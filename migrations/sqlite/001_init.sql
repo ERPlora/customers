@@ -1,7 +1,7 @@
 -- Customers · esquema inicial (SQLite). Portado fielmente de old_modules/m_customers/models.py (v2.2.10).
 -- Modelos: CustomerGroup, CustomerTag, CustomerField, CustomerFieldValue, Customer,
 -- CustomerActivity (timeline), CustomerNote + M2M groups/tags.
--- Contrato de fila estándar hub-next (§2.5): hub_id + soft-delete + auditoría.
+-- Contrato de fila estándar hub (§2.5): hub_id + soft-delete + auditoría.
 
 CREATE TABLE IF NOT EXISTS customers_customergroup (
     id               TEXT PRIMARY KEY,

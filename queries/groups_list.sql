@@ -5,4 +5,3 @@ SELECT g.id, g.name, g.description, g.discount_percent, g.color, g.sort_order, g
         WHERE cg.group_id = g.id AND c.is_deleted = 0) AS customer_count
 FROM customers_customergroup g
 WHERE g.hub_id = :hub_id AND g.is_deleted = 0 AND g.is_active = 1
-ORDER BY g.sort_order ASC, g.name ASC;

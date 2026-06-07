@@ -4,5 +4,3 @@ SELECT id, name, email, phone, tax_id, company_name, lifecycle_stage, source,
        is_active, total_purchases, total_spent, last_purchase_date
 FROM customers_customer
 WHERE hub_id = :hub_id AND is_deleted = 0
-ORDER BY name ASC
-LIMIT 100;
