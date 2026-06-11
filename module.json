@@ -69,6 +69,24 @@
       "label": "Customers",
       "icon": "users",
       "component": "erp-customers-list"
+    },
+    {
+      "id": "groups",
+      "label": "Groups",
+      "icon": "people-outline",
+      "component": "erp-customers-groups"
+    },
+    {
+      "id": "tags",
+      "label": "Tags",
+      "icon": "pricetags",
+      "component": "erp-customers-tags"
+    },
+    {
+      "id": "fields",
+      "label": "Fields",
+      "icon": "layers-outline",
+      "component": "erp-customers-fields"
     }
   ],
   "migrations": {
@@ -292,6 +310,22 @@
       "schema": "schemas/activities.json",
       "ai": {
         "description": "Lists the activity history of a customer"
+      }
+    },
+    "customers.group_ids": {
+      "permission": "customers.view_customer",
+      "sql": "queries/group_ids.sql",
+      "schema": "schemas/group_ids.json",
+      "ai": {
+        "description": "Lists the group ids assigned to a customer"
+      }
+    },
+    "customers.tag_ids": {
+      "permission": "customers.view_customer",
+      "sql": "queries/tag_ids.sql",
+      "schema": "schemas/tag_ids.json",
+      "ai": {
+        "description": "Lists the tag ids assigned to a customer"
       }
     }
   },

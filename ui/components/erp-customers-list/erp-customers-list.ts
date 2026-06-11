@@ -2,7 +2,8 @@ import { LitElement, html, css, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-data-table';
-import type { DataTableColumn } from '@erplora/outfitkit';
+import '@erplora/outfitkit/ok-kpi';
+import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
 import { createListController } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 
@@ -18,9 +19,35 @@ interface Customer {
   name: string;
   email: string;
   phone: string;
+  tax_id: string;
+  address: string;
+  city: string;
+  postal_code: string;
+  country: string;
+  notes: string;
+  is_active: number;
   lifecycle_stage: string;
-  total_spent: number;
+  source: string;
+  company_name: string;
+  birthday: string | null;
+  anniversary: string | null;
+  preferred_channel: string;
+  marketing_consent: number;
+  consent_date: string | null;
   total_purchases: number;
+  total_spent: number;
+  last_purchase_date: string | null;
+  created_at?: string;
+}
+
+interface Stats { total: number; active: number; vip: number; total_revenue: number }
+
+interface Group { id: string; name: string; discount_percent: number; color: string }
+
+interface Tag { id: string; name: string; color: string }
+
+interface Activity {
+  id: string; activity_type: string; title: string; description: string; created_at: string;
 }
 
 function erplora(): ErploraClientLike {
@@ -34,16 +61,48 @@ const STAGE_LABEL: Record<string, string> = {
   at_risk: 'En riesgo', dormant: 'Inactivo', churned: 'Perdido', vip: 'VIP',
 };
 
+const CHANNEL_LABEL: Record<string, string> = {
+  none: 'Ninguno', email: 'Email', sms: 'SMS', whatsapp: 'WhatsApp', phone: 'Teléfono',
+};
+
+/** Campos editables de la ficha (el schema update.json exige el set completo de binds). */
+const EMPTY_FORM = {
+  name: '', email: '', phone: '', tax_id: '', address: '', city: '', postal_code: '',
+  country: '', notes: '', lifecycle_stage: 'lead', source: 'walk_in', company_name: '',
+  birthday: '', anniversary: '', preferred_channel: 'none', marketing_consent: false,
+  is_active: true,
+};
+
+type EditForm = typeof EMPTY_FORM;
+
 export class ErpCustomersList extends LitElement {
   static styles = css`
     :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
+    h3 { margin:.25rem 0 .5rem; font-size:1rem; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
     .form { display:flex; gap:.5rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1rem; }
-    .form ion-input { --background:var(--surface-2,#f7f4ec); border:1px solid var(--line,#e7e2d6); border-radius:8px; flex:1; min-width:8rem; }
+    .form ion-input, .form ion-select, .form ion-textarea { --background:var(--surface-2,#f7f4ec); border:1px solid var(--line,#e7e2d6); border-radius:8px; flex:1; min-width:8rem; }
+    .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
+    .grid2 { display:grid; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); gap:.35rem .75rem; }
+    .grid2 ion-input, .grid2 ion-select { --background:#fff; border:1px solid var(--line,#e7e2d6); border-radius:8px; }
+    .meta { display:grid; grid-template-columns:repeat(auto-fill, minmax(12rem, 1fr)); gap:.25rem .75rem; margin:.5rem 0; }
+    .meta dt { font-size:.72rem; text-transform:uppercase; opacity:.6; }
+    .meta dd { margin:0 0 .4rem; font-weight:600; }
+    .chips { display:flex; gap:.4rem; flex-wrap:wrap; margin:.35rem 0; }
+    .check { display:inline-flex; align-items:center; gap:.35rem; margin:.15rem .9rem .15rem 0; }
+    .timeline { list-style:none; margin:.5rem 0 0; padding:0; }
+    .timeline li { border-left:3px solid var(--line,#e7e2d6); padding:.25rem 0 .55rem .75rem; }
+    .timeline .t { font-weight:600; }
+    .timeline .d { font-size:.85rem; opacity:.85; }
+    .timeline .when { font-size:.75rem; opacity:.55; }
     .err { color:#d9480f; font-weight:600; }
+    .ok { color:#2b8a3e; font-weight:600; }
+    footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
   `;
 
+  // — Lista —
   @state() newName = '';
 
   @state() newEmail = '';
@@ -52,7 +111,31 @@ export class ErpCustomersList extends LitElement {
 
   @state() formError = '';
 
-  @state() tick = 0;
+  @state() formMsg = '';
+
+  @state() stats: Stats | null = null;
+
+  /** Borrado en dos pasos desde la lista o la ficha. */
+  @state() pendingDelete: Customer | null = null;
+
+  // — Detalle —
+  @state() detail: Customer | null = null;
+
+  @state() editing = false;
+
+  @state() form: EditForm = { ...EMPTY_FORM };
+
+  @state() activities: Activity[] = [];
+
+  @state() groups: Group[] = [];
+
+  @state() tags: Tag[] = [];
+
+  @state() groupIds: string[] = [];
+
+  @state() tagIds: string[] = [];
+
+  @state() newNote = '';
 
   private ctrl!: ListController<Customer>;
 
@@ -82,9 +165,11 @@ export class ErpCustomersList extends LitElement {
     },
   ];
 
-  // TODO-LIT: componentWillLoad → connectedCallback. Recuerda: connectedCallback se dispara
-  // en CADA reconexión al DOM (no solo en el primer montaje). Si la init debe correr una
-  // sola vez tras el primer render, considera firstUpdated() en su lugar.
+  private rowActions: DataTableAction[] = [
+    { id: 'view', label: 'Ver' },
+    { id: 'delete', label: 'Eliminar', color: 'danger' },
+  ];
+
   async connectedCallback() {
     super.connectedCallback();
     this.ctrl = createListController<Customer>(erplora(), 'customers.list', () => this.requestUpdate(), {
@@ -92,17 +177,28 @@ export class ErpCustomersList extends LitElement {
       sort: 'name',
       dir: 'asc',
     });
-    await this.ctrl.load();
+    await Promise.all([this.ctrl.load(), this.loadStats()]);
     try {
-      const a = erplora().on('customer.created', () => this.ctrl.load());
-      const b = erplora().on('customer.updated', () => this.ctrl.load());
-      this.unsub = () => { a(); b(); };
+      const a = erplora().on('customer.created', () => { this.ctrl.load(); this.loadStats(); });
+      const b = erplora().on('customer.updated', () => { this.ctrl.load(); this.loadStats(); });
+      const c = erplora().on('customer.deleted', () => { this.ctrl.load(); this.loadStats(); });
+      this.unsub = () => { a(); b(); c(); };
     } catch { /* preview sin SDK */ }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback(); this.unsub?.(); }
 
+  private fmt(n: number | null | undefined): string { return n == null ? '—' : Number(n).toFixed(2); }
+
+  private async loadStats() {
+    try {
+      const rows = await erplora().query<Stats[]>('customers.stats');
+      this.stats = rows?.[0] ?? null;
+    } catch { /* tarjetas opcionales */ }
+  }
+
+  // — Alta rápida (lista) —
   private async create(ev: Event) {
     ev.preventDefault();
     if (!this.newName.trim()) return;
@@ -117,7 +213,7 @@ export class ErpCustomersList extends LitElement {
         marketing_consent: 0, consent_date: null,
       });
       this.newName = ''; this.newEmail = '';
-      await this.ctrl.load();
+      await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : 'No se pudo crear';
     } finally {
@@ -125,19 +221,331 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
+  // — Detalle —
+  private async openDetail(id: string) {
+    this.formError = '';
+    this.formMsg = '';
+    this.pendingDelete = null;
+    this.editing = false;
+    try {
+      const rows = await erplora().query<Customer[]>('customers.get', { customer_id: id });
+      const customer = rows?.[0];
+      if (!customer) { this.formError = 'Cliente no encontrado'; return; }
+      this.detail = customer;
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
+    } catch (e) {
+      this.formError = e instanceof Error ? e.message : 'No se pudo cargar el cliente';
+    }
+  }
+
+  private async loadActivities(id: string) {
+    try {
+      this.activities = (await erplora().query<Activity[]>('customers.activities', { customer_id: id })) ?? [];
+    } catch { this.activities = []; }
+  }
+
+  private async loadMemberships(id: string) {
+    try {
+      const [groupsPage, tagsPage, gids, tids] = await Promise.all([
+        erplora().queryPage<Group>('customers.groups.list', { page: 0, page_size: 50 }),
+        erplora().queryPage<Tag>('customers.tags.list', { page: 0, page_size: 50 }),
+        erplora().query<Array<{ id: string }>>('customers.group_ids', { customer_id: id }),
+        erplora().query<Array<{ id: string }>>('customers.tag_ids', { customer_id: id }),
+      ]);
+      this.groups = groupsPage?.rows ?? [];
+      this.tags = tagsPage?.rows ?? [];
+      this.groupIds = (gids ?? []).map((r) => String(r.id));
+      this.tagIds = (tids ?? []).map((r) => String(r.id));
+    } catch { /* asignación opcional si faltan permisos de grupos/tags */ }
+  }
+
+  private closeDetail() {
+    this.detail = null;
+    this.editing = false;
+    this.pendingDelete = null;
+    this.formError = '';
+    this.formMsg = '';
+  }
+
+  private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
+    const row = ev.detail.row as unknown as Customer;
+    if (ev.detail.actionId === 'view') this.openDetail(String(row.id));
+    if (ev.detail.actionId === 'delete') { this.pendingDelete = row; this.formMsg = ''; this.formError = ''; }
+  }
+
+  // — Edición → customers.update (set completo de binds, ver schemas/update.json) —
+  private startEdit() {
+    if (!this.detail) return;
+    const d = this.detail;
+    this.form = {
+      name: d.name ?? '', email: d.email ?? '', phone: d.phone ?? '', tax_id: d.tax_id ?? '',
+      address: d.address ?? '', city: d.city ?? '', postal_code: d.postal_code ?? '',
+      country: d.country ?? '', notes: d.notes ?? '', lifecycle_stage: d.lifecycle_stage || 'lead',
+      source: d.source || 'walk_in', company_name: d.company_name ?? '',
+      birthday: d.birthday ?? '', anniversary: d.anniversary ?? '',
+      preferred_channel: d.preferred_channel || 'none',
+      marketing_consent: Boolean(d.marketing_consent), is_active: Boolean(d.is_active),
+    };
+    this.editing = true;
+    this.formError = '';
+    this.formMsg = '';
+  }
+
+  private async saveEdit(ev: Event) {
+    ev.preventDefault();
+    if (!this.detail || !this.form.name.trim()) return;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.update', {
+        customer_id: this.detail.id,
+        name: this.form.name.trim(), email: this.form.email.trim(), phone: this.form.phone.trim(),
+        tax_id: this.form.tax_id.trim(), address: this.form.address.trim(), city: this.form.city.trim(),
+        postal_code: this.form.postal_code.trim(), country: this.form.country.trim(),
+        notes: this.form.notes, lifecycle_stage: this.form.lifecycle_stage, source: this.form.source.trim() || 'walk_in',
+        company_name: this.form.company_name.trim(),
+        birthday: this.form.birthday || null, anniversary: this.form.anniversary || null,
+        preferred_channel: this.form.preferred_channel,
+        marketing_consent: this.form.marketing_consent ? 1 : 0,
+        is_active: this.form.is_active ? 1 : 0,
+      });
+      this.editing = false;
+      this.formMsg = 'Cliente actualizado';
+      await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
+    } catch (e) {
+      this.formError = e instanceof Error ? e.message : 'No se pudo actualizar';
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  // — Borrado (soft-delete) → customers.delete, confirmación en dos pasos —
+  private async confirmDelete() {
+    if (!this.pendingDelete) return;
+    const target = this.pendingDelete;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.delete', { customer_id: target.id });
+      this.pendingDelete = null;
+      if (this.detail?.id === target.id) this.closeDetail();
+      this.formMsg = `Cliente ${target.name} eliminado`;
+      await Promise.all([this.ctrl.load(), this.loadStats()]);
+    } catch (e) {
+      this.formError = e instanceof Error ? e.message : 'No se pudo eliminar';
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  // — Grupos / etiquetas → set_groups / set_tags (reemplazo de colección) —
+  private toggleId(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+  }
+
+  private async saveMembership(kind: 'groups' | 'tags') {
+    if (!this.detail) return;
+    this.saving = true;
+    this.formError = '';
+    try {
+      if (kind === 'groups') {
+        await erplora().command('customers.set_groups', { customer_id: this.detail.id, ids: this.groupIds });
+      } else {
+        await erplora().command('customers.set_tags', { customer_id: this.detail.id, ids: this.tagIds });
+      }
+      this.formMsg = kind === 'groups' ? 'Grupos asignados' : 'Etiquetas asignadas';
+      await this.loadMemberships(this.detail.id);
+    } catch (e) {
+      this.formError = e instanceof Error ? e.message : 'No se pudo guardar la asignación';
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  // — Notas → notes.add + entrada 'note' en el timeline (activity.add) —
+  private async addNote(ev: Event) {
+    ev.preventDefault();
+    if (!this.detail || !this.newNote.trim()) return;
+    const content = this.newNote.trim();
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.notes.add', {
+        customer_id: this.detail.id, content, author_name: '',
+      });
+      // El legacy registraba la nota también como actividad; aquí lo hace la UI.
+      await erplora().command('customers.activity.add', {
+        customer_id: this.detail.id, activity_type: 'note', title: 'Nota añadida',
+        description: content, extra_metadata: '{}', related_object_id: null, related_object_type: '',
+      });
+      this.newNote = '';
+      this.formMsg = 'Nota añadida';
+      await this.loadActivities(this.detail.id);
+    } catch (e) {
+      this.formError = e instanceof Error ? e.message : 'No se pudo añadir la nota';
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  // — Render —
+  private renderStats() {
+    if (!this.stats) return nothing;
+    const s = this.stats;
+    return html`<div class="kpis">
+      <ok-kpi label="Clientes" value=${String(s.total ?? 0)}></ok-kpi>
+      <ok-kpi label="Activos" value=${String(s.active ?? 0)}></ok-kpi>
+      <ok-kpi label="VIP" value=${String(s.vip ?? 0)}></ok-kpi>
+      <ok-kpi label="Ingresos" value=${this.fmt(s.total_revenue)}></ok-kpi>
+    </div>`;
+  }
+
+  private renderDeleteConfirm() {
+    if (!this.pendingDelete) return nothing;
+    return html`<section class="panel">
+      <h3>Eliminar cliente</h3>
+      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? La ficha deja de estar disponible (borrado lógico).</p>
+      <footer class="actions">
+        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? 'Eliminando…' : 'Eliminar'}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>Cancelar</ion-button>
+      </footer>
+    </section>`;
+  }
+
+  private renderEditForm() {
+    const f = this.form;
+    const input = (key: keyof EditForm, label: string, type = 'text') => html`
+      <ion-input type=${type} label=${label} label-placement="stacked" .value=${String(f[key] ?? '')}
+        @ionInput=${(e: any) => (this.form = { ...this.form, [key]: e.target.value })}></ion-input>`;
+    return html`<form @submit=${(e: Event) => this.saveEdit(e)}>
+      <div class="grid2">
+        ${input('name', 'Nombre')}
+        ${input('email', 'Email', 'email')}
+        ${input('phone', 'Teléfono')}
+        ${input('tax_id', 'NIF/CIF')}
+        ${input('company_name', 'Empresa')}
+        ${input('address', 'Dirección')}
+        ${input('city', 'Ciudad')}
+        ${input('postal_code', 'Código postal')}
+        ${input('country', 'País')}
+        ${input('birthday', 'Cumpleaños', 'date')}
+        ${input('anniversary', 'Aniversario', 'date')}
+        ${input('source', 'Origen')}
+        <ion-select label="Etapa" label-placement="stacked" .value=${f.lifecycle_stage}
+          @ionChange=${(e: any) => (this.form = { ...this.form, lifecycle_stage: e.target.value })}>
+          ${Object.entries(STAGE_LABEL).map(([v, l]) => html`<ion-select-option value=${v}>${l}</ion-select-option>`)}
+        </ion-select>
+        <ion-select label="Canal preferido" label-placement="stacked" .value=${f.preferred_channel}
+          @ionChange=${(e: any) => (this.form = { ...this.form, preferred_channel: e.target.value })}>
+          ${Object.entries(CHANNEL_LABEL).map(([v, l]) => html`<ion-select-option value=${v}>${l}</ion-select-option>`)}
+        </ion-select>
+      </div>
+      <div class="form">
+        <ion-textarea label="Notas internas" label-placement="stacked" auto-grow .value=${f.notes}
+          @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
+      </div>
+      <label class="check"><ion-checkbox .checked=${f.marketing_consent}
+        @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> Consentimiento de marketing</label>
+      <label class="check"><ion-checkbox .checked=${f.is_active}
+        @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> Activo</label>
+      <footer class="actions">
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? 'Guardando…' : 'Guardar'}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => (this.editing = false)}>Cancelar</ion-button>
+      </footer>
+    </form>`;
+  }
+
+  private renderMembership(kind: 'groups' | 'tags') {
+    const isGroups = kind === 'groups';
+    const items = isGroups ? this.groups : this.tags;
+    const selected = isGroups ? this.groupIds : this.tagIds;
+    if (!items.length) return html`<p>No hay ${isGroups ? 'grupos' : 'etiquetas'} definidos.</p>`;
+    return html`<div>
+      <div class="chips">
+        ${items.map((it) => html`<label class="check">
+          <ion-checkbox .checked=${selected.includes(String(it.id))}
+            @ionChange=${() => {
+              if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
+              else this.tagIds = this.toggleId(this.tagIds, String(it.id));
+            }}></ion-checkbox>
+          ${it.name}${isGroups && Number((it as Group).discount_percent) > 0 ? ` (−${Number((it as Group).discount_percent)}%)` : ''}
+        </label>`)}
+      </div>
+      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>Guardar ${isGroups ? 'grupos' : 'etiquetas'}</ion-button>
+    </div>`;
+  }
+
+  private renderDetail() {
+    const d = this.detail!;
+    return html`<div>
+      <header>
+        <h2>${d.name}</h2>
+        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>← Volver</ion-button>
+        ${this.editing ? nothing : html`<ion-button size="small" @click=${() => this.startEdit()}>Editar</ion-button>`}
+        <ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>Eliminar</ion-button>
+      </header>
+      ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
+      ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+      ${this.renderDeleteConfirm()}
+      <section class="panel">
+        ${this.editing ? this.renderEditForm() : html`<dl class="meta">
+          <div><dt>Email</dt><dd>${d.email || '—'}</dd></div>
+          <div><dt>Teléfono</dt><dd>${d.phone || '—'}</dd></div>
+          <div><dt>NIF/CIF</dt><dd>${d.tax_id || '—'}</dd></div>
+          <div><dt>Empresa</dt><dd>${d.company_name || '—'}</dd></div>
+          <div><dt>Dirección</dt><dd>${[d.address, d.postal_code, d.city, d.country].filter(Boolean).join(', ') || '—'}</dd></div>
+          <div><dt>Etapa</dt><dd>${STAGE_LABEL[d.lifecycle_stage] ?? d.lifecycle_stage}</dd></div>
+          <div><dt>Origen</dt><dd>${d.source || '—'}</dd></div>
+          <div><dt>Canal preferido</dt><dd>${CHANNEL_LABEL[d.preferred_channel] ?? d.preferred_channel}</dd></div>
+          <div><dt>Consent. marketing</dt><dd>${d.marketing_consent ? 'Sí' : 'No'}</dd></div>
+          <div><dt>Compras</dt><dd>${d.total_purchases ?? 0}</dd></div>
+          <div><dt>Gastado</dt><dd>${this.fmt(d.total_spent)}</dd></div>
+          <div><dt>Última compra</dt><dd>${d.last_purchase_date || '—'}</dd></div>
+          <div><dt>Activo</dt><dd>${d.is_active ? 'Sí' : 'No'}</dd></div>
+        </dl>`}
+      </section>
+      <section class="panel">
+        <h3>Grupos</h3>
+        ${this.renderMembership('groups')}
+        <h3 style="margin-top:.75rem">Etiquetas</h3>
+        ${this.renderMembership('tags')}
+      </section>
+      <section class="panel">
+        <h3>Añadir nota</h3>
+        <form class="form" @submit=${(e: Event) => this.addNote(e)}>
+          <ion-textarea label="Nota" label-placement="stacked" auto-grow .value=${this.newNote}
+            @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
+          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>Añadir</ion-button>
+        </form>
+        <h3>Actividad</h3>
+        ${this.activities.length ? html`<ul class="timeline">
+          ${this.activities.map((a) => html`<li>
+            <div class="t">${a.title} <small>(${a.activity_type})</small></div>
+            ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
+            <div class="when">${a.created_at}</div>
+          </li>`)}
+        </ul>` : html`<p>Sin actividad registrada.</p>`}
+      </section>
+    </div>`;
+  }
+
   render() {
+    if (this.detail) return this.renderDetail();
     return html`<div>
         <header>
           <h2>Clientes</h2>
         </header>
-        <form class="form" @submit=${(e) => this.create(e)}>
+        ${this.renderStats()}
+        <form class="form" @submit=${(e: Event) => this.create(e)}>
           <ion-input placeholder="Nombre" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
           <ion-input type="email" placeholder="Email" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
           <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? 'Guardando…' : 'Añadir'}</ion-button>
         </form>
         ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
+        ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+        ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email…"} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin clientes.'} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email…"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin clientes.'} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
       </div>`;
   }
 }
