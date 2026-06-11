@@ -148,6 +148,7 @@
     "customers.get": {
       "permission": "customers.view_customer",
       "sql": "queries/get.sql",
+      "schema": "schemas/get.json",
       "ai": {
         "description": "Retrieves a customer's details by their identifier"
       }
@@ -288,6 +289,7 @@
     "customers.activities": {
       "permission": "customers.view_activity",
       "sql": "queries/activities.sql",
+      "schema": "schemas/activities.json",
       "ai": {
         "description": "Lists the activity history of a customer"
       }
@@ -300,6 +302,7 @@
       "sql": [
         "commands/create.sql"
       ],
+      "schema": "schemas/create.json",
       "emit": [
         "customer.created"
       ],
@@ -313,6 +316,7 @@
       "sql": [
         "commands/update.sql"
       ],
+      "schema": "schemas/update.json",
       "emit": [
         "customer.updated"
       ],
@@ -339,6 +343,7 @@
       "sql": [
         "commands/record_purchase.sql"
       ],
+      "schema": "schemas/record_purchase.json",
       "ai": {
         "description": "Records a purchase in the customer's history"
       }
@@ -350,6 +355,7 @@
         "file": "dist/handler.wasm",
         "function": "bulk_create"
       },
+      "schema": "schemas/bulk_create.json",
       "ai": {
         "description": "Creates multiple customers in bulk"
       }
@@ -361,6 +367,7 @@
         "file": "dist/handler.wasm",
         "function": "set_groups"
       },
+      "schema": "schemas/set_groups.json",
       "ai": {
         "description": "Assigns a customer's groups, replacing the previous selection"
       }
@@ -372,6 +379,7 @@
         "file": "dist/handler.wasm",
         "function": "set_tags"
       },
+      "schema": "schemas/set_tags.json",
       "ai": {
         "description": "Assigns a customer's tags, replacing the previous selection"
       }
@@ -382,6 +390,7 @@
       "sql": [
         "commands/group_create.sql"
       ],
+      "schema": "schemas/group_create.json",
       "ai": {
         "description": "Creates a new customer group"
       }
@@ -392,6 +401,7 @@
       "sql": [
         "commands/group_update.sql"
       ],
+      "schema": "schemas/group_update.json",
       "ai": {
         "description": "Updates an existing customer group"
       }
@@ -412,6 +422,7 @@
       "sql": [
         "commands/tag_create.sql"
       ],
+      "schema": "schemas/tag_create.json",
       "ai": {
         "description": "Creates a new customer tag"
       }
@@ -422,6 +433,7 @@
       "sql": [
         "commands/tag_update.sql"
       ],
+      "schema": "schemas/tag_update.json",
       "ai": {
         "description": "Updates an existing customer tag"
       }
@@ -442,6 +454,7 @@
       "sql": [
         "commands/field_create.sql"
       ],
+      "schema": "schemas/field_create.json",
       "ai": {
         "description": "Creates a new custom field for customers"
       }
@@ -452,6 +465,7 @@
       "sql": [
         "commands/field_update.sql"
       ],
+      "schema": "schemas/field_update.json",
       "ai": {
         "description": "Updates a customer custom field"
       }
@@ -472,6 +486,7 @@
       "sql": [
         "commands/note_create.sql"
       ],
+      "schema": "schemas/note_create.json",
       "ai": {
         "description": "Adds a note to a customer's history"
       }
@@ -482,6 +497,7 @@
       "sql": [
         "commands/activity_add.sql"
       ],
+      "schema": "schemas/activity_add.json",
       "ai": {
         "description": "Records a new activity in a customer's history"
       }

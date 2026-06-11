@@ -1,0 +1,12 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.activity.add payload", "type": "object", "additionalProperties": true,
+  "required": ["customer_id", "activity_type", "title", "description", "extra_metadata",
+               "related_object_id", "related_object_type"],
+  "properties": {
+    "customer_id": { "type": "string", "minLength": 1 },
+    "activity_type": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "extra_metadata": { "type": "string", "description": "JSON serializado, p.ej. '{}'" },
+    "related_object_id": { "type": ["string", "null"] },
+    "related_object_type": { "type": "string" } } }

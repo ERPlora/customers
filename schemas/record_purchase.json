@@ -1,0 +1,7 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.record_purchase payload", "type": "object", "additionalProperties": true,
+  "required": ["total"],
+  "properties": {
+    "customer_id": { "type": ["string", "null"],
+      "description": "NULL = venta anónima (no-op seguro: el WHERE no casa ninguna fila)" },
+    "total": { "type": "number", "minimum": 0 } } }

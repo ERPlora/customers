@@ -1,0 +1,8 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.tags.update payload", "type": "object", "additionalProperties": true,
+  "required": ["tag_id", "name", "color", "is_active"],
+  "properties": {
+    "tag_id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "color": { "type": "string" },
+    "is_active": { "type": ["boolean", "integer"], "minimum": 0, "maximum": 1 } } }
