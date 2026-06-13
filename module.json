@@ -1,7 +1,7 @@
 {
   "id": "customers",
   "name": "Customers",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "agent": {
     "description": "Manages customers, groups, tags, custom fields, notes, and activity history: create, update, delete customers and look up their purchase records.",
     "keywords": [
