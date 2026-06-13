@@ -198,6 +198,32 @@ export class ErpCustomersList extends LitElement {
     } catch { /* tarjetas opcionales */ }
   }
 
+  // — Importación CSV (bulk) — mismas columnas que exporta la tabla: name,email,phone… —
+  // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
+  // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
+  private async onCsvImport(ev: CustomEvent<{ rows: Record<string, string>[] }>): Promise<void> {
+    const rows = ev.detail?.rows ?? [];
+    for (const r of rows) {
+      const name = (r.name ?? r.Nombre ?? '').trim();
+      if (!name) continue;
+      try {
+        await erplora().command('customers.create', {
+          name,
+          email: (r.email ?? r.Email ?? '').trim(),
+          phone: (r.phone ?? r['Teléfono'] ?? r.telefono ?? '').trim(),
+          tax_id: '', address: '', city: '', postal_code: '', country: '', avatar: '', notes: '',
+          lifecycle_stage: (r.lifecycle_stage ?? 'lead').trim() || 'lead',
+          source: 'walk_in', company_name: (r.company_name ?? '').trim(),
+          birthday: null, anniversary: null, preferred_channel: 'none',
+          marketing_consent: 0, consent_date: null,
+        });
+      } catch {
+        /* ignora filas inválidas (mismo criterio que inventory) */
+      }
+    }
+    await Promise.all([this.ctrl.load(), this.loadStats()]);
+  }
+
   // — Alta rápida (lista) —
   private async create(ev: Event) {
     ev.preventDefault();
@@ -545,7 +571,7 @@ export class ErpCustomersList extends LitElement {
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email…"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin clientes.'} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email…"} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin clientes.'} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
       </div>`;
   }
 }
