@@ -1827,17 +1827,17 @@ var OkDataTable = class extends i3 {
       out.push(row);
     }
     const headers = out.shift() ?? [];
-    const rows = out.map((r6) => Object.fromEntries(headers.map((h4, i7) => [h4, r6[i7] ?? ""])));
-    return { headers, rows };
+    const rows2 = out.map((r6) => Object.fromEntries(headers.map((h4, i7) => [h4, r6[i7] ?? ""])));
+    return { headers, rows: rows2 };
   }
   async onImportFile(ev) {
     const input = ev.target;
     const file = input.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const { headers, rows } = this.parseCsv(text);
-    this.emit("csvImport", { headers, rows });
-    this.emit("import", { headers, rows });
+    const { headers, rows: rows2 } = this.parseCsv(text);
+    this.emit("csvImport", { headers, rows: rows2 });
+    this.emit("import", { headers, rows: rows2 });
     input.value = "";
   }
   toggle(p4) {
@@ -3550,8 +3550,8 @@ var ErpCustomersList = class extends i3 {
   }
   async loadStats() {
     try {
-      const rows = await erplora3().query("customers.stats");
-      this.stats = rows?.[0] ?? null;
+      const rows2 = await erplora3().query("customers.stats");
+      this.stats = rows2?.[0] ?? null;
     } catch {
     }
   }
@@ -3559,8 +3559,8 @@ var ErpCustomersList = class extends i3 {
   // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
   // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
   async onCsvImport(ev) {
-    const rows = ev.detail?.rows ?? [];
-    for (const r6 of rows) {
+    const rows2 = ev.detail?.rows ?? [];
+    for (const r6 of rows2) {
       const name = (r6.name ?? r6.Nombre ?? "").trim();
       if (!name) continue;
       try {
@@ -3632,8 +3632,8 @@ var ErpCustomersList = class extends i3 {
     this.pendingDelete = null;
     this.editing = false;
     try {
-      const rows = await erplora3().query("customers.get", { customer_id: id });
-      const customer = rows?.[0];
+      const rows2 = await erplora3().query("customers.get", { customer_id: id });
+      const customer = rows2?.[0];
       if (!customer) {
         this.formError = "Cliente no encontrado";
         return;
@@ -4023,8 +4023,162 @@ __decorateClass([
 ], ErpCustomersList.prototype, "newNote", 2);
 define("erp-customers-list", ErpCustomersList);
 
-// modules/customers/ui/components/erp-customers-tags/erp-customers-tags.ts
+// modules/customers/ui/components/erp-customers-pos-search/erp-customers-pos-search.ts
 function erplora4() {
+  const c5 = globalThis.erplora;
+  if (!c5) throw new Error("erplora SDK no inicializado por el shell");
+  return c5;
+}
+function rows(r6) {
+  if (Array.isArray(r6)) return r6;
+  if (r6 && typeof r6 === "object" && Array.isArray(r6.rows)) return r6.rows;
+  return [];
+}
+var ErpCustomersPosSearch = class extends i3 {
+  constructor() {
+    super(...arguments);
+    this.open = false;
+    this.results = [];
+    this.q = "";
+    this.selectedName = "";
+    this.loading = false;
+    this.error = "";
+    this.onReset = () => {
+      this.selectedId = void 0;
+      this.selectedName = "";
+    };
+  }
+  static {
+    this.styles = i`
+    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    .open { width:100%; }
+    .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:60; }
+    .sheet { background:var(--ion-background-color,#fff); border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.35); }
+    .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.8rem; }
+    .sheet-h .t { font-size:1.2rem; font-weight:700; }
+    .x { background:none; border:none; font-size:1.3rem; cursor:pointer; color:#8b897f; }
+    .list { display:flex; flex-direction:column; gap:.4rem; margin-top:.6rem; max-height:55vh; overflow:auto; }
+    .item { display:flex; flex-direction:column; gap:.1rem; border:1px solid var(--ion-border-color,#e0ddd4); border-radius:10px; padding:.5rem .7rem; background:var(--ion-background-color,#fff); cursor:pointer; font:inherit; color:inherit; text-align:left; width:100%; }
+    .item[aria-pressed=true] { outline:3px solid var(--ion-color-primary,#0091ce); outline-offset:1px; }
+    .nm { font-weight:700; }
+    .meta { font-size:.8rem; color:#8b897f; }
+    .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
+    .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
+  `;
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener("erp:customer-context-reset", this.onReset);
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener("erp:customer-context-reset", this.onReset);
+  }
+  async openPicker() {
+    this.open = true;
+    if (!this.results.length) await this.search("");
+  }
+  async search(q) {
+    this.loading = true;
+    this.error = "";
+    try {
+      const r6 = await erplora4().query("customers.list", { search: q, page_size: 20, sort: "name", dir: "asc" }).catch(() => []);
+      this.results = rows(r6);
+    } catch (e5) {
+      this.error = e5 instanceof Error ? e5.message : "No se pudieron cargar los clientes";
+    } finally {
+      this.loading = false;
+    }
+  }
+  onInput(v3) {
+    this.q = v3;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => void this.search(v3), 300);
+  }
+  emit(customer_id, customer_name) {
+    this.dispatchEvent(new CustomEvent("erp:customer-context", {
+      detail: { customer_id, customer_name },
+      bubbles: true,
+      composed: true
+    }));
+  }
+  pick(c5) {
+    this.selectedId = c5.id;
+    this.selectedName = c5.name;
+    this.emit(c5.id, c5.name);
+    this.open = false;
+  }
+  clear() {
+    this.selectedId = void 0;
+    this.selectedName = "";
+    this.emit(null, "");
+    this.open = false;
+  }
+  render() {
+    return b2`
+      <ion-button class="open" fill=${this.selectedId ? "solid" : "outline"} size="small" @click=${() => this.openPicker()}>
+        ${this.selectedName || "Asignar cliente"}
+      </ion-button>
+
+      ${this.open ? b2`<div class="scrim" @click=${(e5) => {
+      if (e5.target.classList.contains("scrim")) this.open = false;
+    }}>
+            <div class="sheet">
+              <div class="sheet-h">
+                <span class="t">Elegir cliente</span>
+                <button class="x" @click=${() => {
+      this.open = false;
+    }}>✕</button>
+              </div>
+
+              <ion-searchbar placeholder="Buscar por nombre, teléfono, email…" value=${this.q}
+                @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
+
+              ${this.error ? b2`<p style="color:#d9480f">${this.error}</p>` : A}
+
+              <div class="list">
+                ${this.results.map((c5) => b2`
+                  <button class="item" aria-pressed=${this.selectedId === c5.id} @click=${() => this.pick(c5)}>
+                    <span class="nm">${c5.name}</span>
+                    ${c5.phone || c5.email ? b2`<span class="meta">${c5.phone || c5.email}</span>` : A}
+                  </button>`)}
+                ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? "Sin resultados." : "No hay clientes."}</div>` : A}
+                ${this.loading ? b2`<div class="empty">Cargando…</div>` : A}
+              </div>
+
+              <div class="foot">
+                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>Quitar cliente</ion-button>
+              </div>
+            </div>
+          </div>` : A}
+    `;
+  }
+};
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "open", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "results", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "q", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "selectedId", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "selectedName", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "loading", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "error", 2);
+define("erp-customers-pos-search", ErpCustomersPosSearch);
+
+// modules/customers/ui/components/erp-customers-tags/erp-customers-tags.ts
+function erplora5() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
@@ -4065,7 +4219,7 @@ var ErpCustomersTags = class extends i3 {
   }
   async connectedCallback() {
     super.connectedCallback();
-    this.ctrl = createListController(erplora4(), "customers.tags.list", () => this.requestUpdate(), {
+    this.ctrl = createListController(erplora5(), "customers.tags.list", () => this.requestUpdate(), {
       pageSize: 50,
       sort: "name",
       dir: "asc"
@@ -4108,13 +4262,13 @@ var ErpCustomersTags = class extends i3 {
     this.formError = "";
     try {
       if (this.editing === "new") {
-        await erplora4().command("customers.tags.create", {
+        await erplora5().command("customers.tags.create", {
           name: this.fName.trim(),
           color: this.fColor.trim() || "primary"
         });
         this.formMsg = "Etiqueta creada";
       } else {
-        await erplora4().command("customers.tags.update", {
+        await erplora5().command("customers.tags.update", {
           tag_id: this.editing.id,
           name: this.fName.trim(),
           color: this.fColor.trim() || "primary",
@@ -4135,7 +4289,7 @@ var ErpCustomersTags = class extends i3 {
     this.saving = true;
     this.formError = "";
     try {
-      await erplora4().command("customers.tags.delete", { tag_id: this.pendingDelete.id });
+      await erplora5().command("customers.tags.delete", { tag_id: this.pendingDelete.id });
       this.formMsg = `Etiqueta ${this.pendingDelete.name} eliminada`;
       this.pendingDelete = null;
       await this.ctrl.load();
