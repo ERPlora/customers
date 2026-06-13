@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS customers_customergroup (
     hub_id           TEXT NOT NULL,
     name             TEXT NOT NULL,
     description      TEXT NOT NULL DEFAULT '',
-    discount_percent NUMERIC NOT NULL DEFAULT 0,
+    discount_percent REAL NOT NULL DEFAULT 0,    -- tasa % (no es dinero)
     color            TEXT NOT NULL DEFAULT 'primary',
     is_active        INTEGER NOT NULL DEFAULT 1,
     sort_order       INTEGER NOT NULL DEFAULT 0,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS customers_customer (
     marketing_consent  INTEGER NOT NULL DEFAULT 0,
     consent_date       TEXT,
     total_purchases    INTEGER NOT NULL DEFAULT 0,
-    total_spent        NUMERIC NOT NULL DEFAULT 0,
+    total_spent        INTEGER NOT NULL DEFAULT 0,  -- céntimos (ADR-0007)
     last_purchase_date TEXT,
     is_deleted         INTEGER NOT NULL DEFAULT 0,
     deleted_at         TEXT, created_by TEXT, updated_by TEXT, created_at TEXT, updated_at TEXT
