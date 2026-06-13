@@ -67,7 +67,7 @@
     {
       "id": "customers",
       "label": "Customers",
-      "icon": "users",
+      "icon": "people-outline",
       "component": "erp-customers-list"
     },
     {
