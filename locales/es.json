@@ -1,0 +1,17 @@
+{
+  "name": "Clientes",
+  "navigation": {
+    "customers": {
+      "label": "Clientes"
+    },
+    "groups": {
+      "label": "Grupos"
+    },
+    "tags": {
+      "label": "Etiquetas"
+    },
+    "fields": {
+      "label": "Campos"
+    }
+  }
+}

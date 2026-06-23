@@ -1,0 +1,17 @@
+{
+  "name": "Customers",
+  "navigation": {
+    "customers": {
+      "label": "Customers"
+    },
+    "groups": {
+      "label": "Groups"
+    },
+    "tags": {
+      "label": "Tags"
+    },
+    "fields": {
+      "label": "Fields"
+    }
+  }
+}
