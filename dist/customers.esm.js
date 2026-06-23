@@ -9,7 +9,7 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// ../../node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/element-internals.js
+// node_modules/@lit-labs/ssr-dom-shim/lib/element-internals.js
 var ElementInternalsShim = class ElementInternals {
   get shadowRoot() {
     return this.__host.__shadowRoot;
@@ -88,7 +88,7 @@ var ElementInternalsShim = class ElementInternals {
   }
 };
 
-// ../../node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/events.js
+// node_modules/@lit-labs/ssr-dom-shim/lib/events.js
 var __classPrivateFieldSet = function(receiver, state, value, kind, f3) {
   if (kind === "m") throw new TypeError("Private method is not writable");
   if (kind === "a" && !f3) throw new TypeError("Private accessor was defined without a setter");
@@ -246,7 +246,7 @@ Object.defineProperties(CustomEventShim.prototype, {
 var EventShimWithRealType = EventShim;
 var CustomEventShimWithRealType = CustomEventShim;
 
-// ../../node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/css.js
+// node_modules/@lit-labs/ssr-dom-shim/lib/css.js
 var _a2;
 var CSSRuleShim = (_a2 = class CSSRule {
   constructor() {
@@ -277,7 +277,7 @@ var CSSRuleShim = (_a2 = class CSSRule {
   }
 }, _a2.STYLE_RULE = 1, _a2.CHARSET_RULE = 2, _a2.IMPORT_RULE = 3, _a2.MEDIA_RULE = 4, _a2.FONT_FACE_RULE = 5, _a2.PAGE_RULE = 6, _a2.NAMESPACE_RULE = 10, _a2.KEYFRAMES_RULE = 7, _a2.KEYFRAME_RULE = 8, _a2.SUPPORTS_RULE = 12, _a2.COUNTER_STYLE_RULE = 11, _a2.FONT_FEATURE_VALUES_RULE = 14, _a2.MARGIN_RULE = 9, _a2);
 
-// ../../node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/index.js
+// node_modules/@lit-labs/ssr-dom-shim/index.js
 globalThis.Event ??= EventShimWithRealType;
 globalThis.CustomEvent ??= CustomEventShimWithRealType;
 var constructionToken = Symbol();
@@ -674,7 +674,7 @@ var CustomElementRegistryShimWithRealType = CustomElementRegistry;
 var customElements2 = new CustomElementRegistryShimWithRealType();
 var windowShim = new WindowShim(constructionToken);
 
-// ../../node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/css-tag.js
+// node_modules/@lit/reactive-element/node/css-tag.js
 var t = globalThis;
 var e = t.ShadowRoot && (void 0 === t.ShadyCSS || t.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype;
 var s = Symbol();
@@ -719,7 +719,7 @@ var c = e || void 0 === t.CSSStyleSheet ? (t5) => t5 : (t5) => t5 instanceof CSS
   return r(e5);
 })(t5) : t5;
 
-// ../../node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/reactive-element.js
+// node_modules/@lit/reactive-element/node/reactive-element.js
 var { is: h, defineProperty: r2, getOwnPropertyDescriptor: o2, getOwnPropertyNames: n2, getOwnPropertySymbols: a, getPrototypeOf: c2 } = Object;
 var l = globalThis;
 l.customElements ??= customElements2;
@@ -942,7 +942,7 @@ var g = class extends (globalThis.HTMLElement ?? HTMLElementShimWithRealType) {
 };
 g.elementStyles = [], g.shadowRootOptions = { mode: "open" }, g[f("elementProperties")] = /* @__PURE__ */ new Map(), g[f("finalized")] = /* @__PURE__ */ new Map(), u?.({ ReactiveElement: g }), (l.reactiveElementVersions ??= []).push("2.1.2");
 
-// ../../node_modules/.pnpm/lit-html@3.3.3/node_modules/lit-html/lit-html.js
+// node_modules/lit-html/lit-html.js
 var t2 = globalThis;
 var i2 = (t5) => t5;
 var s2 = t2.trustedTypes;
@@ -1197,7 +1197,7 @@ var D = (t5, i7, s5) => {
   return h4._$AI(t5), h4;
 };
 
-// ../../node_modules/.pnpm/lit-element@4.2.2/node_modules/lit-element/lit-element.js
+// node_modules/lit-element/lit-element.js
 var s3 = globalThis;
 var i3 = class extends g {
   constructor() {
@@ -1226,7 +1226,7 @@ var o4 = s3.litElementPolyfillSupport;
 o4?.({ LitElement: i3 });
 (s3.litElementVersions ??= []).push("4.2.2");
 
-// ../../node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/property.js
+// node_modules/@lit/reactive-element/node/decorators/property.js
 var o5 = { attribute: true, type: String, converter: b, reflect: false, hasChanged: m };
 var r4 = (t5 = o5, e5, r6) => {
   const { kind: n6, metadata: i7 } = r6;
@@ -1256,19 +1256,19 @@ function n4(t5) {
   })(t5, e5, o7);
 }
 
-// ../../node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/state.js
+// node_modules/@lit/reactive-element/node/decorators/state.js
 function r5(r6) {
   return n4({ ...r6, state: true, attribute: false });
 }
 
-// ../../node_modules/.pnpm/@outfitkit+core@file+..+outfitkit/node_modules/@outfitkit/core/dist/define.js
+// ../outfitkit/dist/define.js
 function define(tag, ctor) {
   if (typeof customElements !== "undefined" && !customElements.get(tag)) {
     customElements.define(tag, ctor);
   }
 }
 
-// ../../node_modules/.pnpm/lit-html@3.3.3/node_modules/lit-html/directive.js
+// node_modules/lit-html/directive.js
 var t3 = { ATTRIBUTE: 1, CHILD: 2, PROPERTY: 3, BOOLEAN_ATTRIBUTE: 4, EVENT: 5, ELEMENT: 6 };
 var e4 = (t5) => (...e5) => ({ _$litDirective$: t5, values: e5 });
 var i4 = class {
@@ -1288,7 +1288,7 @@ var i4 = class {
   }
 };
 
-// ../../node_modules/.pnpm/lit-html@3.3.3/node_modules/lit-html/directive-helpers.js
+// node_modules/lit-html/directive-helpers.js
 var { I: t4 } = j;
 var i5 = (o7) => o7;
 var s4 = () => document.createComment("");
@@ -1321,7 +1321,7 @@ var h3 = (o7) => {
   o7._$AR(), o7._$AA.remove();
 };
 
-// ../../node_modules/.pnpm/lit-html@3.3.3/node_modules/lit-html/directives/repeat.js
+// node_modules/lit-html/directives/repeat.js
 var u4 = (e5, s5, t5) => {
   const r6 = /* @__PURE__ */ new Map();
   for (let l3 = s5; l3 <= t5; l3++) r6.set(e5[l3], l3);
@@ -1374,7 +1374,7 @@ var c4 = e4(class extends i4 {
   }
 });
 
-// ../../node_modules/.pnpm/lit-html@3.3.3/node_modules/lit-html/directives/style-map.js
+// node_modules/lit-html/directives/style-map.js
 var n5 = "important";
 var i6 = " !" + n5;
 var o6 = e4(class extends i4 {
@@ -1403,7 +1403,7 @@ var o6 = e4(class extends i4 {
   }
 });
 
-// ../../node_modules/.pnpm/@outfitkit+core@file+..+outfitkit/node_modules/@outfitkit/core/dist/ok-data-table.js
+// ../outfitkit/dist/ok-data-table.js
 var __defProp2 = Object.defineProperty;
 var __decorateClass2 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -1571,12 +1571,15 @@ var OkDataTable = class extends i3 {
 
     /* ── Topbar / cabecera (relieve) ─────────────────────────────────────────────────────── */
     .bar { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.65rem 1rem; border-bottom: 1px solid var(--border-color); background: var(--header-background); }
-    /* Toolbar CONSOLIDADA: TODOS los controles (buscador, filtros, page-size, vistas, columnas,
-     * CSV, ⋮, alta) son hijos directos de UNA sola fila flex que envuelve ELEMENTO A ELEMENTO
-     * (no por bloques): caben en una línea → una línea; los que no caben bajan a la(s) línea(s)
-     * que hagan falta. El cluster derecho se empuja al borde con .tk-spacer (hueco flexible)
-     * solo cuando todo cabe en una línea; al envolver, el spacer se oculta y todo se apila a la
-     * izquierda. */
+    /* Toolbar CONSOLIDADA: TODOS los controles son hijos directos de UNA sola fila flex que
+     * envuelve ELEMENTO A ELEMENTO (no por bloques): caben en una línea → una línea; los que no
+     * caben bajan a la(s) línea(s) que hagan falta. El cluster derecho se empuja al borde con
+     * .tk-spacer (hueco flexible) solo cuando todo cabe en una línea; al envolver, el spacer se
+     * oculta y todo se apila a la izquierda.
+     * ORDEN CANÓNICO (2026-06-22, izquierda→derecha): [buscador] · [filtros en línea] · ‹spacer› ·
+     * [SELECTORES: columnas → filas/página] · [BOTONES: vistas → filtros(funnel) → import → export →
+     * alta → ⋮ → acción primaria]. Es decir: buscador al inicio, filtros en medio, y al final los
+     * selectores (columnas, luego «N por página») seguidos de los botones de acción. */
     .bar-main { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
     .bar-main > ion-button { --padding-start: 0.5rem; --padding-end: 0.5rem; margin: 0; }
     /* Spacer que absorbe el hueco libre en pantallas anchas (empuja el cluster derecho al borde).
@@ -2287,6 +2290,19 @@ var OkDataTable = class extends i3 {
                   ${this.hasSearch ? b2`<div class="search">${searchbar}</div>` : A}
                   ${this.inlineFilters ? this.renderInlineFilters() : A}
                   <span class="tk-spacer"></span>
+                    ${this.effColumnPicker ? b2`
+                          <ion-select
+                            class="tk-cols"
+                            multiple
+                            interface="popover"
+                            aria-label=${this.t.columnsVisible}
+                            .value=${this.visibleColumns.map((c5) => c5.key)}
+                            .selectedText=${this.t.columns}
+                            @ionChange=${(e5) => this.setVisibleColumns(e5.detail.value)}
+                          >
+                            ${this.columns.map((c5) => b2`<ion-select-option value=${c5.key}>${c5.header}</ion-select-option>`)}
+                          </ion-select>
+                        ` : A}
                     ${this.effPageSizes.length ? b2`
                           <ion-select
                             class="tk-psize"
@@ -2303,19 +2319,6 @@ var OkDataTable = class extends i3 {
                             ${this.toolButton("list-outline", this.viewMode === "table", () => this.setViewMode("table"), this.t.viewList)}
                             ${this.toolButton("grid-outline", this.viewMode === "cards", () => this.setViewMode("cards"), this.t.viewCards)}
                           </span>
-                        ` : A}
-                    ${this.effColumnPicker ? b2`
-                          <ion-select
-                            class="tk-cols"
-                            multiple
-                            interface="popover"
-                            aria-label=${this.t.columnsVisible}
-                            .value=${this.visibleColumns.map((c5) => c5.key)}
-                            .selectedText=${this.t.columns}
-                            @ionChange=${(e5) => this.setVisibleColumns(e5.detail.value)}
-                          >
-                            ${this.columns.map((c5) => b2`<ion-select-option value=${c5.key}>${c5.header}</ion-select-option>`)}
-                          </ion-select>
                         ` : A}
                     ${this.hasFilterRow && !this.inlineFilters ? this.toolButton("funnel-outline", this.panel === "filters" || this.activeFilterCount > 0, () => this.toggle("filters"), this.t.filters, this.serverSide ? void 0 : this.activeFilterCount) : A}
                     ${this.effImport ? b2`
@@ -2678,7 +2681,7 @@ __decorateClass2([
 ], OkDataTable.prototype, "menuOpen");
 define("ok-data-table", OkDataTable);
 
-// ../../node_modules/.pnpm/@erplora+module-sdk@file+..+hub+packages+module-sdk/node_modules/@erplora/module-sdk/src/index.ts
+// ../hub/packages/module-sdk/src/index.ts
 function isEmpty(v3) {
   return v3 === null || v3 === void 0 || v3 === "";
 }
@@ -2796,20 +2799,362 @@ function createListController(client, queryName, onChange = () => {
   return new ListController(client, queryName, onChange, opts);
 }
 
-// ui/components/erp-customers-fields/erp-customers-fields.ts
+// ../modules-workspace/modules/customers/locales/es.json
+var es_default = {
+  name: "Clientes",
+  navigation: {
+    customers: {
+      label: "Clientes"
+    },
+    groups: {
+      label: "Grupos"
+    },
+    tags: {
+      label: "Etiquetas"
+    },
+    fields: {
+      label: "Campos"
+    }
+  },
+  ui: {
+    customers: "Clientes",
+    active: "Activos",
+    vip: "VIP",
+    revenue: "Ingresos",
+    colName: "Nombre",
+    colEmail: "Email",
+    colPhone: "Tel\xE9fono",
+    colStage: "Etapa",
+    colSpent: "Gastado",
+    actionView: "Ver",
+    actionEdit: "Editar",
+    actionDelete: "Eliminar",
+    stageLead: "Lead",
+    stageProspect: "Prospecto",
+    stageFirstPurchase: "1\xAA compra",
+    stageActive: "Activo",
+    stageAtRisk: "En riesgo",
+    stageDormant: "Inactivo",
+    stageChurned: "Perdido",
+    stageVip: "VIP",
+    channelNone: "Ninguno",
+    channelEmail: "Email",
+    channelSms: "SMS",
+    channelWhatsapp: "WhatsApp",
+    channelPhone: "Tel\xE9fono",
+    placeholderName: "Nombre",
+    placeholderEmail: "Email",
+    addCustomer: "A\xF1adir",
+    saving: "Guardando\u2026",
+    searchCustomers: "Buscar nombre o email\u2026",
+    loading: "Cargando\u2026",
+    emptyCustomers: "Sin clientes.",
+    deleteCustomerTitle: "Eliminar cliente",
+    deleteCustomerConfirm: "\xBFEliminar {name}? La ficha deja de estar disponible (borrado l\xF3gico).",
+    deleting: "Eliminando\u2026",
+    cancel: "Cancelar",
+    errCreate: "No se pudo crear",
+    errUpdate: "No se pudo actualizar",
+    errDelete: "No se pudo eliminar",
+    errCustomerNotFound: "Cliente no encontrado",
+    errLoadCustomer: "No se pudo cargar el cliente",
+    errSaveMembership: "No se pudo guardar la asignaci\xF3n",
+    errAddNote: "No se pudo a\xF1adir la nota",
+    customerUpdated: "Cliente actualizado",
+    customerDeleted: "Cliente {name} eliminado",
+    groupsAssigned: "Grupos asignados",
+    tagsAssigned: "Etiquetas asignadas",
+    noteAdded: "Nota a\xF1adida",
+    noteAddedTitle: "Nota a\xF1adida",
+    fieldNif: "NIF/CIF",
+    fieldCompany: "Empresa",
+    fieldAddress: "Direcci\xF3n",
+    fieldCity: "Ciudad",
+    fieldPostalCode: "C\xF3digo postal",
+    fieldCountry: "Pa\xEDs",
+    fieldBirthday: "Cumplea\xF1os",
+    fieldAnniversary: "Aniversario",
+    fieldSource: "Origen",
+    fieldPreferredChannel: "Canal preferido",
+    fieldInternalNotes: "Notas internas",
+    marketingConsent: "Consentimiento de marketing",
+    fieldActive: "Activo",
+    save: "Guardar",
+    back: "\u2190 Volver",
+    edit: "Editar",
+    delete: "Eliminar",
+    noGroupsDefined: "No hay grupos definidos.",
+    noTagsDefined: "No hay etiquetas definidos.",
+    saveGroups: "Guardar grupos",
+    saveTags: "Guardar etiquetas",
+    detailMarketingConsent: "Consent. marketing",
+    detailPurchases: "Compras",
+    detailLastPurchase: "\xDAltima compra",
+    yes: "S\xED",
+    no: "No",
+    groupsHeading: "Grupos",
+    tagsHeading: "Etiquetas",
+    addNote: "A\xF1adir nota",
+    noteLabel: "Nota",
+    add: "A\xF1adir",
+    activityHeading: "Actividad",
+    noActivity: "Sin actividad registrada.",
+    groupsTitle: "Grupos de clientes",
+    newGroup: "Nuevo grupo",
+    colDescription: "Descripci\xF3n",
+    colDiscount: "Descuento %",
+    colCustomers: "Clientes",
+    colOrder: "Orden",
+    searchGroup: "Buscar grupo\u2026",
+    emptyGroups: "Sin grupos.",
+    newGroupTitle: "Nuevo grupo",
+    editGroupTitle: "Editar \xB7 {name}",
+    fieldDescription: "Descripci\xF3n",
+    fieldDiscount: "Descuento %",
+    fieldColor: "Color",
+    fieldOrder: "Orden",
+    deleteGroupTitle: "Eliminar grupo",
+    deleteGroupConfirm: "\xBFEliminar {name}? Los clientes asignados pierden el grupo.",
+    groupCreated: "Grupo creado",
+    groupUpdated: "Grupo actualizado",
+    groupDeleted: "Grupo {name} eliminado",
+    errSaveGroup: "No se pudo guardar el grupo",
+    errDeleteGroup: "No se pudo eliminar el grupo",
+    tagsTitle: "Etiquetas de clientes",
+    newTag: "Nueva etiqueta",
+    colColor: "Color",
+    searchTag: "Buscar etiqueta\u2026",
+    emptyTags: "Sin etiquetas.",
+    newTagTitle: "Nueva etiqueta",
+    editTagTitle: "Editar \xB7 {name}",
+    fieldActiveTag: "Activa",
+    deleteTagTitle: "Eliminar etiqueta",
+    deleteTagConfirm: "\xBFEliminar {name}? Los clientes asignados pierden la etiqueta.",
+    tagCreated: "Etiqueta creada",
+    tagUpdated: "Etiqueta actualizada",
+    tagDeleted: "Etiqueta {name} eliminada",
+    errSaveTag: "No se pudo guardar la etiqueta",
+    errDeleteTag: "No se pudo eliminar la etiqueta",
+    fieldsTitle: "Campos personalizados",
+    newField: "Nuevo campo",
+    colType: "Tipo",
+    colRequired: "Obligatorio",
+    searchField: "Buscar campo\u2026",
+    emptyFields: "Sin campos personalizados.",
+    typeText: "Texto",
+    typeNumber: "N\xFAmero",
+    typeDate: "Fecha",
+    typeBoolean: "S\xED/No",
+    typeSelect: "Selecci\xF3n",
+    typeTextarea: "Texto largo",
+    newFieldTitle: "Nuevo campo personalizado",
+    editFieldTitle: "Editar \xB7 {name}",
+    fieldType: "Tipo",
+    fieldOptions: "Opciones (separadas por coma)",
+    fieldRequired: "Obligatorio",
+    deleteFieldTitle: "Eliminar campo",
+    deleteFieldConfirm: "\xBFEliminar {name}? Los valores guardados dejan de mostrarse.",
+    fieldCreated: "Campo creado",
+    fieldUpdated: "Campo actualizado",
+    fieldDeleted: "Campo {name} eliminado",
+    errSaveField: "No se pudo guardar el campo",
+    errDeleteField: "No se pudo eliminar el campo",
+    assignCustomer: "Asignar cliente",
+    chooseCustomer: "Elegir cliente",
+    searchPosCustomer: "Buscar por nombre, tel\xE9fono, email\u2026",
+    noResults: "Sin resultados.",
+    noCustomers: "No hay clientes.",
+    removeCustomer: "Quitar cliente",
+    errLoadCustomers: "No se pudieron cargar los clientes"
+  }
+};
+
+// ../modules-workspace/modules/customers/locales/en.json
+var en_default = {
+  name: "Customers",
+  navigation: {
+    customers: {
+      label: "Customers"
+    },
+    groups: {
+      label: "Groups"
+    },
+    tags: {
+      label: "Tags"
+    },
+    fields: {
+      label: "Fields"
+    }
+  },
+  ui: {
+    customers: "Customers",
+    active: "Active",
+    vip: "VIP",
+    revenue: "Revenue",
+    colName: "Name",
+    colEmail: "Email",
+    colPhone: "Phone",
+    colStage: "Stage",
+    colSpent: "Spent",
+    actionView: "View",
+    actionEdit: "Edit",
+    actionDelete: "Delete",
+    stageLead: "Lead",
+    stageProspect: "Prospect",
+    stageFirstPurchase: "1st purchase",
+    stageActive: "Active",
+    stageAtRisk: "At risk",
+    stageDormant: "Dormant",
+    stageChurned: "Churned",
+    stageVip: "VIP",
+    channelNone: "None",
+    channelEmail: "Email",
+    channelSms: "SMS",
+    channelWhatsapp: "WhatsApp",
+    channelPhone: "Phone",
+    placeholderName: "Name",
+    placeholderEmail: "Email",
+    addCustomer: "Add",
+    saving: "Saving\u2026",
+    searchCustomers: "Search name or email\u2026",
+    loading: "Loading\u2026",
+    emptyCustomers: "No customers.",
+    deleteCustomerTitle: "Delete customer",
+    deleteCustomerConfirm: "Delete {name}? The record will no longer be available (soft delete).",
+    deleting: "Deleting\u2026",
+    cancel: "Cancel",
+    errCreate: "Could not create",
+    errUpdate: "Could not update",
+    errDelete: "Could not delete",
+    errCustomerNotFound: "Customer not found",
+    errLoadCustomer: "Could not load the customer",
+    errSaveMembership: "Could not save the assignment",
+    errAddNote: "Could not add the note",
+    customerUpdated: "Customer updated",
+    customerDeleted: "Customer {name} deleted",
+    groupsAssigned: "Groups assigned",
+    tagsAssigned: "Tags assigned",
+    noteAdded: "Note added",
+    noteAddedTitle: "Note added",
+    fieldNif: "Tax ID",
+    fieldCompany: "Company",
+    fieldAddress: "Address",
+    fieldCity: "City",
+    fieldPostalCode: "Postal code",
+    fieldCountry: "Country",
+    fieldBirthday: "Birthday",
+    fieldAnniversary: "Anniversary",
+    fieldSource: "Source",
+    fieldPreferredChannel: "Preferred channel",
+    fieldInternalNotes: "Internal notes",
+    marketingConsent: "Marketing consent",
+    fieldActive: "Active",
+    save: "Save",
+    back: "\u2190 Back",
+    edit: "Edit",
+    delete: "Delete",
+    noGroupsDefined: "No groups defined.",
+    noTagsDefined: "No tags defined.",
+    saveGroups: "Save groups",
+    saveTags: "Save tags",
+    detailMarketingConsent: "Marketing consent",
+    detailPurchases: "Purchases",
+    detailLastPurchase: "Last purchase",
+    yes: "Yes",
+    no: "No",
+    groupsHeading: "Groups",
+    tagsHeading: "Tags",
+    addNote: "Add note",
+    noteLabel: "Note",
+    add: "Add",
+    activityHeading: "Activity",
+    noActivity: "No activity recorded.",
+    groupsTitle: "Customer groups",
+    newGroup: "New group",
+    colDescription: "Description",
+    colDiscount: "Discount %",
+    colCustomers: "Customers",
+    colOrder: "Order",
+    searchGroup: "Search group\u2026",
+    emptyGroups: "No groups.",
+    newGroupTitle: "New group",
+    editGroupTitle: "Edit \xB7 {name}",
+    fieldDescription: "Description",
+    fieldDiscount: "Discount %",
+    fieldColor: "Color",
+    fieldOrder: "Order",
+    deleteGroupTitle: "Delete group",
+    deleteGroupConfirm: "Delete {name}? Assigned customers lose the group.",
+    groupCreated: "Group created",
+    groupUpdated: "Group updated",
+    groupDeleted: "Group {name} deleted",
+    errSaveGroup: "Could not save the group",
+    errDeleteGroup: "Could not delete the group",
+    tagsTitle: "Customer tags",
+    newTag: "New tag",
+    colColor: "Color",
+    searchTag: "Search tag\u2026",
+    emptyTags: "No tags.",
+    newTagTitle: "New tag",
+    editTagTitle: "Edit \xB7 {name}",
+    fieldActiveTag: "Active",
+    deleteTagTitle: "Delete tag",
+    deleteTagConfirm: "Delete {name}? Assigned customers lose the tag.",
+    tagCreated: "Tag created",
+    tagUpdated: "Tag updated",
+    tagDeleted: "Tag {name} deleted",
+    errSaveTag: "Could not save the tag",
+    errDeleteTag: "Could not delete the tag",
+    fieldsTitle: "Custom fields",
+    newField: "New field",
+    colType: "Type",
+    colRequired: "Required",
+    searchField: "Search field\u2026",
+    emptyFields: "No custom fields.",
+    typeText: "Text",
+    typeNumber: "Number",
+    typeDate: "Date",
+    typeBoolean: "Yes/No",
+    typeSelect: "Select",
+    typeTextarea: "Long text",
+    newFieldTitle: "New custom field",
+    editFieldTitle: "Edit \xB7 {name}",
+    fieldType: "Type",
+    fieldOptions: "Options (comma-separated)",
+    fieldRequired: "Required",
+    deleteFieldTitle: "Delete field",
+    deleteFieldConfirm: "Delete {name}? Saved values will no longer be shown.",
+    fieldCreated: "Field created",
+    fieldUpdated: "Field updated",
+    fieldDeleted: "Field {name} deleted",
+    errSaveField: "Could not save the field",
+    errDeleteField: "Could not delete the field",
+    assignCustomer: "Assign customer",
+    chooseCustomer: "Choose customer",
+    searchPosCustomer: "Search by name, phone, email\u2026",
+    noResults: "No results.",
+    noCustomers: "No customers.",
+    removeCustomer: "Remove customer",
+    errLoadCustomers: "Could not load the customers"
+  }
+};
+
+// ../modules-workspace/modules/customers/ui/components/erp-customers-fields/erp-customers-fields.ts
+var CATALOG = { es: es_default, en: en_default };
 function erplora() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-var TYPE_LABEL = {
-  text: "Texto",
-  number: "N\xFAmero",
-  date: "Fecha",
-  boolean: "S\xED/No",
-  select: "Selecci\xF3n",
-  textarea: "Texto largo"
+var TYPE_KEY = {
+  text: "ui.typeText",
+  number: "ui.typeNumber",
+  date: "ui.typeDate",
+  boolean: "ui.typeBoolean",
+  select: "ui.typeSelect",
+  textarea: "ui.typeTextarea"
 };
+var typeLabel = (value) => TYPE_KEY[value] ? erplora().t(CATALOG, TYPE_KEY[value]) : value;
 var ErpCustomersFields = class extends i3 {
   constructor() {
     super(...arguments);
@@ -2824,24 +3169,7 @@ var ErpCustomersFields = class extends i3 {
     this.fRequired = false;
     this.fSortOrder = "0";
     this.fActive = true;
-    this.columns = [
-      { key: "name", header: "Nombre", sortable: true, filterable: true, filterType: "text" },
-      {
-        key: "field_type",
-        header: "Tipo",
-        sortable: true,
-        filterable: true,
-        filterType: "select",
-        options: Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label })),
-        format: (r6) => TYPE_LABEL[r6.field_type] ?? r6.field_type
-      },
-      { key: "is_required", header: "Obligatorio", sortable: true, format: (r6) => r6.is_required ? "S\xED" : "No" },
-      { key: "sort_order", header: "Orden", align: "right", sortable: true }
-    ];
-    this.rowActions = [
-      { id: "edit", label: "Editar" },
-      { id: "delete", label: "Eliminar", color: "danger" }
-    ];
+    this.onLocaleChange = () => this.requestUpdate();
   }
   static {
     this.styles = i`
@@ -2858,14 +3186,43 @@ var ErpCustomersFields = class extends i3 {
     .ok { color:#2b8a3e; font-weight:600; }
   `;
   }
+  get columns() {
+    const t5 = (k2) => erplora().t(CATALOG, k2);
+    return [
+      { key: "name", header: t5("ui.colName"), sortable: true, filterable: true, filterType: "text" },
+      {
+        key: "field_type",
+        header: t5("ui.colType"),
+        sortable: true,
+        filterable: true,
+        filterType: "select",
+        options: Object.keys(TYPE_KEY).map((value) => ({ value, label: typeLabel(value) })),
+        format: (r6) => typeLabel(r6.field_type)
+      },
+      { key: "is_required", header: t5("ui.colRequired"), sortable: true, format: (r6) => r6.is_required ? t5("ui.yes") : t5("ui.no") },
+      { key: "sort_order", header: t5("ui.colOrder"), align: "right", sortable: true }
+    ];
+  }
+  get rowActions() {
+    const t5 = (k2) => erplora().t(CATALOG, k2);
+    return [
+      { id: "edit", label: t5("ui.actionEdit") },
+      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+    ];
+  }
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener("erplora:locale-changed", this.onLocaleChange);
     this.ctrl = createListController(erplora(), "customers.fields.list", () => this.requestUpdate(), {
       pageSize: 50,
       sort: "sort_order",
       dir: "asc"
     });
     await this.ctrl.load();
+  }
+  disconnectedCallback() {
+    window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    super.disconnectedCallback();
   }
   resetForm() {
     this.editing = null;
@@ -2930,7 +3287,7 @@ var ErpCustomersFields = class extends i3 {
           is_required: this.fRequired ? 1 : 0,
           sort_order: Number(this.fSortOrder) || 0
         });
-        this.formMsg = "Campo creado";
+        this.formMsg = erplora().t(CATALOG, "ui.fieldCreated");
       } else {
         await erplora().command("customers.fields.update", {
           field_id: this.editing.id,
@@ -2941,12 +3298,12 @@ var ErpCustomersFields = class extends i3 {
           sort_order: Number(this.fSortOrder) || 0,
           is_active: this.fActive ? 1 : 0
         });
-        this.formMsg = "Campo actualizado";
+        this.formMsg = erplora().t(CATALOG, "ui.fieldUpdated");
       }
       this.resetForm();
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo guardar el campo";
+      this.formError = e5 instanceof Error ? e5.message : erplora().t(CATALOG, "ui.errSaveField");
     } finally {
       this.saving = false;
     }
@@ -2957,11 +3314,11 @@ var ErpCustomersFields = class extends i3 {
     this.formError = "";
     try {
       await erplora().command("customers.fields.delete", { field_id: this.pendingDelete.id });
-      this.formMsg = `Campo ${this.pendingDelete.name} eliminado`;
+      this.formMsg = erplora().t(CATALOG, "ui.fieldDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo eliminar el campo";
+      this.formError = e5 instanceof Error ? e5.message : erplora().t(CATALOG, "ui.errDeleteField");
     } finally {
       this.saving = false;
     }
@@ -2969,43 +3326,46 @@ var ErpCustomersFields = class extends i3 {
   renderForm() {
     if (!this.editing) return A;
     const isNew = this.editing === "new";
+    const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
     return b2`<section class="panel">
-      <h3>${isNew ? "Nuevo campo personalizado" : `Editar \xB7 ${this.editing.name}`}</h3>
+      <h3>${isNew ? t5("ui.newFieldTitle") : t5("ui.editFieldTitle", { name: this.editing.name })}</h3>
       <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input label="Nombre" label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-select label="Tipo" label-placement="stacked" .value=${this.fType} @ionChange=${(e5) => this.fType = e5.target.value}>
-          ${Object.entries(TYPE_LABEL).map(([v3, l3]) => b2`<ion-select-option value=${v3}>${l3}</ion-select-option>`)}
+        <ion-input label=${t5("ui.colName")} label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+        <ion-select label=${t5("ui.fieldType")} label-placement="stacked" .value=${this.fType} @ionChange=${(e5) => this.fType = e5.target.value}>
+          ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
         </ion-select>
-        ${this.fType === "select" ? b2`<ion-input label="Opciones (separadas por coma)" label-placement="stacked" .value=${this.fOptions} @ionInput=${(e5) => this.fOptions = e5.target.value}></ion-input>` : A}
-        <ion-input type="number" label="Orden" label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
-        <label class="check"><ion-checkbox .checked=${this.fRequired} @ionChange=${(e5) => this.fRequired = e5.target.checked}></ion-checkbox> Obligatorio</label>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> Activo</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? "Guardando\u2026" : "Guardar"}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>Cancelar</ion-button>
+        ${this.fType === "select" ? b2`<ion-input label=${t5("ui.fieldOptions")} label-placement="stacked" .value=${this.fOptions} @ionInput=${(e5) => this.fOptions = e5.target.value}></ion-input>` : A}
+        <ion-input type="number" label=${t5("ui.fieldOrder")} label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
+        <label class="check"><ion-checkbox .checked=${this.fRequired} @ionChange=${(e5) => this.fRequired = e5.target.checked}></ion-checkbox> ${t5("ui.fieldRequired")}</label>
+        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActive")}</label>`}
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
       </form>
     </section>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
+    const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
     return b2`<section class="panel">
-      <h3>Eliminar campo</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? Los valores guardados dejan de mostrarse.</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? "Eliminando\u2026" : "Eliminar"}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>Cancelar</ion-button>
+      <h3>${t5("ui.deleteFieldTitle")}</h3>
+      <p>${t5("ui.deleteFieldConfirm", { name: this.pendingDelete.name })}</p>
+      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
+    const t5 = (k2) => erplora().t(CATALOG, k2);
     return b2`<div>
       <header>
-        <h2>Campos personalizados</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>Nuevo campo</ion-button>
+        <h2>${t5("ui.fieldsTitle")}</h2>
+        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newField")}</ion-button>
       </header>
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${"Buscar campo\u2026"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? "Cargando\u2026" : "Sin campos personalizados."} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
     </div>`;
   }
 };
@@ -3044,7 +3404,8 @@ __decorateClass([
 ], ErpCustomersFields.prototype, "fActive", 2);
 define("erp-customers-fields", ErpCustomersFields);
 
-// ui/components/erp-customers-groups/erp-customers-groups.ts
+// ../modules-workspace/modules/customers/ui/components/erp-customers-groups/erp-customers-groups.ts
+var CATALOG2 = { es: es_default, en: en_default };
 function erplora2() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -3064,17 +3425,7 @@ var ErpCustomersGroups = class extends i3 {
     this.fColor = "primary";
     this.fSortOrder = "0";
     this.fActive = true;
-    this.columns = [
-      { key: "name", header: "Nombre", sortable: true, filterable: true, filterType: "text" },
-      { key: "description", header: "Descripci\xF3n", sortable: true },
-      { key: "discount_percent", header: "Descuento %", align: "right", sortable: true, filterable: true, filterType: "range", format: (r6) => `${Number(r6.discount_percent || 0)}%` },
-      { key: "customer_count", header: "Clientes", align: "right", sortable: true },
-      { key: "sort_order", header: "Orden", align: "right", sortable: true }
-    ];
-    this.rowActions = [
-      { id: "edit", label: "Editar" },
-      { id: "delete", label: "Eliminar", color: "danger" }
-    ];
+    this.onLocaleChange = () => this.requestUpdate();
   }
   static {
     this.styles = i`
@@ -3090,14 +3441,36 @@ var ErpCustomersGroups = class extends i3 {
     .ok { color:#2b8a3e; font-weight:600; }
   `;
   }
+  get columns() {
+    const t5 = (k2) => erplora2().t(CATALOG2, k2);
+    return [
+      { key: "name", header: t5("ui.colName"), sortable: true, filterable: true, filterType: "text" },
+      { key: "description", header: t5("ui.colDescription"), sortable: true },
+      { key: "discount_percent", header: t5("ui.colDiscount"), align: "right", sortable: true, filterable: true, filterType: "range", format: (r6) => `${Number(r6.discount_percent || 0)}%` },
+      { key: "customer_count", header: t5("ui.colCustomers"), align: "right", sortable: true },
+      { key: "sort_order", header: t5("ui.colOrder"), align: "right", sortable: true }
+    ];
+  }
+  get rowActions() {
+    const t5 = (k2) => erplora2().t(CATALOG2, k2);
+    return [
+      { id: "edit", label: t5("ui.actionEdit") },
+      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+    ];
+  }
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener("erplora:locale-changed", this.onLocaleChange);
     this.ctrl = createListController(erplora2(), "customers.groups.list", () => this.requestUpdate(), {
       pageSize: 50,
       sort: "name",
       dir: "asc"
     });
     await this.ctrl.load();
+  }
+  disconnectedCallback() {
+    window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    super.disconnectedCallback();
   }
   resetForm() {
     this.editing = null;
@@ -3149,7 +3522,7 @@ var ErpCustomersGroups = class extends i3 {
           color: this.fColor.trim() || "primary",
           sort_order: Number(this.fSortOrder) || 0
         });
-        this.formMsg = "Grupo creado";
+        this.formMsg = erplora2().t(CATALOG2, "ui.groupCreated");
       } else {
         await erplora2().command("customers.groups.update", {
           group_id: this.editing.id,
@@ -3160,12 +3533,12 @@ var ErpCustomersGroups = class extends i3 {
           sort_order: Number(this.fSortOrder) || 0,
           is_active: this.fActive ? 1 : 0
         });
-        this.formMsg = "Grupo actualizado";
+        this.formMsg = erplora2().t(CATALOG2, "ui.groupUpdated");
       }
       this.resetForm();
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo guardar el grupo";
+      this.formError = e5 instanceof Error ? e5.message : erplora2().t(CATALOG2, "ui.errSaveGroup");
     } finally {
       this.saving = false;
     }
@@ -3176,11 +3549,11 @@ var ErpCustomersGroups = class extends i3 {
     this.formError = "";
     try {
       await erplora2().command("customers.groups.delete", { group_id: this.pendingDelete.id });
-      this.formMsg = `Grupo ${this.pendingDelete.name} eliminado`;
+      this.formMsg = erplora2().t(CATALOG2, "ui.groupDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo eliminar el grupo";
+      this.formError = e5 instanceof Error ? e5.message : erplora2().t(CATALOG2, "ui.errDeleteGroup");
     } finally {
       this.saving = false;
     }
@@ -3188,41 +3561,44 @@ var ErpCustomersGroups = class extends i3 {
   renderForm() {
     if (!this.editing) return A;
     const isNew = this.editing === "new";
+    const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
     return b2`<section class="panel">
-      <h3>${isNew ? "Nuevo grupo" : `Editar \xB7 ${this.editing.name}`}</h3>
+      <h3>${isNew ? t5("ui.newGroupTitle") : t5("ui.editGroupTitle", { name: this.editing.name })}</h3>
       <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input label="Nombre" label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-input label="Descripción" label-placement="stacked" .value=${this.fDescription} @ionInput=${(e5) => this.fDescription = e5.target.value}></ion-input>
-        <ion-input type="number" label="Descuento %" label-placement="stacked" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e5) => this.fDiscount = e5.target.value}></ion-input>
-        <ion-input label="Color" label-placement="stacked" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
-        <ion-input type="number" label="Orden" label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> Activo</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? "Guardando\u2026" : "Guardar"}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>Cancelar</ion-button>
+        <ion-input label=${t5("ui.colName")} label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+        <ion-input label=${t5("ui.fieldDescription")} label-placement="stacked" .value=${this.fDescription} @ionInput=${(e5) => this.fDescription = e5.target.value}></ion-input>
+        <ion-input type="number" label=${t5("ui.fieldDiscount")} label-placement="stacked" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e5) => this.fDiscount = e5.target.value}></ion-input>
+        <ion-input label=${t5("ui.fieldColor")} label-placement="stacked" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
+        <ion-input type="number" label=${t5("ui.fieldOrder")} label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
+        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActive")}</label>`}
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
       </form>
     </section>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
+    const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
     return b2`<section class="panel">
-      <h3>Eliminar grupo</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? Los clientes asignados pierden el grupo.</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? "Eliminando\u2026" : "Eliminar"}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>Cancelar</ion-button>
+      <h3>${t5("ui.deleteGroupTitle")}</h3>
+      <p>${t5("ui.deleteGroupConfirm", { name: this.pendingDelete.name })}</p>
+      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
+    const t5 = (k2) => erplora2().t(CATALOG2, k2);
     return b2`<div>
       <header>
-        <h2>Grupos de clientes</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>Nuevo grupo</ion-button>
+        <h2>${t5("ui.groupsTitle")}</h2>
+        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newGroup")}</ion-button>
       </header>
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${"Buscar grupo\u2026"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? "Cargando\u2026" : "Sin grupos."} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
     </div>`;
   }
 };
@@ -3261,7 +3637,7 @@ __decorateClass([
 ], ErpCustomersGroups.prototype, "fActive", 2);
 define("erp-customers-groups", ErpCustomersGroups);
 
-// ../../node_modules/.pnpm/@outfitkit+core@file+..+outfitkit/node_modules/@outfitkit/core/dist/ok-kpi.js
+// ../outfitkit/dist/ok-kpi.js
 var __defProp3 = Object.defineProperty;
 var __decorateClass3 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -3404,29 +3780,32 @@ __decorateClass3([
 ], OkKpi.prototype, "icon");
 define("ok-kpi", OkKpi);
 
-// ui/components/erp-customers-list/erp-customers-list.ts
+// ../modules-workspace/modules/customers/ui/components/erp-customers-list/erp-customers-list.ts
+var CATALOG3 = { es: es_default, en: en_default };
 function erplora3() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-var STAGE_LABEL = {
-  lead: "Lead",
-  prospect: "Prospecto",
-  first_purchase: "1\xAA compra",
-  active: "Activo",
-  at_risk: "En riesgo",
-  dormant: "Inactivo",
-  churned: "Perdido",
-  vip: "VIP"
+var STAGE_KEY = {
+  lead: "ui.stageLead",
+  prospect: "ui.stageProspect",
+  first_purchase: "ui.stageFirstPurchase",
+  active: "ui.stageActive",
+  at_risk: "ui.stageAtRisk",
+  dormant: "ui.stageDormant",
+  churned: "ui.stageChurned",
+  vip: "ui.stageVip"
 };
-var CHANNEL_LABEL = {
-  none: "Ninguno",
-  email: "Email",
-  sms: "SMS",
-  whatsapp: "WhatsApp",
-  phone: "Tel\xE9fono"
+var CHANNEL_KEY = {
+  none: "ui.channelNone",
+  email: "ui.channelEmail",
+  sms: "ui.channelSms",
+  whatsapp: "ui.channelWhatsapp",
+  phone: "ui.channelPhone"
 };
+var stageLabel = (value) => STAGE_KEY[value] ? erplora3().t(CATALOG3, STAGE_KEY[value]) : value;
+var channelLabel = (value) => CHANNEL_KEY[value] ? erplora3().t(CATALOG3, CHANNEL_KEY[value]) : value;
 var EMPTY_FORM = {
   name: "",
   email: "",
@@ -3465,33 +3844,7 @@ var ErpCustomersList = class extends i3 {
     this.groupIds = [];
     this.tagIds = [];
     this.newNote = "";
-    this.columns = [
-      { key: "name", header: "Nombre", sortable: true, filterable: true, filterType: "text" },
-      { key: "email", header: "Email", sortable: true, filterable: true, filterType: "text" },
-      { key: "phone", header: "Tel\xE9fono", sortable: true, filterable: true, filterType: "text" },
-      {
-        key: "lifecycle_stage",
-        header: "Etapa",
-        sortable: true,
-        filterable: true,
-        filterType: "select",
-        options: Object.entries(STAGE_LABEL).map(([value, label]) => ({ value, label })),
-        format: (r6) => STAGE_LABEL[r6.lifecycle_stage] ?? r6.lifecycle_stage
-      },
-      {
-        key: "total_spent",
-        header: "Gastado",
-        align: "right",
-        sortable: true,
-        filterable: true,
-        filterType: "range",
-        format: (r6) => Number(r6.total_spent || 0).toFixed(2)
-      }
-    ];
-    this.rowActions = [
-      { id: "view", label: "Ver" },
-      { id: "delete", label: "Eliminar", color: "danger" }
-    ];
+    this.onLocaleChange = () => this.requestUpdate();
   }
   static {
     this.styles = i`
@@ -3520,8 +3873,42 @@ var ErpCustomersList = class extends i3 {
     footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
   `;
   }
+  get columns() {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    return [
+      { key: "name", header: t5("ui.colName"), sortable: true, filterable: true, filterType: "text" },
+      { key: "email", header: t5("ui.colEmail"), sortable: true, filterable: true, filterType: "text" },
+      { key: "phone", header: t5("ui.colPhone"), sortable: true, filterable: true, filterType: "text" },
+      {
+        key: "lifecycle_stage",
+        header: t5("ui.colStage"),
+        sortable: true,
+        filterable: true,
+        filterType: "select",
+        options: Object.keys(STAGE_KEY).map((value) => ({ value, label: stageLabel(value) })),
+        format: (r6) => stageLabel(r6.lifecycle_stage)
+      },
+      {
+        key: "total_spent",
+        header: t5("ui.colSpent"),
+        align: "right",
+        sortable: true,
+        filterable: true,
+        filterType: "range",
+        format: (r6) => Number(r6.total_spent || 0).toFixed(2)
+      }
+    ];
+  }
+  get rowActions() {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    return [
+      { id: "view", label: t5("ui.actionView") },
+      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+    ];
+  }
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener("erplora:locale-changed", this.onLocaleChange);
     this.ctrl = createListController(erplora3(), "customers.list", () => this.requestUpdate(), {
       pageSize: 50,
       sort: "name",
@@ -3550,8 +3937,9 @@ var ErpCustomersList = class extends i3 {
     }
   }
   disconnectedCallback() {
-    super.disconnectedCallback();
+    window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     this.unsub?.();
+    super.disconnectedCallback();
   }
   fmt(n6) {
     return n6 == null ? "\u2014" : Number(n6).toFixed(2);
@@ -3628,7 +4016,7 @@ var ErpCustomersList = class extends i3 {
       this.newEmail = "";
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo crear";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errCreate");
     } finally {
       this.saving = false;
     }
@@ -3643,13 +4031,13 @@ var ErpCustomersList = class extends i3 {
       const rows2 = await erplora3().query("customers.get", { customer_id: id });
       const customer = rows2?.[0];
       if (!customer) {
-        this.formError = "Cliente no encontrado";
+        this.formError = erplora3().t(CATALOG3, "ui.errCustomerNotFound");
         return;
       }
       this.detail = customer;
       await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo cargar el cliente";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
   }
   async loadActivities(id) {
@@ -3744,10 +4132,10 @@ var ErpCustomersList = class extends i3 {
         is_active: this.form.is_active ? 1 : 0
       });
       this.editing = false;
-      this.formMsg = "Cliente actualizado";
+      this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo actualizar";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errUpdate");
     } finally {
       this.saving = false;
     }
@@ -3762,10 +4150,10 @@ var ErpCustomersList = class extends i3 {
       await erplora3().command("customers.delete", { customer_id: target.id });
       this.pendingDelete = null;
       if (this.detail?.id === target.id) this.closeDetail();
-      this.formMsg = `Cliente ${target.name} eliminado`;
+      this.formMsg = erplora3().t(CATALOG3, "ui.customerDeleted", { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo eliminar";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errDelete");
     } finally {
       this.saving = false;
     }
@@ -3784,10 +4172,10 @@ var ErpCustomersList = class extends i3 {
       } else {
         await erplora3().command("customers.set_tags", { customer_id: this.detail.id, ids: this.tagIds });
       }
-      this.formMsg = kind === "groups" ? "Grupos asignados" : "Etiquetas asignadas";
+      this.formMsg = erplora3().t(CATALOG3, kind === "groups" ? "ui.groupsAssigned" : "ui.tagsAssigned");
       await this.loadMemberships(this.detail.id);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo guardar la asignaci\xF3n";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errSaveMembership");
     } finally {
       this.saving = false;
     }
@@ -3808,17 +4196,17 @@ var ErpCustomersList = class extends i3 {
       await erplora3().command("customers.activity.add", {
         customer_id: this.detail.id,
         activity_type: "note",
-        title: "Nota a\xF1adida",
+        title: erplora3().t(CATALOG3, "ui.noteAddedTitle"),
         description: content,
         extra_metadata: "{}",
         related_object_id: null,
         related_object_type: ""
       });
       this.newNote = "";
-      this.formMsg = "Nota a\xF1adida";
+      this.formMsg = erplora3().t(CATALOG3, "ui.noteAdded");
       await this.loadActivities(this.detail.id);
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo a\xF1adir la nota";
+      this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errAddNote");
     } finally {
       this.saving = false;
     }
@@ -3827,63 +4215,66 @@ var ErpCustomersList = class extends i3 {
   renderStats() {
     if (!this.stats) return A;
     const s5 = this.stats;
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<div class="kpis">
-      <ok-kpi label="Clientes" value=${String(s5.total ?? 0)}></ok-kpi>
-      <ok-kpi label="Activos" value=${String(s5.active ?? 0)}></ok-kpi>
-      <ok-kpi label="VIP" value=${String(s5.vip ?? 0)}></ok-kpi>
-      <ok-kpi label="Ingresos" value=${this.fmt(s5.total_revenue)}></ok-kpi>
+      <ok-kpi label=${t5("ui.customers")} value=${String(s5.total ?? 0)}></ok-kpi>
+      <ok-kpi label=${t5("ui.active")} value=${String(s5.active ?? 0)}></ok-kpi>
+      <ok-kpi label=${t5("ui.vip")} value=${String(s5.vip ?? 0)}></ok-kpi>
+      <ok-kpi label=${t5("ui.revenue")} value=${this.fmt(s5.total_revenue)}></ok-kpi>
     </div>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
+    const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
     return b2`<section class="panel">
-      <h3>Eliminar cliente</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? La ficha deja de estar disponible (borrado lógico).</p>
+      <h3>${t5("ui.deleteCustomerTitle")}</h3>
+      <p>${t5("ui.deleteCustomerConfirm", { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? "Eliminando\u2026" : "Eliminar"}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>Cancelar</ion-button>
+        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
       </footer>
     </section>`;
   }
   renderEditForm() {
     const f3 = this.form;
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const input = (key, label, type = "text") => b2`
       <ion-input type=${type} label=${label} label-placement="stacked" .value=${String(f3[key] ?? "")}
         @ionInput=${(e5) => this.form = { ...this.form, [key]: e5.target.value }}></ion-input>`;
     return b2`<form @submit=${(e5) => this.saveEdit(e5)}>
       <div class="grid2">
-        ${input("name", "Nombre")}
-        ${input("email", "Email", "email")}
-        ${input("phone", "Tel\xE9fono")}
-        ${input("tax_id", "NIF/CIF")}
-        ${input("company_name", "Empresa")}
-        ${input("address", "Direcci\xF3n")}
-        ${input("city", "Ciudad")}
-        ${input("postal_code", "C\xF3digo postal")}
-        ${input("country", "Pa\xEDs")}
-        ${input("birthday", "Cumplea\xF1os", "date")}
-        ${input("anniversary", "Aniversario", "date")}
-        ${input("source", "Origen")}
-        <ion-select label="Etapa" label-placement="stacked" .value=${f3.lifecycle_stage}
+        ${input("name", t5("ui.colName"))}
+        ${input("email", t5("ui.colEmail"), "email")}
+        ${input("phone", t5("ui.colPhone"))}
+        ${input("tax_id", t5("ui.fieldNif"))}
+        ${input("company_name", t5("ui.fieldCompany"))}
+        ${input("address", t5("ui.fieldAddress"))}
+        ${input("city", t5("ui.fieldCity"))}
+        ${input("postal_code", t5("ui.fieldPostalCode"))}
+        ${input("country", t5("ui.fieldCountry"))}
+        ${input("birthday", t5("ui.fieldBirthday"), "date")}
+        ${input("anniversary", t5("ui.fieldAnniversary"), "date")}
+        ${input("source", t5("ui.fieldSource"))}
+        <ion-select label=${t5("ui.colStage")} label-placement="stacked" .value=${f3.lifecycle_stage}
           @ionChange=${(e5) => this.form = { ...this.form, lifecycle_stage: e5.target.value }}>
-          ${Object.entries(STAGE_LABEL).map(([v3, l3]) => b2`<ion-select-option value=${v3}>${l3}</ion-select-option>`)}
+          ${Object.keys(STAGE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${stageLabel(v3)}</ion-select-option>`)}
         </ion-select>
-        <ion-select label="Canal preferido" label-placement="stacked" .value=${f3.preferred_channel}
+        <ion-select label=${t5("ui.fieldPreferredChannel")} label-placement="stacked" .value=${f3.preferred_channel}
           @ionChange=${(e5) => this.form = { ...this.form, preferred_channel: e5.target.value }}>
-          ${Object.entries(CHANNEL_LABEL).map(([v3, l3]) => b2`<ion-select-option value=${v3}>${l3}</ion-select-option>`)}
+          ${Object.keys(CHANNEL_KEY).map((v3) => b2`<ion-select-option value=${v3}>${channelLabel(v3)}</ion-select-option>`)}
         </ion-select>
       </div>
       <div class="form">
-        <ion-textarea label="Notas internas" label-placement="stacked" auto-grow .value=${f3.notes}
+        <ion-textarea label=${t5("ui.fieldInternalNotes")} label-placement="stacked" auto-grow .value=${f3.notes}
           @ionInput=${(e5) => this.form = { ...this.form, notes: e5.target.value }}></ion-textarea>
       </div>
       <label class="check"><ion-checkbox .checked=${f3.marketing_consent}
-        @ionChange=${(e5) => this.form = { ...this.form, marketing_consent: e5.target.checked }}></ion-checkbox> Consentimiento de marketing</label>
+        @ionChange=${(e5) => this.form = { ...this.form, marketing_consent: e5.target.checked }}></ion-checkbox> ${t5("ui.marketingConsent")}</label>
       <label class="check"><ion-checkbox .checked=${f3.is_active}
-        @ionChange=${(e5) => this.form = { ...this.form, is_active: e5.target.checked }}></ion-checkbox> Activo</label>
+        @ionChange=${(e5) => this.form = { ...this.form, is_active: e5.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
       <footer class="actions">
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? "Guardando\u2026" : "Guardar"}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.editing = false}>Cancelar</ion-button>
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.editing = false}>${t5("ui.cancel")}</ion-button>
       </footer>
     </form>`;
   }
@@ -3891,7 +4282,8 @@ var ErpCustomersList = class extends i3 {
     const isGroups = kind === "groups";
     const items = isGroups ? this.groups : this.tags;
     const selected = isGroups ? this.groupIds : this.tagIds;
-    if (!items.length) return b2`<p>No hay ${isGroups ? "grupos" : "etiquetas"} definidos.</p>`;
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    if (!items.length) return b2`<p>${t5(isGroups ? "ui.noGroupsDefined" : "ui.noTagsDefined")}</p>`;
     return b2`<div>
       <div class="chips">
         ${items.map((it) => b2`<label class="check">
@@ -3903,81 +4295,83 @@ var ErpCustomersList = class extends i3 {
           ${it.name}${isGroups && Number(it.discount_percent) > 0 ? ` (\u2212${Number(it.discount_percent)}%)` : ""}
         </label>`)}
       </div>
-      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>Guardar ${isGroups ? "grupos" : "etiquetas"}</ion-button>
+      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>
     </div>`;
   }
   renderDetail() {
     const d3 = this.detail;
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<div>
       <header>
         <h2>${d3.name}</h2>
-        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>← Volver</ion-button>
-        ${this.editing ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>Editar</ion-button>`}
+        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
+        ${this.editing ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
         <ion-button size="small" color="danger" fill="outline" @click=${() => {
       this.pendingDelete = d3;
-    }}>Eliminar</ion-button>
+    }}>${t5("ui.delete")}</ion-button>
       </header>
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : b2`<dl class="meta">
-          <div><dt>Email</dt><dd>${d3.email || "\u2014"}</dd></div>
-          <div><dt>Teléfono</dt><dd>${d3.phone || "\u2014"}</dd></div>
-          <div><dt>NIF/CIF</dt><dd>${d3.tax_id || "\u2014"}</dd></div>
-          <div><dt>Empresa</dt><dd>${d3.company_name || "\u2014"}</dd></div>
-          <div><dt>Dirección</dt><dd>${[d3.address, d3.postal_code, d3.city, d3.country].filter(Boolean).join(", ") || "\u2014"}</dd></div>
-          <div><dt>Etapa</dt><dd>${STAGE_LABEL[d3.lifecycle_stage] ?? d3.lifecycle_stage}</dd></div>
-          <div><dt>Origen</dt><dd>${d3.source || "\u2014"}</dd></div>
-          <div><dt>Canal preferido</dt><dd>${CHANNEL_LABEL[d3.preferred_channel] ?? d3.preferred_channel}</dd></div>
-          <div><dt>Consent. marketing</dt><dd>${d3.marketing_consent ? "S\xED" : "No"}</dd></div>
-          <div><dt>Compras</dt><dd>${d3.total_purchases ?? 0}</dd></div>
-          <div><dt>Gastado</dt><dd>${this.fmt(d3.total_spent)}</dd></div>
-          <div><dt>Última compra</dt><dd>${d3.last_purchase_date || "\u2014"}</dd></div>
-          <div><dt>Activo</dt><dd>${d3.is_active ? "S\xED" : "No"}</dd></div>
+          <div><dt>${t5("ui.colEmail")}</dt><dd>${d3.email || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.colPhone")}</dt><dd>${d3.phone || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldNif")}</dt><dd>${d3.tax_id || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldCompany")}</dt><dd>${d3.company_name || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldAddress")}</dt><dd>${[d3.address, d3.postal_code, d3.city, d3.country].filter(Boolean).join(", ") || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.colStage")}</dt><dd>${stageLabel(d3.lifecycle_stage)}</dd></div>
+          <div><dt>${t5("ui.fieldSource")}</dt><dd>${d3.source || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldPreferredChannel")}</dt><dd>${channelLabel(d3.preferred_channel)}</dd></div>
+          <div><dt>${t5("ui.detailMarketingConsent")}</dt><dd>${d3.marketing_consent ? t5("ui.yes") : t5("ui.no")}</dd></div>
+          <div><dt>${t5("ui.detailPurchases")}</dt><dd>${d3.total_purchases ?? 0}</dd></div>
+          <div><dt>${t5("ui.colSpent")}</dt><dd>${this.fmt(d3.total_spent)}</dd></div>
+          <div><dt>${t5("ui.detailLastPurchase")}</dt><dd>${d3.last_purchase_date || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldActive")}</dt><dd>${d3.is_active ? t5("ui.yes") : t5("ui.no")}</dd></div>
         </dl>`}
       </section>
       <section class="panel">
-        <h3>Grupos</h3>
+        <h3>${t5("ui.groupsHeading")}</h3>
         ${this.renderMembership("groups")}
-        <h3 style="margin-top:.75rem">Etiquetas</h3>
+        <h3 style="margin-top:.75rem">${t5("ui.tagsHeading")}</h3>
         ${this.renderMembership("tags")}
       </section>
       <section class="panel">
-        <h3>Añadir nota</h3>
+        <h3>${t5("ui.addNote")}</h3>
         <form class="form" @submit=${(e5) => this.addNote(e5)}>
-          <ion-textarea label="Nota" label-placement="stacked" auto-grow .value=${this.newNote}
+          <ion-textarea label=${t5("ui.noteLabel")} label-placement="stacked" auto-grow .value=${this.newNote}
             @ionInput=${(e5) => this.newNote = e5.target.value}></ion-textarea>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>Añadir</ion-button>
+          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
         </form>
-        <h3>Actividad</h3>
+        <h3>${t5("ui.activityHeading")}</h3>
         ${this.activities.length ? b2`<ul class="timeline">
           ${this.activities.map((a3) => b2`<li>
             <div class="t">${a3.title} <small>(${a3.activity_type})</small></div>
             ${a3.description ? b2`<div class="d">${a3.description}</div>` : A}
             <div class="when">${a3.created_at}</div>
           </li>`)}
-        </ul>` : b2`<p>Sin actividad registrada.</p>`}
+        </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}
       </section>
     </div>`;
   }
   render() {
     if (this.detail) return this.renderDetail();
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<div>
         <header>
-          <h2>Clientes</h2>
+          <h2>${t5("ui.customers")}</h2>
         </header>
         ${this.renderStats()}
         <form class="form" @submit=${(e5) => this.create(e5)}>
-          <ion-input placeholder="Nombre" .value=${this.newName} @ionInput=${(e5) => this.newName = e5.target.value}></ion-input>
-          <ion-input type="email" placeholder="Email" .value=${this.newEmail} @ionInput=${(e5) => this.newEmail = e5.target.value}></ion-input>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? "Guardando\u2026" : "A\xF1adir"}</ion-button>
+          <ion-input placeholder=${t5("ui.placeholderName")} .value=${this.newName} @ionInput=${(e5) => this.newName = e5.target.value}></ion-input>
+          <ion-input type="email" placeholder=${t5("ui.placeholderEmail")} .value=${this.newEmail} @ionInput=${(e5) => this.newEmail = e5.target.value}></ion-input>
+          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
         </form>
         ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
         ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email\u2026"} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? "Cargando\u2026" : "Sin clientes."} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
       </div>`;
   }
 };
@@ -4031,7 +4425,8 @@ __decorateClass([
 ], ErpCustomersList.prototype, "newNote", 2);
 define("erp-customers-list", ErpCustomersList);
 
-// ui/components/erp-customers-pos-search/erp-customers-pos-search.ts
+// ../modules-workspace/modules/customers/ui/components/erp-customers-pos-search/erp-customers-pos-search.ts
+var CATALOG4 = { es: es_default, en: en_default };
 function erplora4() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -4055,6 +4450,7 @@ var ErpCustomersPosSearch = class extends i3 {
       this.selectedId = void 0;
       this.selectedName = "";
     };
+    this.onLocaleChange = () => this.requestUpdate();
   }
   static {
     this.styles = i`
@@ -4077,10 +4473,12 @@ var ErpCustomersPosSearch = class extends i3 {
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener("erp:customer-context-reset", this.onReset);
+    window.addEventListener("erplora:locale-changed", this.onLocaleChange);
   }
   disconnectedCallback() {
-    super.disconnectedCallback();
     this.removeEventListener("erp:customer-context-reset", this.onReset);
+    window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    super.disconnectedCallback();
   }
   async openPicker() {
     this.open = true;
@@ -4093,7 +4491,7 @@ var ErpCustomersPosSearch = class extends i3 {
       const r6 = await erplora4().query("customers.list", { search: q, page_size: 20, sort: "name", dir: "asc" }).catch(() => []);
       this.results = rows(r6);
     } catch (e5) {
-      this.error = e5 instanceof Error ? e5.message : "No se pudieron cargar los clientes";
+      this.error = e5 instanceof Error ? e5.message : erplora4().t(CATALOG4, "ui.errLoadCustomers");
     } finally {
       this.loading = false;
     }
@@ -4123,9 +4521,10 @@ var ErpCustomersPosSearch = class extends i3 {
     this.open = false;
   }
   render() {
+    const t5 = (k2) => erplora4().t(CATALOG4, k2);
     return b2`
       <ion-button class="open" fill=${this.selectedId ? "solid" : "outline"} size="small" @click=${() => this.openPicker()}>
-        ${this.selectedName || "Asignar cliente"}
+        ${this.selectedName || t5("ui.assignCustomer")}
       </ion-button>
 
       ${this.open ? b2`<div class="scrim" @click=${(e5) => {
@@ -4133,13 +4532,13 @@ var ErpCustomersPosSearch = class extends i3 {
     }}>
             <div class="sheet">
               <div class="sheet-h">
-                <span class="t">Elegir cliente</span>
+                <span class="t">${t5("ui.chooseCustomer")}</span>
                 <button class="x" @click=${() => {
       this.open = false;
     }}>✕</button>
               </div>
 
-              <ion-searchbar placeholder="Buscar por nombre, teléfono, email…" value=${this.q}
+              <ion-searchbar placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
                 @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
 
               ${this.error ? b2`<p style="color:#d9480f">${this.error}</p>` : A}
@@ -4150,12 +4549,12 @@ var ErpCustomersPosSearch = class extends i3 {
                     <span class="nm">${c5.name}</span>
                     ${c5.phone || c5.email ? b2`<span class="meta">${c5.phone || c5.email}</span>` : A}
                   </button>`)}
-                ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? "Sin resultados." : "No hay clientes."}</div>` : A}
-                ${this.loading ? b2`<div class="empty">Cargando…</div>` : A}
+                ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}</div>` : A}
+                ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
               </div>
 
               <div class="foot">
-                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>Quitar cliente</ion-button>
+                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
               </div>
             </div>
           </div>` : A}
@@ -4185,7 +4584,8 @@ __decorateClass([
 ], ErpCustomersPosSearch.prototype, "error", 2);
 define("erp-customers-pos-search", ErpCustomersPosSearch);
 
-// ui/components/erp-customers-tags/erp-customers-tags.ts
+// ../modules-workspace/modules/customers/ui/components/erp-customers-tags/erp-customers-tags.ts
+var CATALOG5 = { es: es_default, en: en_default };
 function erplora5() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -4202,14 +4602,7 @@ var ErpCustomersTags = class extends i3 {
     this.fName = "";
     this.fColor = "primary";
     this.fActive = true;
-    this.columns = [
-      { key: "name", header: "Nombre", sortable: true, filterable: true, filterType: "text" },
-      { key: "color", header: "Color", sortable: true }
-    ];
-    this.rowActions = [
-      { id: "edit", label: "Editar" },
-      { id: "delete", label: "Eliminar", color: "danger" }
-    ];
+    this.onLocaleChange = () => this.requestUpdate();
   }
   static {
     this.styles = i`
@@ -4225,14 +4618,33 @@ var ErpCustomersTags = class extends i3 {
     .ok { color:#2b8a3e; font-weight:600; }
   `;
   }
+  get columns() {
+    const t5 = (k2) => erplora5().t(CATALOG5, k2);
+    return [
+      { key: "name", header: t5("ui.colName"), sortable: true, filterable: true, filterType: "text" },
+      { key: "color", header: t5("ui.colColor"), sortable: true }
+    ];
+  }
+  get rowActions() {
+    const t5 = (k2) => erplora5().t(CATALOG5, k2);
+    return [
+      { id: "edit", label: t5("ui.actionEdit") },
+      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+    ];
+  }
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener("erplora:locale-changed", this.onLocaleChange);
     this.ctrl = createListController(erplora5(), "customers.tags.list", () => this.requestUpdate(), {
       pageSize: 50,
       sort: "name",
       dir: "asc"
     });
     await this.ctrl.load();
+  }
+  disconnectedCallback() {
+    window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    super.disconnectedCallback();
   }
   resetForm() {
     this.editing = null;
@@ -4274,7 +4686,7 @@ var ErpCustomersTags = class extends i3 {
           name: this.fName.trim(),
           color: this.fColor.trim() || "primary"
         });
-        this.formMsg = "Etiqueta creada";
+        this.formMsg = erplora5().t(CATALOG5, "ui.tagCreated");
       } else {
         await erplora5().command("customers.tags.update", {
           tag_id: this.editing.id,
@@ -4282,12 +4694,12 @@ var ErpCustomersTags = class extends i3 {
           color: this.fColor.trim() || "primary",
           is_active: this.fActive ? 1 : 0
         });
-        this.formMsg = "Etiqueta actualizada";
+        this.formMsg = erplora5().t(CATALOG5, "ui.tagUpdated");
       }
       this.resetForm();
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo guardar la etiqueta";
+      this.formError = e5 instanceof Error ? e5.message : erplora5().t(CATALOG5, "ui.errSaveTag");
     } finally {
       this.saving = false;
     }
@@ -4298,11 +4710,11 @@ var ErpCustomersTags = class extends i3 {
     this.formError = "";
     try {
       await erplora5().command("customers.tags.delete", { tag_id: this.pendingDelete.id });
-      this.formMsg = `Etiqueta ${this.pendingDelete.name} eliminada`;
+      this.formMsg = erplora5().t(CATALOG5, "ui.tagDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e5) {
-      this.formError = e5 instanceof Error ? e5.message : "No se pudo eliminar la etiqueta";
+      this.formError = e5 instanceof Error ? e5.message : erplora5().t(CATALOG5, "ui.errDeleteTag");
     } finally {
       this.saving = false;
     }
@@ -4310,38 +4722,41 @@ var ErpCustomersTags = class extends i3 {
   renderForm() {
     if (!this.editing) return A;
     const isNew = this.editing === "new";
+    const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
     return b2`<section class="panel">
-      <h3>${isNew ? "Nueva etiqueta" : `Editar \xB7 ${this.editing.name}`}</h3>
+      <h3>${isNew ? t5("ui.newTagTitle") : t5("ui.editTagTitle", { name: this.editing.name })}</h3>
       <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input label="Nombre" label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-input label="Color" label-placement="stacked" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> Activa</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? "Guardando\u2026" : "Guardar"}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>Cancelar</ion-button>
+        <ion-input label=${t5("ui.colName")} label-placement="stacked" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+        <ion-input label=${t5("ui.fieldColor")} label-placement="stacked" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
+        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActiveTag")}</label>`}
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
       </form>
     </section>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
+    const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
     return b2`<section class="panel">
-      <h3>Eliminar etiqueta</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? Los clientes asignados pierden la etiqueta.</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? "Eliminando\u2026" : "Eliminar"}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>Cancelar</ion-button>
+      <h3>${t5("ui.deleteTagTitle")}</h3>
+      <p>${t5("ui.deleteTagConfirm", { name: this.pendingDelete.name })}</p>
+      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
+    const t5 = (k2) => erplora5().t(CATALOG5, k2);
     return b2`<div>
       <header>
-        <h2>Etiquetas de clientes</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>Nueva etiqueta</ion-button>
+        <h2>${t5("ui.tagsTitle")}</h2>
+        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newTag")}</ion-button>
       </header>
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${"Buscar etiqueta\u2026"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? "Cargando\u2026" : "Sin etiquetas."} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
     </div>`;
   }
 };

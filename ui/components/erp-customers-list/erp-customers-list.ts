@@ -6,12 +6,19 @@ import '@erplora/outfitkit/ok-kpi';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
 import { createListController } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
+import esLocale from '../../../locales/es.json';
+import enLocale from '../../../locales/en.json';
+
+const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
 interface ErploraClientLike extends ListClient {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
+  /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
+  locale: string;
+  t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
 }
 
 interface Customer {
@@ -56,14 +63,20 @@ function erplora(): ErploraClientLike {
   return c;
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  lead: 'Lead', prospect: 'Prospecto', first_purchase: '1ª compra', active: 'Activo',
-  at_risk: 'En riesgo', dormant: 'Inactivo', churned: 'Perdido', vip: 'VIP',
+/** value (enum, no traducir) → clave i18n `ui.*` para su etiqueta. */
+const STAGE_KEY: Record<string, string> = {
+  lead: 'ui.stageLead', prospect: 'ui.stageProspect', first_purchase: 'ui.stageFirstPurchase',
+  active: 'ui.stageActive', at_risk: 'ui.stageAtRisk', dormant: 'ui.stageDormant',
+  churned: 'ui.stageChurned', vip: 'ui.stageVip',
 };
 
-const CHANNEL_LABEL: Record<string, string> = {
-  none: 'Ninguno', email: 'Email', sms: 'SMS', whatsapp: 'WhatsApp', phone: 'Teléfono',
+const CHANNEL_KEY: Record<string, string> = {
+  none: 'ui.channelNone', email: 'ui.channelEmail', sms: 'ui.channelSms',
+  whatsapp: 'ui.channelWhatsapp', phone: 'ui.channelPhone',
 };
+
+const stageLabel = (value: string): string => (STAGE_KEY[value] ? erplora().t(CATALOG, STAGE_KEY[value]) : value);
+const channelLabel = (value: string): string => (CHANNEL_KEY[value] ? erplora().t(CATALOG, CHANNEL_KEY[value]) : value);
 
 /** Campos editables de la ficha (el schema update.json exige el set completo de binds). */
 const EMPTY_FORM = {
@@ -141,37 +154,46 @@ export class ErpCustomersList extends LitElement {
 
   private unsub?: () => void;
 
-  private columns: DataTableColumn[] = [
-    { key: 'name', header: 'Nombre', sortable: true, filterable: true, filterType: 'text' },
-    { key: 'email', header: 'Email', sortable: true, filterable: true, filterType: 'text' },
-    { key: 'phone', header: 'Teléfono', sortable: true, filterable: true, filterType: 'text' },
-    {
-      key: 'lifecycle_stage',
-      header: 'Etapa',
-      sortable: true,
-      filterable: true,
-      filterType: 'select',
-      options: Object.entries(STAGE_LABEL).map(([value, label]) => ({ value, label })),
-      format: (r) => STAGE_LABEL[r.lifecycle_stage as string] ?? (r.lifecycle_stage as string),
-    },
-    {
-      key: 'total_spent',
-      header: 'Gastado',
-      align: 'right',
-      sortable: true,
-      filterable: true,
-      filterType: 'range',
-      format: (r) => Number(r.total_spent || 0).toFixed(2),
-    },
-  ];
+  private get columns(): DataTableColumn[] {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    return [
+      { key: 'name', header: t('ui.colName'), sortable: true, filterable: true, filterType: 'text' },
+      { key: 'email', header: t('ui.colEmail'), sortable: true, filterable: true, filterType: 'text' },
+      { key: 'phone', header: t('ui.colPhone'), sortable: true, filterable: true, filterType: 'text' },
+      {
+        key: 'lifecycle_stage',
+        header: t('ui.colStage'),
+        sortable: true,
+        filterable: true,
+        filterType: 'select',
+        options: Object.keys(STAGE_KEY).map((value) => ({ value, label: stageLabel(value) })),
+        format: (r) => stageLabel(r.lifecycle_stage as string),
+      },
+      {
+        key: 'total_spent',
+        header: t('ui.colSpent'),
+        align: 'right',
+        sortable: true,
+        filterable: true,
+        filterType: 'range',
+        format: (r) => Number(r.total_spent || 0).toFixed(2),
+      },
+    ];
+  }
 
-  private rowActions: DataTableAction[] = [
-    { id: 'view', label: 'Ver' },
-    { id: 'delete', label: 'Eliminar', color: 'danger' },
-  ];
+  private get rowActions(): DataTableAction[] {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    return [
+      { id: 'view', label: t('ui.actionView') },
+      { id: 'delete', label: t('ui.actionDelete'), color: 'danger' },
+    ];
+  }
+
+  private readonly onLocaleChange = (): void => this.requestUpdate();
 
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener('erplora:locale-changed', this.onLocaleChange);
     this.ctrl = createListController<Customer>(erplora(), 'customers.list', () => this.requestUpdate(), {
       pageSize: 50,
       sort: 'name',
@@ -187,7 +209,10 @@ export class ErpCustomersList extends LitElement {
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback(); this.unsub?.(); }
+    window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
+    this.unsub?.();
+    super.disconnectedCallback();
+  }
 
   private fmt(n: number | null | undefined): string { return n == null ? '—' : Number(n).toFixed(2); }
 
@@ -241,7 +266,7 @@ export class ErpCustomersList extends LitElement {
       this.newName = ''; this.newEmail = '';
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo crear';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errCreate');
     } finally {
       this.saving = false;
     }
@@ -256,11 +281,11 @@ export class ErpCustomersList extends LitElement {
     try {
       const rows = await erplora().query<Customer[]>('customers.get', { customer_id: id });
       const customer = rows?.[0];
-      if (!customer) { this.formError = 'Cliente no encontrado'; return; }
+      if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
       await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo cargar el cliente';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
   }
 
@@ -336,10 +361,10 @@ export class ErpCustomersList extends LitElement {
         is_active: this.form.is_active ? 1 : 0,
       });
       this.editing = false;
-      this.formMsg = 'Cliente actualizado';
+      this.formMsg = erplora().t(CATALOG, 'ui.customerUpdated');
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo actualizar';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errUpdate');
     } finally {
       this.saving = false;
     }
@@ -355,10 +380,10 @@ export class ErpCustomersList extends LitElement {
       await erplora().command('customers.delete', { customer_id: target.id });
       this.pendingDelete = null;
       if (this.detail?.id === target.id) this.closeDetail();
-      this.formMsg = `Cliente ${target.name} eliminado`;
+      this.formMsg = erplora().t(CATALOG, 'ui.customerDeleted', { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo eliminar';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDelete');
     } finally {
       this.saving = false;
     }
@@ -379,10 +404,10 @@ export class ErpCustomersList extends LitElement {
       } else {
         await erplora().command('customers.set_tags', { customer_id: this.detail.id, ids: this.tagIds });
       }
-      this.formMsg = kind === 'groups' ? 'Grupos asignados' : 'Etiquetas asignadas';
+      this.formMsg = erplora().t(CATALOG, kind === 'groups' ? 'ui.groupsAssigned' : 'ui.tagsAssigned');
       await this.loadMemberships(this.detail.id);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo guardar la asignación';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errSaveMembership');
     } finally {
       this.saving = false;
     }
@@ -401,14 +426,14 @@ export class ErpCustomersList extends LitElement {
       });
       // El legacy registraba la nota también como actividad; aquí lo hace la UI.
       await erplora().command('customers.activity.add', {
-        customer_id: this.detail.id, activity_type: 'note', title: 'Nota añadida',
+        customer_id: this.detail.id, activity_type: 'note', title: erplora().t(CATALOG, 'ui.noteAddedTitle'),
         description: content, extra_metadata: '{}', related_object_id: null, related_object_type: '',
       });
       this.newNote = '';
-      this.formMsg = 'Nota añadida';
+      this.formMsg = erplora().t(CATALOG, 'ui.noteAdded');
       await this.loadActivities(this.detail.id);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo añadir la nota';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errAddNote');
     } finally {
       this.saving = false;
     }
@@ -418,65 +443,68 @@ export class ErpCustomersList extends LitElement {
   private renderStats() {
     if (!this.stats) return nothing;
     const s = this.stats;
+    const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<div class="kpis">
-      <ok-kpi label="Clientes" value=${String(s.total ?? 0)}></ok-kpi>
-      <ok-kpi label="Activos" value=${String(s.active ?? 0)}></ok-kpi>
-      <ok-kpi label="VIP" value=${String(s.vip ?? 0)}></ok-kpi>
-      <ok-kpi label="Ingresos" value=${this.fmt(s.total_revenue)}></ok-kpi>
+      <ok-kpi label=${t('ui.customers')} value=${String(s.total ?? 0)}></ok-kpi>
+      <ok-kpi label=${t('ui.active')} value=${String(s.active ?? 0)}></ok-kpi>
+      <ok-kpi label=${t('ui.vip')} value=${String(s.vip ?? 0)}></ok-kpi>
+      <ok-kpi label=${t('ui.revenue')} value=${this.fmt(s.total_revenue)}></ok-kpi>
     </div>`;
   }
 
   private renderDeleteConfirm() {
     if (!this.pendingDelete) return nothing;
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     return html`<section class="panel">
-      <h3>Eliminar cliente</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? La ficha deja de estar disponible (borrado lógico).</p>
+      <h3>${t('ui.deleteCustomerTitle')}</h3>
+      <p>${t('ui.deleteCustomerConfirm', { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? 'Eliminando…' : 'Eliminar'}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>Cancelar</ion-button>
+        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
       </footer>
     </section>`;
   }
 
   private renderEditForm() {
     const f = this.form;
+    const t = (k: string): string => erplora().t(CATALOG, k);
     const input = (key: keyof EditForm, label: string, type = 'text') => html`
       <ion-input type=${type} label=${label} label-placement="stacked" .value=${String(f[key] ?? '')}
         @ionInput=${(e: any) => (this.form = { ...this.form, [key]: e.target.value })}></ion-input>`;
     return html`<form @submit=${(e: Event) => this.saveEdit(e)}>
       <div class="grid2">
-        ${input('name', 'Nombre')}
-        ${input('email', 'Email', 'email')}
-        ${input('phone', 'Teléfono')}
-        ${input('tax_id', 'NIF/CIF')}
-        ${input('company_name', 'Empresa')}
-        ${input('address', 'Dirección')}
-        ${input('city', 'Ciudad')}
-        ${input('postal_code', 'Código postal')}
-        ${input('country', 'País')}
-        ${input('birthday', 'Cumpleaños', 'date')}
-        ${input('anniversary', 'Aniversario', 'date')}
-        ${input('source', 'Origen')}
-        <ion-select label="Etapa" label-placement="stacked" .value=${f.lifecycle_stage}
+        ${input('name', t('ui.colName'))}
+        ${input('email', t('ui.colEmail'), 'email')}
+        ${input('phone', t('ui.colPhone'))}
+        ${input('tax_id', t('ui.fieldNif'))}
+        ${input('company_name', t('ui.fieldCompany'))}
+        ${input('address', t('ui.fieldAddress'))}
+        ${input('city', t('ui.fieldCity'))}
+        ${input('postal_code', t('ui.fieldPostalCode'))}
+        ${input('country', t('ui.fieldCountry'))}
+        ${input('birthday', t('ui.fieldBirthday'), 'date')}
+        ${input('anniversary', t('ui.fieldAnniversary'), 'date')}
+        ${input('source', t('ui.fieldSource'))}
+        <ion-select label=${t('ui.colStage')} label-placement="stacked" .value=${f.lifecycle_stage}
           @ionChange=${(e: any) => (this.form = { ...this.form, lifecycle_stage: e.target.value })}>
-          ${Object.entries(STAGE_LABEL).map(([v, l]) => html`<ion-select-option value=${v}>${l}</ion-select-option>`)}
+          ${Object.keys(STAGE_KEY).map((v) => html`<ion-select-option value=${v}>${stageLabel(v)}</ion-select-option>`)}
         </ion-select>
-        <ion-select label="Canal preferido" label-placement="stacked" .value=${f.preferred_channel}
+        <ion-select label=${t('ui.fieldPreferredChannel')} label-placement="stacked" .value=${f.preferred_channel}
           @ionChange=${(e: any) => (this.form = { ...this.form, preferred_channel: e.target.value })}>
-          ${Object.entries(CHANNEL_LABEL).map(([v, l]) => html`<ion-select-option value=${v}>${l}</ion-select-option>`)}
+          ${Object.keys(CHANNEL_KEY).map((v) => html`<ion-select-option value=${v}>${channelLabel(v)}</ion-select-option>`)}
         </ion-select>
       </div>
       <div class="form">
-        <ion-textarea label="Notas internas" label-placement="stacked" auto-grow .value=${f.notes}
+        <ion-textarea label=${t('ui.fieldInternalNotes')} label-placement="stacked" auto-grow .value=${f.notes}
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
       <label class="check"><ion-checkbox .checked=${f.marketing_consent}
-        @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> Consentimiento de marketing</label>
+        @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> ${t('ui.marketingConsent')}</label>
       <label class="check"><ion-checkbox .checked=${f.is_active}
-        @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> Activo</label>
+        @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> ${t('ui.fieldActive')}</label>
       <footer class="actions">
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? 'Guardando…' : 'Guardar'}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => (this.editing = false)}>Cancelar</ion-button>
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => (this.editing = false)}>${t('ui.cancel')}</ion-button>
       </footer>
     </form>`;
   }
@@ -485,7 +513,8 @@ export class ErpCustomersList extends LitElement {
     const isGroups = kind === 'groups';
     const items = isGroups ? this.groups : this.tags;
     const selected = isGroups ? this.groupIds : this.tagIds;
-    if (!items.length) return html`<p>No hay ${isGroups ? 'grupos' : 'etiquetas'} definidos.</p>`;
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    if (!items.length) return html`<p>${t(isGroups ? 'ui.noGroupsDefined' : 'ui.noTagsDefined')}</p>`;
     return html`<div>
       <div class="chips">
         ${items.map((it) => html`<label class="check">
@@ -497,81 +526,83 @@ export class ErpCustomersList extends LitElement {
           ${it.name}${isGroups && Number((it as Group).discount_percent) > 0 ? ` (−${Number((it as Group).discount_percent)}%)` : ''}
         </label>`)}
       </div>
-      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>Guardar ${isGroups ? 'grupos' : 'etiquetas'}</ion-button>
+      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>
     </div>`;
   }
 
   private renderDetail() {
     const d = this.detail!;
+    const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<div>
       <header>
         <h2>${d.name}</h2>
-        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>← Volver</ion-button>
-        ${this.editing ? nothing : html`<ion-button size="small" @click=${() => this.startEdit()}>Editar</ion-button>`}
-        <ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>Eliminar</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t('ui.back')}</ion-button>
+        ${this.editing ? nothing : html`<ion-button size="small" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
+        <ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>
       </header>
       ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : html`<dl class="meta">
-          <div><dt>Email</dt><dd>${d.email || '—'}</dd></div>
-          <div><dt>Teléfono</dt><dd>${d.phone || '—'}</dd></div>
-          <div><dt>NIF/CIF</dt><dd>${d.tax_id || '—'}</dd></div>
-          <div><dt>Empresa</dt><dd>${d.company_name || '—'}</dd></div>
-          <div><dt>Dirección</dt><dd>${[d.address, d.postal_code, d.city, d.country].filter(Boolean).join(', ') || '—'}</dd></div>
-          <div><dt>Etapa</dt><dd>${STAGE_LABEL[d.lifecycle_stage] ?? d.lifecycle_stage}</dd></div>
-          <div><dt>Origen</dt><dd>${d.source || '—'}</dd></div>
-          <div><dt>Canal preferido</dt><dd>${CHANNEL_LABEL[d.preferred_channel] ?? d.preferred_channel}</dd></div>
-          <div><dt>Consent. marketing</dt><dd>${d.marketing_consent ? 'Sí' : 'No'}</dd></div>
-          <div><dt>Compras</dt><dd>${d.total_purchases ?? 0}</dd></div>
-          <div><dt>Gastado</dt><dd>${this.fmt(d.total_spent)}</dd></div>
-          <div><dt>Última compra</dt><dd>${d.last_purchase_date || '—'}</dd></div>
-          <div><dt>Activo</dt><dd>${d.is_active ? 'Sí' : 'No'}</dd></div>
+          <div><dt>${t('ui.colEmail')}</dt><dd>${d.email || '—'}</dd></div>
+          <div><dt>${t('ui.colPhone')}</dt><dd>${d.phone || '—'}</dd></div>
+          <div><dt>${t('ui.fieldNif')}</dt><dd>${d.tax_id || '—'}</dd></div>
+          <div><dt>${t('ui.fieldCompany')}</dt><dd>${d.company_name || '—'}</dd></div>
+          <div><dt>${t('ui.fieldAddress')}</dt><dd>${[d.address, d.postal_code, d.city, d.country].filter(Boolean).join(', ') || '—'}</dd></div>
+          <div><dt>${t('ui.colStage')}</dt><dd>${stageLabel(d.lifecycle_stage)}</dd></div>
+          <div><dt>${t('ui.fieldSource')}</dt><dd>${d.source || '—'}</dd></div>
+          <div><dt>${t('ui.fieldPreferredChannel')}</dt><dd>${channelLabel(d.preferred_channel)}</dd></div>
+          <div><dt>${t('ui.detailMarketingConsent')}</dt><dd>${d.marketing_consent ? t('ui.yes') : t('ui.no')}</dd></div>
+          <div><dt>${t('ui.detailPurchases')}</dt><dd>${d.total_purchases ?? 0}</dd></div>
+          <div><dt>${t('ui.colSpent')}</dt><dd>${this.fmt(d.total_spent)}</dd></div>
+          <div><dt>${t('ui.detailLastPurchase')}</dt><dd>${d.last_purchase_date || '—'}</dd></div>
+          <div><dt>${t('ui.fieldActive')}</dt><dd>${d.is_active ? t('ui.yes') : t('ui.no')}</dd></div>
         </dl>`}
       </section>
       <section class="panel">
-        <h3>Grupos</h3>
+        <h3>${t('ui.groupsHeading')}</h3>
         ${this.renderMembership('groups')}
-        <h3 style="margin-top:.75rem">Etiquetas</h3>
+        <h3 style="margin-top:.75rem">${t('ui.tagsHeading')}</h3>
         ${this.renderMembership('tags')}
       </section>
       <section class="panel">
-        <h3>Añadir nota</h3>
+        <h3>${t('ui.addNote')}</h3>
         <form class="form" @submit=${(e: Event) => this.addNote(e)}>
-          <ion-textarea label="Nota" label-placement="stacked" auto-grow .value=${this.newNote}
+          <ion-textarea label=${t('ui.noteLabel')} label-placement="stacked" auto-grow .value=${this.newNote}
             @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>Añadir</ion-button>
+          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
         </form>
-        <h3>Actividad</h3>
+        <h3>${t('ui.activityHeading')}</h3>
         ${this.activities.length ? html`<ul class="timeline">
           ${this.activities.map((a) => html`<li>
             <div class="t">${a.title} <small>(${a.activity_type})</small></div>
             ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
             <div class="when">${a.created_at}</div>
           </li>`)}
-        </ul>` : html`<p>Sin actividad registrada.</p>`}
+        </ul>` : html`<p>${t('ui.noActivity')}</p>`}
       </section>
     </div>`;
   }
 
   render() {
     if (this.detail) return this.renderDetail();
+    const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<div>
         <header>
-          <h2>Clientes</h2>
+          <h2>${t('ui.customers')}</h2>
         </header>
         ${this.renderStats()}
         <form class="form" @submit=${(e: Event) => this.create(e)}>
-          <ion-input placeholder="Nombre" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
-          <ion-input type="email" placeholder="Email" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? 'Guardando…' : 'Añadir'}</ion-button>
+          <ion-input placeholder=${t('ui.placeholderName')} .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
+          <ion-input type="email" placeholder=${t('ui.placeholderEmail')} .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
+          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
         </form>
         ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar nombre o email…"} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin clientes.'} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
       </div>`;
   }
 }

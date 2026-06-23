@@ -5,12 +5,19 @@ import '@erplora/outfitkit/ok-data-table';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
 import { createListController } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
+import esLocale from '../../../locales/es.json';
+import enLocale from '../../../locales/en.json';
+
+const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
 interface ErploraClientLike extends ListClient {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
+  /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
+  locale: string;
+  t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
 }
 
 interface Group {
@@ -64,27 +71,41 @@ export class ErpCustomersGroups extends LitElement {
 
   private ctrl!: ListController<Group>;
 
-  private columns: DataTableColumn[] = [
-    { key: 'name', header: 'Nombre', sortable: true, filterable: true, filterType: 'text' },
-    { key: 'description', header: 'Descripción', sortable: true },
-    { key: 'discount_percent', header: 'Descuento %', align: 'right', sortable: true, filterable: true, filterType: 'range', format: (r) => `${Number(r.discount_percent || 0)}%` },
-    { key: 'customer_count', header: 'Clientes', align: 'right', sortable: true },
-    { key: 'sort_order', header: 'Orden', align: 'right', sortable: true },
-  ];
+  private get columns(): DataTableColumn[] {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    return [
+      { key: 'name', header: t('ui.colName'), sortable: true, filterable: true, filterType: 'text' },
+      { key: 'description', header: t('ui.colDescription'), sortable: true },
+      { key: 'discount_percent', header: t('ui.colDiscount'), align: 'right', sortable: true, filterable: true, filterType: 'range', format: (r) => `${Number(r.discount_percent || 0)}%` },
+      { key: 'customer_count', header: t('ui.colCustomers'), align: 'right', sortable: true },
+      { key: 'sort_order', header: t('ui.colOrder'), align: 'right', sortable: true },
+    ];
+  }
 
-  private rowActions: DataTableAction[] = [
-    { id: 'edit', label: 'Editar' },
-    { id: 'delete', label: 'Eliminar', color: 'danger' },
-  ];
+  private get rowActions(): DataTableAction[] {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    return [
+      { id: 'edit', label: t('ui.actionEdit') },
+      { id: 'delete', label: t('ui.actionDelete'), color: 'danger' },
+    ];
+  }
+
+  private readonly onLocaleChange = (): void => this.requestUpdate();
 
   async connectedCallback() {
     super.connectedCallback();
+    window.addEventListener('erplora:locale-changed', this.onLocaleChange);
     this.ctrl = createListController<Group>(erplora(), 'customers.groups.list', () => this.requestUpdate(), {
       pageSize: 50,
       sort: 'name',
       dir: 'asc',
     });
     await this.ctrl.load();
+  }
+
+  disconnectedCallback(): void {
+    window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
+    super.disconnectedCallback();
   }
 
   private resetForm() {
@@ -128,7 +149,7 @@ export class ErpCustomersGroups extends LitElement {
           discount_percent: discount, color: this.fColor.trim() || 'primary',
           sort_order: Number(this.fSortOrder) || 0,
         });
-        this.formMsg = 'Grupo creado';
+        this.formMsg = erplora().t(CATALOG, 'ui.groupCreated');
       } else {
         await erplora().command('customers.groups.update', {
           group_id: this.editing.id,
@@ -136,12 +157,12 @@ export class ErpCustomersGroups extends LitElement {
           discount_percent: discount, color: this.fColor.trim() || 'primary',
           sort_order: Number(this.fSortOrder) || 0, is_active: this.fActive ? 1 : 0,
         });
-        this.formMsg = 'Grupo actualizado';
+        this.formMsg = erplora().t(CATALOG, 'ui.groupUpdated');
       }
       this.resetForm();
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo guardar el grupo';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errSaveGroup');
     } finally {
       this.saving = false;
     }
@@ -153,11 +174,11 @@ export class ErpCustomersGroups extends LitElement {
     this.formError = '';
     try {
       await erplora().command('customers.groups.delete', { group_id: this.pendingDelete.id });
-      this.formMsg = `Grupo ${this.pendingDelete.name} eliminado`;
+      this.formMsg = erplora().t(CATALOG, 'ui.groupDeleted', { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : 'No se pudo eliminar el grupo';
+      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDeleteGroup');
     } finally {
       this.saving = false;
     }
@@ -166,43 +187,46 @@ export class ErpCustomersGroups extends LitElement {
   private renderForm() {
     if (!this.editing) return nothing;
     const isNew = this.editing === 'new';
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     return html`<section class="panel">
-      <h3>${isNew ? 'Nuevo grupo' : `Editar · ${(this.editing as Group).name}`}</h3>
+      <h3>${isNew ? t('ui.newGroupTitle') : t('ui.editGroupTitle', { name: (this.editing as Group).name })}</h3>
       <form class="form" @submit=${(e: Event) => this.save(e)}>
-        <ion-input label="Nombre" label-placement="stacked" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-        <ion-input label="Descripción" label-placement="stacked" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
-        <ion-input type="number" label="Descuento %" label-placement="stacked" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e: any) => (this.fDiscount = e.target.value)}></ion-input>
-        <ion-input label="Color" label-placement="stacked" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
-        <ion-input type="number" label="Orden" label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
-        ${isNew ? nothing : html`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}></ion-checkbox> Activo</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? 'Guardando…' : 'Guardar'}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>Cancelar</ion-button>
+        <ion-input label=${t('ui.colName')} label-placement="stacked" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+        <ion-input label=${t('ui.fieldDescription')} label-placement="stacked" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
+        <ion-input type="number" label=${t('ui.fieldDiscount')} label-placement="stacked" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e: any) => (this.fDiscount = e.target.value)}></ion-input>
+        <ion-input label=${t('ui.fieldColor')} label-placement="stacked" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
+        <ion-input type="number" label=${t('ui.fieldOrder')} label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
+        ${isNew ? nothing : html`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}></ion-checkbox> ${t('ui.fieldActive')}</label>`}
+        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>
       </form>
     </section>`;
   }
 
   private renderDeleteConfirm() {
     if (!this.pendingDelete) return nothing;
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     return html`<section class="panel">
-      <h3>Eliminar grupo</h3>
-      <p>¿Eliminar <strong>${this.pendingDelete.name}</strong>? Los clientes asignados pierden el grupo.</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? 'Eliminando…' : 'Eliminar'}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>Cancelar</ion-button>
+      <h3>${t('ui.deleteGroupTitle')}</h3>
+      <p>${t('ui.deleteGroupConfirm', { name: this.pendingDelete.name })}</p>
+      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+      <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
     </section>`;
   }
 
   render() {
+    const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<div>
       <header>
-        <h2>Grupos de clientes</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>Nuevo grupo</ion-button>
+        <h2>${t('ui.groupsTitle')}</h2>
+        <ion-button size="small" @click=${() => this.startNew()}>${t('ui.newGroup')}</ion-button>
       </header>
       ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
       ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${"Buscar grupo…"} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? 'Cargando…' : 'Sin grupos.'} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchGroup')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyGroups')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
     </div>`;
   }
 }

@@ -1,6 +1,10 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
+import esLocale from '../../../locales/es.json';
+import enLocale from '../../../locales/en.json';
+
+const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
 // erp-customers-pos-search — selector de CLIENTE (ficha) inyectado en la pantalla de venta
 // (ADR-0043). El módulo `customers` declara en su manifest que rellena el slot
@@ -19,6 +23,9 @@ interface Customer { id: string; name: string; phone?: string; email?: string; }
 
 interface ErploraLike {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
+  /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
+  locale: string;
+  t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
 }
 
 function erplora(): ErploraLike {
@@ -65,14 +72,18 @@ export class ErpCustomersPosSearch extends LitElement {
     this.selectedName = '';
   };
 
+  private readonly onLocaleChange = (): void => this.requestUpdate();
+
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener('erp:customer-context-reset', this.onReset);
+    window.addEventListener('erplora:locale-changed', this.onLocaleChange);
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback();
     this.removeEventListener('erp:customer-context-reset', this.onReset);
+    window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
+    super.disconnectedCallback();
   }
 
   private async openPicker() {
@@ -89,7 +100,7 @@ export class ErpCustomersPosSearch extends LitElement {
         .catch(() => []);
       this.results = rows<Customer>(r);
     } catch (e) {
-      this.error = e instanceof Error ? e.message : 'No se pudieron cargar los clientes';
+      this.error = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomers');
     } finally {
       this.loading = false;
     }
@@ -122,20 +133,21 @@ export class ErpCustomersPosSearch extends LitElement {
   }
 
   render() {
+    const t = (k: string): string => erplora().t(CATALOG, k);
     return html`
       <ion-button class="open" fill=${this.selectedId ? 'solid' : 'outline'} size="small" @click=${() => this.openPicker()}>
-        ${this.selectedName || 'Asignar cliente'}
+        ${this.selectedName || t('ui.assignCustomer')}
       </ion-button>
 
       ${this.open
         ? html`<div class="scrim" @click=${(e: Event) => { if ((e.target as HTMLElement).classList.contains('scrim')) this.open = false; }}>
             <div class="sheet">
               <div class="sheet-h">
-                <span class="t">Elegir cliente</span>
+                <span class="t">${t('ui.chooseCustomer')}</span>
                 <button class="x" @click=${() => { this.open = false; }}>✕</button>
               </div>
 
-              <ion-searchbar placeholder="Buscar por nombre, teléfono, email…" value=${this.q}
+              <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
                 @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
 
               ${this.error ? html`<p style="color:#d9480f">${this.error}</p>` : nothing}
@@ -146,12 +158,12 @@ export class ErpCustomersPosSearch extends LitElement {
                     <span class="nm">${c.name}</span>
                     ${c.phone || c.email ? html`<span class="meta">${c.phone || c.email}</span>` : nothing}
                   </button>`)}
-                ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? 'Sin resultados.' : 'No hay clientes.'}</div>` : nothing}
-                ${this.loading ? html`<div class="empty">Cargando…</div>` : nothing}
+                ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
+                ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
               </div>
 
               <div class="foot">
-                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>Quitar cliente</ion-button>
+                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
               </div>
             </div>
           </div>`
