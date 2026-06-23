@@ -47,8 +47,8 @@ export class ErpCustomersFields extends LitElement {
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
-    .form { display:flex; gap:.5rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input, .form ion-select { --background:#fff; border:1px solid var(--line,#e7e2d6); border-radius:8px; min-width:9rem; }
+    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
+    .form ion-input, .form ion-select { flex:1 1 11rem; min-width:9rem; }
     .check { display:inline-flex; align-items:center; gap:.35rem; }
     .hint { font-size:.8rem; opacity:.65; width:100%; margin:.15rem 0 0; }
     .err { color:#d9480f; font-weight:600; }
@@ -219,12 +219,12 @@ export class ErpCustomersFields extends LitElement {
     return html`<section class="panel">
       <h3>${isNew ? t('ui.newFieldTitle') : t('ui.editFieldTitle', { name: (this.editing as Field).name })}</h3>
       <form class="form" @submit=${(e: Event) => this.save(e)}>
-        <ion-input label=${t('ui.colName')} label-placement="stacked" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-        <ion-select label=${t('ui.fieldType')} label-placement="stacked" .value=${this.fType} @ionChange=${(e: any) => (this.fType = e.target.value)}>
+        <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+        <ion-select fill="outline" label=${t('ui.fieldType')} label-placement="floating" .value=${this.fType} @ionChange=${(e: any) => (this.fType = e.target.value)}>
           ${Object.keys(TYPE_KEY).map((v) => html`<ion-select-option value=${v}>${typeLabel(v)}</ion-select-option>`)}
         </ion-select>
-        ${this.fType === 'select' ? html`<ion-input label=${t('ui.fieldOptions')} label-placement="stacked" .value=${this.fOptions} @ionInput=${(e: any) => (this.fOptions = e.target.value)}></ion-input>` : nothing}
-        <ion-input type="number" label=${t('ui.fieldOrder')} label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
+        ${this.fType === 'select' ? html`<ion-input fill="outline" label=${t('ui.fieldOptions')} label-placement="floating" .value=${this.fOptions} @ionInput=${(e: any) => (this.fOptions = e.target.value)}></ion-input>` : nothing}
+        <ion-input type="number" fill="outline" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
         <label class="check"><ion-checkbox .checked=${this.fRequired} @ionChange=${(e: any) => (this.fRequired = e.target.checked)}></ion-checkbox> ${t('ui.fieldRequired')}</label>
         ${isNew ? nothing : html`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}></ion-checkbox> ${t('ui.fieldActive')}</label>`}
         <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>

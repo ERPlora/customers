@@ -39,8 +39,8 @@ export class ErpCustomersGroups extends LitElement {
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
-    .form { display:flex; gap:.5rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input { --background:#fff; border:1px solid var(--line,#e7e2d6); border-radius:8px; min-width:9rem; }
+    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
+    .form ion-input { flex:1 1 11rem; min-width:9rem; }
     .check { display:inline-flex; align-items:center; gap:.35rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
@@ -191,11 +191,11 @@ export class ErpCustomersGroups extends LitElement {
     return html`<section class="panel">
       <h3>${isNew ? t('ui.newGroupTitle') : t('ui.editGroupTitle', { name: (this.editing as Group).name })}</h3>
       <form class="form" @submit=${(e: Event) => this.save(e)}>
-        <ion-input label=${t('ui.colName')} label-placement="stacked" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-        <ion-input label=${t('ui.fieldDescription')} label-placement="stacked" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
-        <ion-input type="number" label=${t('ui.fieldDiscount')} label-placement="stacked" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e: any) => (this.fDiscount = e.target.value)}></ion-input>
-        <ion-input label=${t('ui.fieldColor')} label-placement="stacked" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
-        <ion-input type="number" label=${t('ui.fieldOrder')} label-placement="stacked" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
+        <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+        <ion-input fill="outline" label=${t('ui.fieldDescription')} label-placement="floating" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
+        <ion-input type="number" fill="outline" label=${t('ui.fieldDiscount')} label-placement="floating" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e: any) => (this.fDiscount = e.target.value)}></ion-input>
+        <ion-input fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
+        <ion-input type="number" fill="outline" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
         ${isNew ? nothing : html`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}></ion-checkbox> ${t('ui.fieldActive')}</label>`}
         <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>

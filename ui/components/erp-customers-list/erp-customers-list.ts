@@ -95,11 +95,10 @@ export class ErpCustomersList extends LitElement {
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
-    .form { display:flex; gap:.5rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1rem; }
-    .form ion-input, .form ion-select, .form ion-textarea { --background:var(--surface-2,#f7f4ec); border:1px solid var(--line,#e7e2d6); border-radius:8px; flex:1; min-width:8rem; }
+    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1.25rem; }
+    .form ion-input, .form ion-select, .form ion-textarea { flex:1 1 11rem; min-width:9rem; }
     .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
-    .grid2 { display:grid; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); gap:.35rem .75rem; }
-    .grid2 ion-input, .grid2 ion-select { --background:#fff; border:1px solid var(--line,#e7e2d6); border-radius:8px; }
+    .grid2 { display:grid; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); gap:.75rem; }
     .meta { display:grid; grid-template-columns:repeat(auto-fill, minmax(12rem, 1fr)); gap:.25rem .75rem; margin:.5rem 0; }
     .meta dt { font-size:.72rem; text-transform:uppercase; opacity:.6; }
     .meta dd { margin:0 0 .4rem; font-weight:600; }
@@ -469,7 +468,7 @@ export class ErpCustomersList extends LitElement {
     const f = this.form;
     const t = (k: string): string => erplora().t(CATALOG, k);
     const input = (key: keyof EditForm, label: string, type = 'text') => html`
-      <ion-input type=${type} label=${label} label-placement="stacked" .value=${String(f[key] ?? '')}
+      <ion-input type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f[key] ?? '')}
         @ionInput=${(e: any) => (this.form = { ...this.form, [key]: e.target.value })}></ion-input>`;
     return html`<form @submit=${(e: Event) => this.saveEdit(e)}>
       <div class="grid2">
@@ -485,17 +484,17 @@ export class ErpCustomersList extends LitElement {
         ${input('birthday', t('ui.fieldBirthday'), 'date')}
         ${input('anniversary', t('ui.fieldAnniversary'), 'date')}
         ${input('source', t('ui.fieldSource'))}
-        <ion-select label=${t('ui.colStage')} label-placement="stacked" .value=${f.lifecycle_stage}
+        <ion-select fill="outline" label=${t('ui.colStage')} label-placement="floating" .value=${f.lifecycle_stage}
           @ionChange=${(e: any) => (this.form = { ...this.form, lifecycle_stage: e.target.value })}>
           ${Object.keys(STAGE_KEY).map((v) => html`<ion-select-option value=${v}>${stageLabel(v)}</ion-select-option>`)}
         </ion-select>
-        <ion-select label=${t('ui.fieldPreferredChannel')} label-placement="stacked" .value=${f.preferred_channel}
+        <ion-select fill="outline" label=${t('ui.fieldPreferredChannel')} label-placement="floating" .value=${f.preferred_channel}
           @ionChange=${(e: any) => (this.form = { ...this.form, preferred_channel: e.target.value })}>
           ${Object.keys(CHANNEL_KEY).map((v) => html`<ion-select-option value=${v}>${channelLabel(v)}</ion-select-option>`)}
         </ion-select>
       </div>
       <div class="form">
-        <ion-textarea label=${t('ui.fieldInternalNotes')} label-placement="stacked" auto-grow .value=${f.notes}
+        <ion-textarea fill="outline" label=${t('ui.fieldInternalNotes')} label-placement="floating" auto-grow .value=${f.notes}
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
       <label class="check"><ion-checkbox .checked=${f.marketing_consent}
@@ -569,7 +568,7 @@ export class ErpCustomersList extends LitElement {
       <section class="panel">
         <h3>${t('ui.addNote')}</h3>
         <form class="form" @submit=${(e: Event) => this.addNote(e)}>
-          <ion-textarea label=${t('ui.noteLabel')} label-placement="stacked" auto-grow .value=${this.newNote}
+          <ion-textarea fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
             @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
           <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
         </form>
@@ -594,8 +593,8 @@ export class ErpCustomersList extends LitElement {
         </header>
         ${this.renderStats()}
         <form class="form" @submit=${(e: Event) => this.create(e)}>
-          <ion-input placeholder=${t('ui.placeholderName')} .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
-          <ion-input type="email" placeholder=${t('ui.placeholderEmail')} .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
+          <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
+          <ion-input type="email" fill="outline" label=${t('ui.colEmail')} label-placement="floating" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
           <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
         </form>
         ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
