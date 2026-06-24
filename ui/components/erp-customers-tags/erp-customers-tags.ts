@@ -35,7 +35,7 @@ export class ErpCustomersTags extends LitElement {
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
-    .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
+    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
     .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
     .form ion-input { flex:1 1 11rem; min-width:9rem; }
     .check { display:inline-flex; align-items:center; gap:.35rem; }

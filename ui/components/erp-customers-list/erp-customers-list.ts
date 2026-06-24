@@ -97,7 +97,7 @@ export class ErpCustomersList extends LitElement {
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
     .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1.25rem; }
     .form ion-input, .form ion-select, .form ion-textarea { flex:1 1 11rem; min-width:9rem; }
-    .panel { border:1px solid var(--line,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--surface-2,#faf8f2); }
+    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
     .grid2 { display:grid; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); gap:.75rem; }
     .meta { display:grid; grid-template-columns:repeat(auto-fill, minmax(12rem, 1fr)); gap:.25rem .75rem; margin:.5rem 0; }
     .meta dt { font-size:.72rem; text-transform:uppercase; opacity:.6; }
@@ -105,7 +105,7 @@ export class ErpCustomersList extends LitElement {
     .chips { display:flex; gap:.4rem; flex-wrap:wrap; margin:.35rem 0; }
     .check { display:inline-flex; align-items:center; gap:.35rem; margin:.15rem .9rem .15rem 0; }
     .timeline { list-style:none; margin:.5rem 0 0; padding:0; }
-    .timeline li { border-left:3px solid var(--line,#e7e2d6); padding:.25rem 0 .55rem .75rem; }
+    .timeline li { border-left:3px solid var(--ion-border-color,#e7e2d6); padding:.25rem 0 .55rem .75rem; }
     .timeline .t { font-weight:600; }
     .timeline .d { font-size:.85rem; opacity:.85; }
     .timeline .when { font-size:.75rem; opacity:.55; }
