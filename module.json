@@ -161,7 +161,8 @@
       },
       "ai": {
         "description": "Lists all customers for the tenant"
-      }
+      },
+      "expose_api": true
     },
     "customers.get": {
       "permission": "customers.view_customer",
@@ -169,7 +170,8 @@
       "schema": "schemas/get.json",
       "ai": {
         "description": "Retrieves a customer's details by their identifier"
-      }
+      },
+      "expose_api": true
     },
     "customers.stats": {
       "permission": "customers.view_customer",
@@ -226,7 +228,8 @@
       },
       "ai": {
         "description": "Lists the available customer groups"
-      }
+      },
+      "expose_api": true
     },
     "customers.tags.list": {
       "permission": "customers.view_customertag",
@@ -258,7 +261,8 @@
       },
       "ai": {
         "description": "Lists the available customer tags"
-      }
+      },
+      "expose_api": true
     },
     "customers.fields.list": {
       "permission": "customers.view_customer",
@@ -310,7 +314,8 @@
       "schema": "schemas/activities.json",
       "ai": {
         "description": "Lists the activity history of a customer"
-      }
+      },
+      "expose_api": true
     },
     "customers.group_ids": {
       "permission": "customers.view_customer",
@@ -342,7 +347,8 @@
       ],
       "ai": {
         "description": "Creates a new customer"
-      }
+      },
+      "expose_api": true
     },
     "customers.update": {
       "permission": "customers.change_customer",
@@ -356,7 +362,8 @@
       ],
       "ai": {
         "description": "Updates an existing customer's data"
-      }
+      },
+      "expose_api": true
     },
     "customers.delete": {
       "permission": "customers.delete_customer",
@@ -427,7 +434,8 @@
       "schema": "schemas/group_create.json",
       "ai": {
         "description": "Creates a new customer group"
-      }
+      },
+      "expose_api": true
     },
     "customers.groups.update": {
       "permission": "customers.change_customergroup",
@@ -438,7 +446,8 @@
       "schema": "schemas/group_update.json",
       "ai": {
         "description": "Updates an existing customer group"
-      }
+      },
+      "expose_api": true
     },
     "customers.groups.delete": {
       "permission": "customers.delete_customergroup",
@@ -459,7 +468,8 @@
       "schema": "schemas/tag_create.json",
       "ai": {
         "description": "Creates a new customer tag"
-      }
+      },
+      "expose_api": true
     },
     "customers.tags.update": {
       "permission": "customers.change_customertag",
@@ -470,7 +480,8 @@
       "schema": "schemas/tag_update.json",
       "ai": {
         "description": "Updates an existing customer tag"
-      }
+      },
+      "expose_api": true
     },
     "customers.tags.delete": {
       "permission": "customers.delete_customertag",
@@ -571,6 +582,63 @@
     "listen": {
       "sale.completed": {
         "command": "customers.record_purchase"
+      }
+    }
+  },
+  "widgets": {
+    "customers.total": {
+      "title": "Clientes",
+      "icon": "people-outline",
+      "category": "Clientes",
+      "size": "sm",
+      "permission": "customers.view_customer",
+      "default": false,
+      "kind": "kpi",
+      "query": "customers.stats",
+      "map": {
+        "value": "total"
+      },
+      "options": {
+        "label": "Clientes",
+        "icon": "people-outline",
+        "format": "number"
+      }
+    },
+    "customers.active": {
+      "title": "Clientes activos",
+      "icon": "person-outline",
+      "category": "Clientes",
+      "size": "sm",
+      "permission": "customers.view_customer",
+      "default": false,
+      "kind": "stat",
+      "query": "customers.stats",
+      "map": {
+        "value": "active"
+      },
+      "options": {
+        "label": "Clientes activos",
+        "icon": "person-outline",
+        "format": "number"
+      }
+    },
+    "customers.revenue": {
+      "title": "Ingresos de clientes",
+      "icon": "cash-outline",
+      "category": "Clientes",
+      "size": "sm",
+      "permission": "customers.view_customer",
+      "default": false,
+      "kind": "kpi",
+      "query": "customers.stats",
+      "map": {
+        "value": "total_revenue"
+      },
+      "options": {
+        "label": "Ingresos de clientes",
+        "icon": "cash-outline",
+        "format": "currency",
+        "currency": "EUR"
       }
     }
   },

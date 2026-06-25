@@ -19,6 +19,9 @@ interface ErploraClientLike extends ListClient {
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
+  /** Moneda del hub + formateo de dinero (ADR-0059). */
+  currency: string;
+  formatAmount(units: number, opts?: { currency?: string; locale?: string }): string;
 }
 
 interface Customer {
@@ -175,7 +178,7 @@ export class ErpCustomersList extends LitElement {
         sortable: true,
         filterable: true,
         filterType: 'range',
-        format: (r) => Number(r.total_spent || 0).toFixed(2),
+        format: (r) => erplora().formatAmount(Number(r.total_spent || 0)),
       },
     ];
   }
@@ -213,7 +216,8 @@ export class ErpCustomersList extends LitElement {
     super.disconnectedCallback();
   }
 
-  private fmt(n: number | null | undefined): string { return n == null ? '—' : Number(n).toFixed(2); }
+  // Dinero (total gastado / facturación) → formateado con la MONEDA DEL HUB (ADR-0059); `null` → guion.
+  private fmt(n: number | null | undefined): string { return n == null ? '—' : erplora().formatAmount(Number(n)); }
 
   private async loadStats() {
     try {
