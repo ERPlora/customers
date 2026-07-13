@@ -116,3 +116,27 @@ describe('el alta sigue funcionando desde el panel', () => {
     expect(alta!.payload.email).toBe('ada@example.com');
   });
 });
+
+// ── Regresión de la migración `page_size` → `queryAll` (ADR-0124) ────────────────────────────
+//
+// `queryAll()` devuelve **el array** de filas, no el sobre `{rows,total}`. El código siguió leyendo
+// `page?.rows`, que sobre un array es `undefined` → `this.groups`/`this.tags` quedaban SIEMPRE
+// vacíos. Efecto: en la ficha del cliente salía «No hay grupos definidos» aunque los hubiera, y
+// **asignar grupos y etiquetas a un cliente estaba muerto en la UI**. El `catch` mudo lo tapaba.
+describe('los grupos y etiquetas de la ficha (regresión queryAll, ADR-0124)', () => {
+  it('los grupos y etiquetas que devuelve el servidor LLEGAN al componente', async () => {
+    const GRUPOS = [{ id: 'g1', name: 'VIP' }];
+    const ETIQUETAS = [{ id: 't1', name: 'Fiel', color: 'success' }];
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.queryAll = async (name: string) =>
+      name === 'customers.groups.list' ? GRUPOS : name === 'customers.tags.list' ? ETIQUETAS : [];
+    sdk.query = async () => [];
+
+    const el = await montar();
+    await (el as unknown as { loadMemberships: (id: string) => Promise<void> }).loadMemberships('c1');
+
+    const wc = el as unknown as { groups: unknown[]; tags: unknown[] };
+    expect(wc.groups, 'queryAll devuelve el ARRAY: leer `.rows` sobre él da undefined').toHaveLength(1);
+    expect(wc.tags, 'sin esto, asignar etiquetas a un cliente es imposible').toHaveLength(1);
+  });
+});

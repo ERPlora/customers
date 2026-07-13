@@ -4253,8 +4253,8 @@ var ErpCustomersList = class extends i3 {
         erplora3().query("customers.group_ids", { customer_id: id }),
         erplora3().query("customers.tag_ids", { customer_id: id })
       ]);
-      this.groups = groupsPage?.rows ?? [];
-      this.tags = tagsPage?.rows ?? [];
+      this.groups = Array.isArray(groupsPage) ? groupsPage : [];
+      this.tags = Array.isArray(tagsPage) ? tagsPage : [];
       this.groupIds = (gids ?? []).map((r6) => String(r6.id));
       this.tagIds = (tids ?? []).map((r6) => String(r6.id));
     } catch {

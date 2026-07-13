@@ -322,8 +322,11 @@ export class ErpCustomersList extends LitElement {
         erplora().query<Array<{ id: string }>>('customers.group_ids', { customer_id: id }),
         erplora().query<Array<{ id: string }>>('customers.tag_ids', { customer_id: id }),
       ]);
-      this.groups = groupsPage?.rows ?? [];
-      this.tags = tagsPage?.rows ?? [];
+      // `queryAll` devuelve EL ARRAY, no el sobre `{rows,total}`. Leer `.rows` aquí daba `undefined`
+      // → la ficha decía «no hay grupos/etiquetas» aunque los hubiera, y asignarlos era imposible.
+      // `Array.isArray` y no `?? []`: una respuesta rara degrada a vacío en vez de reventar.
+      this.groups = Array.isArray(groupsPage) ? groupsPage : [];
+      this.tags = Array.isArray(tagsPage) ? tagsPage : [];
       this.groupIds = (gids ?? []).map((r) => String(r.id));
       this.tagIds = (tids ?? []).map((r) => String(r.id));
     } catch { /* asignación opcional si faltan permisos de grupos/tags */ }
