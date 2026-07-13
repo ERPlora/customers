@@ -124,19 +124,19 @@
         "default_dir": "asc",
         "filters": {
           "name": {
-            "op": "eq"
+            "op": "like"
           },
           "email": {
-            "op": "eq"
+            "op": "like"
           },
           "phone": {
-            "op": "eq"
+            "op": "like"
           },
           "tax_id": {
             "op": "range"
           },
           "company_name": {
-            "op": "eq"
+            "op": "like"
           },
           "lifecycle_stage": {
             "op": "eq"
@@ -201,10 +201,10 @@
         "default_dir": "asc",
         "filters": {
           "name": {
-            "op": "eq"
+            "op": "like"
           },
           "description": {
-            "op": "eq"
+            "op": "like"
           },
           "discount_percent": {
             "op": "range"
@@ -245,7 +245,7 @@
         "default_dir": "asc",
         "filters": {
           "name": {
-            "op": "eq"
+            "op": "like"
           },
           "color": {
             "op": "eq"
@@ -280,7 +280,7 @@
         "default_dir": "asc",
         "filters": {
           "name": {
-            "op": "eq"
+            "op": "like"
           },
           "field_type": {
             "op": "eq"
