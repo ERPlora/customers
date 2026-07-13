@@ -4,4 +4,5 @@
   "properties": {
     "customer_id": { "type": ["string", "null"],
       "description": "NULL = venta anónima (no-op seguro: el WHERE no casa ninguna fila)" },
-    "total": { "type": "number", "minimum": 0 } } }
+    "total": { "type": "integer", "minimum": 0,
+      "description": "Importe de la compra en CÉNTIMOS enteros (ADR-0007). Alimenta el total gastado del cliente: un 2.20 aquí lo dejaría en 2 céntimos." } } }
