@@ -3350,15 +3350,15 @@ var ErpCustomersFields = class extends i3 {
   }
   static {
     this.styles = i`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
-    h2 { margin:0; font-size:1.15rem; flex:1; }
-    h3 { margin:.25rem 0 .5rem; font-size:1rem; }
-    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
-    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input, .form ion-select { flex:1 1 11rem; min-width:9rem; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; }
-    .hint { font-size:.8rem; opacity:.65; width:100%; margin:.15rem 0 0; }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* La tabla llena el alto de la vista: scroll interno en las filas + pie siempre visible. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .panel { flex:0 0 auto; border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
+    .panel h3 { margin:.25rem 0 .5rem; font-size:1rem; }
+    /* El panel del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .form { display:flex; flex-direction:column; gap:.7rem; }
+    .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
   `;
@@ -3376,7 +3376,19 @@ var ErpCustomersFields = class extends i3 {
         options: Object.keys(TYPE_KEY).map((value) => ({ value, label: typeLabel(value) })),
         format: (r6) => typeLabel(r6.field_type)
       },
-      { key: "is_required", header: t5("ui.colRequired"), sortable: true, format: (r6) => r6.is_required ? t5("ui.yes") : t5("ui.no") },
+      {
+        key: "is_required",
+        header: t5("ui.colRequired"),
+        sortable: true,
+        filterable: true,
+        // Dominio CERRADO (0/1) que el servidor filtra por `eq`: se elige, no se teclea.
+        filterType: "select",
+        options: [
+          { value: "1", label: t5("ui.yes") },
+          { value: "0", label: t5("ui.no") }
+        ],
+        format: (r6) => r6.is_required ? t5("ui.yes") : t5("ui.no")
+      },
       { key: "sort_order", header: t5("ui.colOrder"), align: "right", sortable: true }
     ];
   }
@@ -3401,6 +3413,10 @@ var ErpCustomersFields = class extends i3 {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
   }
+  /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
+  dataTable() {
+    return this.renderRoot.querySelector("ok-data-table");
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -3410,11 +3426,6 @@ var ErpCustomersFields = class extends i3 {
     this.fSortOrder = "0";
     this.fActive = true;
     this.formError = "";
-  }
-  startNew() {
-    this.resetForm();
-    this.editing = "new";
-    this.formMsg = "";
   }
   startEdit(f3) {
     this.editing = f3;
@@ -3426,6 +3437,7 @@ var ErpCustomersFields = class extends i3 {
     this.fActive = Boolean(f3.is_active);
     this.formError = "";
     this.formMsg = "";
+    this.dataTable()?.open("create");
   }
   /** options en BD = JSON array serializado; en el form se edita una opción por coma. */
   optionsToText(options) {
@@ -3452,22 +3464,14 @@ var ErpCustomersFields = class extends i3 {
   }
   async save(ev) {
     ev.preventDefault();
-    if (!this.fName.trim() || !this.editing) return;
+    if (!this.fName.trim()) return;
+    const editing = this.editing;
     this.saving = true;
     this.formError = "";
     try {
-      if (this.editing === "new") {
-        await erplora().command("customers.fields.create", {
-          name: this.fName.trim(),
-          field_type: this.fType,
-          options: this.optionsPayload(),
-          is_required: this.fRequired ? 1 : 0,
-          sort_order: Number(this.fSortOrder) || 0
-        });
-        this.formMsg = erplora().t(CATALOG, "ui.fieldCreated");
-      } else {
+      if (editing) {
         await erplora().command("customers.fields.update", {
-          field_id: this.editing.id,
+          field_id: editing.id,
           name: this.fName.trim(),
           field_type: this.fType,
           options: this.optionsPayload(),
@@ -3476,8 +3480,18 @@ var ErpCustomersFields = class extends i3 {
           is_active: this.fActive ? 1 : 0
         });
         this.formMsg = erplora().t(CATALOG, "ui.fieldUpdated");
+      } else {
+        await erplora().command("customers.fields.create", {
+          name: this.fName.trim(),
+          field_type: this.fType,
+          options: this.optionsPayload(),
+          is_required: this.fRequired ? 1 : 0,
+          sort_order: Number(this.fSortOrder) || 0
+        });
+        this.formMsg = erplora().t(CATALOG, "ui.fieldCreated");
       }
       this.resetForm();
+      this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e5) {
       this.formError = e5 instanceof Error ? e5.message : erplora().t(CATALOG, "ui.errSaveField");
@@ -3500,25 +3514,24 @@ var ErpCustomersFields = class extends i3 {
       this.saving = false;
     }
   }
+  /** Formulario del panel `create`: SIEMPRE proyectado (si solo se pintara al editar, el «+» de la
+   *  barra abriría un panel vacío). En alta `editing` es null; en edición trae la fila. */
   renderForm() {
-    if (!this.editing) return A;
-    const isNew = this.editing === "new";
     const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
-    return b2`<section class="panel">
-      <h3>${isNew ? t5("ui.newFieldTitle") : t5("ui.editFieldTitle", { name: this.editing.name })}</h3>
-      <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-select fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e5) => this.fType = e5.target.value}>
-          ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
-        </ion-select>
-        ${this.fType === "select" ? b2`<ion-input fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e5) => this.fOptions = e5.target.value}></ion-input>` : A}
-        <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
-        <label class="check"><ion-checkbox .checked=${this.fRequired} @ionChange=${(e5) => this.fRequired = e5.target.checked}></ion-checkbox> ${t5("ui.fieldRequired")}</label>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActive")}</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
-      </form>
-    </section>`;
+    const editing = this.editing;
+    return b2`<form slot="create" class="form" @submit=${(e5) => this.save(e5)}>
+      ${editing ? b2`<h3>${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
+      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+      <ion-select fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e5) => this.fType = e5.target.value}>
+        ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
+      </ion-select>
+      ${this.fType === "select" ? b2`<ion-input fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e5) => this.fOptions = e5.target.value}></ion-input>` : A}
+      <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
+      <ion-checkbox .checked=${this.fRequired} @ionChange=${(e5) => this.fRequired = e5.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+    </form>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
@@ -3532,17 +3545,14 @@ var ErpCustomersFields = class extends i3 {
   }
   render() {
     const t5 = (k2) => erplora().t(CATALOG, k2);
-    return b2`<div>
-      <header>
-        <h2>${t5("ui.fieldsTitle")}</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newField")}</ion-button>
-      </header>
+    return b2`<div class="page">
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
-      ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+        ${this.renderForm()}
+      </ok-data-table>
     </div>`;
   }
 };
@@ -3606,14 +3616,15 @@ var ErpCustomersGroups = class extends i3 {
   }
   static {
     this.styles = i`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
-    h2 { margin:0; font-size:1.15rem; flex:1; }
-    h3 { margin:.25rem 0 .5rem; font-size:1rem; }
-    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
-    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input { flex:1 1 11rem; min-width:9rem; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* La tabla llena el alto de la vista: scroll interno en las filas + pie siempre visible. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .panel { flex:0 0 auto; border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
+    .panel h3 { margin:.25rem 0 .5rem; font-size:1rem; }
+    /* El panel del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .form { display:flex; flex-direction:column; gap:.7rem; }
+    .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
   `;
@@ -3649,6 +3660,10 @@ var ErpCustomersGroups = class extends i3 {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
   }
+  /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
+  dataTable() {
+    return this.renderRoot.querySelector("ok-data-table");
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -3658,11 +3673,6 @@ var ErpCustomersGroups = class extends i3 {
     this.fSortOrder = "0";
     this.fActive = true;
     this.formError = "";
-  }
-  startNew() {
-    this.resetForm();
-    this.editing = "new";
-    this.formMsg = "";
   }
   startEdit(g3) {
     this.editing = g3;
@@ -3674,6 +3684,7 @@ var ErpCustomersGroups = class extends i3 {
     this.fActive = Boolean(g3.is_active);
     this.formError = "";
     this.formMsg = "";
+    this.dataTable()?.open("create");
   }
   onRowAction(ev) {
     const g3 = ev.detail.row;
@@ -3686,23 +3697,15 @@ var ErpCustomersGroups = class extends i3 {
   }
   async save(ev) {
     ev.preventDefault();
-    if (!this.fName.trim() || !this.editing) return;
+    if (!this.fName.trim()) return;
+    const editing = this.editing;
     const discount = Math.min(100, Math.max(0, Number(this.fDiscount) || 0));
     this.saving = true;
     this.formError = "";
     try {
-      if (this.editing === "new") {
-        await erplora2().command("customers.groups.create", {
-          name: this.fName.trim(),
-          description: this.fDescription.trim(),
-          discount_percent: discount,
-          color: this.fColor.trim() || "primary",
-          sort_order: Number(this.fSortOrder) || 0
-        });
-        this.formMsg = erplora2().t(CATALOG2, "ui.groupCreated");
-      } else {
+      if (editing) {
         await erplora2().command("customers.groups.update", {
-          group_id: this.editing.id,
+          group_id: editing.id,
           name: this.fName.trim(),
           description: this.fDescription.trim(),
           discount_percent: discount,
@@ -3711,8 +3714,18 @@ var ErpCustomersGroups = class extends i3 {
           is_active: this.fActive ? 1 : 0
         });
         this.formMsg = erplora2().t(CATALOG2, "ui.groupUpdated");
+      } else {
+        await erplora2().command("customers.groups.create", {
+          name: this.fName.trim(),
+          description: this.fDescription.trim(),
+          discount_percent: discount,
+          color: this.fColor.trim() || "primary",
+          sort_order: Number(this.fSortOrder) || 0
+        });
+        this.formMsg = erplora2().t(CATALOG2, "ui.groupCreated");
       }
       this.resetForm();
+      this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e5) {
       this.formError = e5 instanceof Error ? e5.message : erplora2().t(CATALOG2, "ui.errSaveGroup");
@@ -3735,23 +3748,22 @@ var ErpCustomersGroups = class extends i3 {
       this.saving = false;
     }
   }
+  /** Formulario del panel `create`: SIEMPRE proyectado (si solo se pintara al editar, el «+» de la
+   *  barra abriría un panel vacío). En alta `editing` es null; en edición trae la fila. */
   renderForm() {
-    if (!this.editing) return A;
-    const isNew = this.editing === "new";
     const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
-    return b2`<section class="panel">
-      <h3>${isNew ? t5("ui.newGroupTitle") : t5("ui.editGroupTitle", { name: this.editing.name })}</h3>
-      <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-input fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e5) => this.fDescription = e5.target.value}></ion-input>
-        <ion-input type="number" fill="outline" label=${t5("ui.fieldDiscount")} label-placement="floating" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e5) => this.fDiscount = e5.target.value}></ion-input>
-        <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
-        <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActive")}</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
-      </form>
-    </section>`;
+    const editing = this.editing;
+    return b2`<form slot="create" class="form" @submit=${(e5) => this.save(e5)}>
+      ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
+      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+      <ion-input fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e5) => this.fDescription = e5.target.value}></ion-input>
+      <ion-input type="number" fill="outline" label=${t5("ui.fieldDiscount")} label-placement="floating" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e5) => this.fDiscount = e5.target.value}></ion-input>
+      <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
+      <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e5) => this.fSortOrder = e5.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+    </form>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
@@ -3765,17 +3777,14 @@ var ErpCustomersGroups = class extends i3 {
   }
   render() {
     const t5 = (k2) => erplora2().t(CATALOG2, k2);
-    return b2`<div>
-      <header>
-        <h2>${t5("ui.groupsTitle")}</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newGroup")}</ion-button>
-      </header>
+    return b2`<div class="page">
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
-      ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+        ${this.renderForm()}
+      </ok-data-table>
     </div>`;
   }
 };
@@ -4025,11 +4034,19 @@ var ErpCustomersList = class extends i3 {
   }
   static {
     this.styles = i`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* Lista: la tabla llena el alto (scroll interno en las filas + pie siempre visible); las KPIs
+       y los avisos quedan fijos arriba. La ficha es un documento: scrollea entera. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
+    .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
+    /* El panel de alta del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .create-form { display:flex; flex-direction:column; gap:.7rem; }
     .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1.25rem; }
     .form ion-input, .form ion-select, .form ion-textarea { flex:1 1 11rem; min-width:9rem; }
     .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
@@ -4161,7 +4178,11 @@ var ErpCustomersList = class extends i3 {
     }
     await Promise.all([this.ctrl.load(), this.loadStats()]);
   }
-  // — Alta rápida (lista) —
+  /** Referencia al ok-data-table para cerrar su panel lateral tras el alta. */
+  dataTable() {
+    return this.renderRoot.querySelector("ok-data-table");
+  }
+  // — Alta rápida (panel `create` de la tabla) —
   async create(ev) {
     ev.preventDefault();
     if (!this.newName.trim()) return;
@@ -4190,6 +4211,7 @@ var ErpCustomersList = class extends i3 {
       });
       this.newName = "";
       this.newEmail = "";
+      this.dataTable()?.close();
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e5) {
       this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errCreate");
@@ -4477,7 +4499,7 @@ var ErpCustomersList = class extends i3 {
   renderDetail() {
     const d3 = this.detail;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    return b2`<div>
+    return b2`<div class="detail-page">
       <header>
         <h2>${d3.name}</h2>
         <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
@@ -4530,24 +4552,28 @@ var ErpCustomersList = class extends i3 {
       </section>
     </div>`;
   }
+  /** Alta rápida: SIEMPRE proyectada en el panel `create` de la tabla (si solo se pintara al pulsar
+   *  el «+», el panel abriría vacío). La ficha completa se edita desde el detalle. */
+  renderCreateForm() {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    return b2`<form slot="create" class="create-form" @submit=${(e5) => this.create(e5)}>
+      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.newName} @ionInput=${(e5) => this.newName = e5.target.value}></ion-input>
+      <ion-input type="email" fill="outline" label=${t5("ui.colEmail")} label-placement="floating" .value=${this.newEmail} @ionInput=${(e5) => this.newEmail = e5.target.value}></ion-input>
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
+    </form>`;
+  }
   render() {
     if (this.detail) return this.renderDetail();
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    return b2`<div>
-        <header>
-          <h2>${t5("ui.customers")}</h2>
-        </header>
+    return b2`<div class="page">
         ${this.renderStats()}
-        <form class="form" @submit=${(e5) => this.create(e5)}>
-          <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.newName} @ionInput=${(e5) => this.newName = e5.target.value}></ion-input>
-          <ion-input type="email" fill="outline" label=${t5("ui.colEmail")} label-placement="floating" .value=${this.newEmail} @ionInput=${(e5) => this.newEmail = e5.target.value}></ion-input>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
-        </form>
         ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
         ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+          ${this.renderCreateForm()}
+        </ok-data-table>
       </div>`;
   }
 };
@@ -4782,14 +4808,15 @@ var ErpCustomersTags = class extends i3 {
   }
   static {
     this.styles = i`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
-    h2 { margin:0; font-size:1.15rem; flex:1; }
-    h3 { margin:.25rem 0 .5rem; font-size:1rem; }
-    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
-    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input { flex:1 1 11rem; min-width:9rem; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* La tabla llena el alto de la vista: scroll interno en las filas + pie siempre visible. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .panel { flex:0 0 auto; border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
+    .panel h3 { margin:.25rem 0 .5rem; font-size:1rem; }
+    /* El panel del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .form { display:flex; flex-direction:column; gap:.7rem; }
+    .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
   `;
@@ -4822,6 +4849,10 @@ var ErpCustomersTags = class extends i3 {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
   }
+  /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
+  dataTable() {
+    return this.renderRoot.querySelector("ok-data-table");
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -4829,50 +4860,48 @@ var ErpCustomersTags = class extends i3 {
     this.fActive = true;
     this.formError = "";
   }
-  startNew() {
-    this.resetForm();
-    this.editing = "new";
-    this.formMsg = "";
-  }
-  startEdit(t5) {
-    this.editing = t5;
-    this.fName = t5.name;
-    this.fColor = t5.color || "primary";
-    this.fActive = Boolean(t5.is_active);
+  startEdit(tag) {
+    this.editing = tag;
+    this.fName = tag.name;
+    this.fColor = tag.color || "primary";
+    this.fActive = Boolean(tag.is_active);
     this.formError = "";
     this.formMsg = "";
+    this.dataTable()?.open("create");
   }
   onRowAction(ev) {
-    const t5 = ev.detail.row;
-    if (ev.detail.actionId === "edit") this.startEdit(t5);
+    const tag = ev.detail.row;
+    if (ev.detail.actionId === "edit") this.startEdit(tag);
     if (ev.detail.actionId === "delete") {
-      this.pendingDelete = t5;
+      this.pendingDelete = tag;
       this.formMsg = "";
       this.formError = "";
     }
   }
   async save(ev) {
     ev.preventDefault();
-    if (!this.fName.trim() || !this.editing) return;
+    if (!this.fName.trim()) return;
+    const editing = this.editing;
     this.saving = true;
     this.formError = "";
     try {
-      if (this.editing === "new") {
-        await erplora5().command("customers.tags.create", {
-          name: this.fName.trim(),
-          color: this.fColor.trim() || "primary"
-        });
-        this.formMsg = erplora5().t(CATALOG5, "ui.tagCreated");
-      } else {
+      if (editing) {
         await erplora5().command("customers.tags.update", {
-          tag_id: this.editing.id,
+          tag_id: editing.id,
           name: this.fName.trim(),
           color: this.fColor.trim() || "primary",
           is_active: this.fActive ? 1 : 0
         });
         this.formMsg = erplora5().t(CATALOG5, "ui.tagUpdated");
+      } else {
+        await erplora5().command("customers.tags.create", {
+          name: this.fName.trim(),
+          color: this.fColor.trim() || "primary"
+        });
+        this.formMsg = erplora5().t(CATALOG5, "ui.tagCreated");
       }
       this.resetForm();
+      this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e5) {
       this.formError = e5 instanceof Error ? e5.message : erplora5().t(CATALOG5, "ui.errSaveTag");
@@ -4895,20 +4924,19 @@ var ErpCustomersTags = class extends i3 {
       this.saving = false;
     }
   }
+  /** Formulario del panel `create`: SIEMPRE proyectado (si solo se pintara al editar, el «+» de la
+   *  barra abriría un panel vacío). En alta `editing` es null; en edición trae la fila. */
   renderForm() {
-    if (!this.editing) return A;
-    const isNew = this.editing === "new";
     const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
-    return b2`<section class="panel">
-      <h3>${isNew ? t5("ui.newTagTitle") : t5("ui.editTagTitle", { name: this.editing.name })}</h3>
-      <form class="form" @submit=${(e5) => this.save(e5)}>
-        <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
-        <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
-        ${isNew ? A : b2`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}></ion-checkbox> ${t5("ui.fieldActiveTag")}</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>
-      </form>
-    </section>`;
+    const editing = this.editing;
+    return b2`<form slot="create" class="form" @submit=${(e5) => this.save(e5)}>
+      ${editing ? b2`<h3>${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
+      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e5) => this.fName = e5.target.value}></ion-input>
+      <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e5) => this.fColor = e5.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e5) => this.fActive = e5.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+    </form>`;
   }
   renderDeleteConfirm() {
     if (!this.pendingDelete) return A;
@@ -4922,17 +4950,14 @@ var ErpCustomersTags = class extends i3 {
   }
   render() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
-    return b2`<div>
-      <header>
-        <h2>${t5("ui.tagsTitle")}</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>${t5("ui.newTag")}</ion-button>
-      </header>
+    return b2`<div class="page">
       ${this.formError ? b2`<p class="err">${this.formError}</p>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
-      ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+        ${this.renderForm()}
+      </ok-data-table>
     </div>`;
   }
 };

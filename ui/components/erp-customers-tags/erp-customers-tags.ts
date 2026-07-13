@@ -31,14 +31,15 @@ function erplora(): ErploraClientLike {
 /** CRUD de etiquetas de clientes (tags.list/create/update/delete). */
 export class ErpCustomersTags extends LitElement {
   static styles = css`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
-    h2 { margin:0; font-size:1.15rem; flex:1; }
-    h3 { margin:.25rem 0 .5rem; font-size:1rem; }
-    .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
-    .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
-    .form ion-input { flex:1 1 11rem; min-width:9rem; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* La tabla llena el alto de la vista: scroll interno en las filas + pie siempre visible. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .panel { flex:0 0 auto; border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
+    .panel h3 { margin:.25rem 0 .5rem; font-size:1rem; }
+    /* El panel del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .form { display:flex; flex-direction:column; gap:.7rem; }
+    .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
   `;
@@ -49,7 +50,8 @@ export class ErpCustomersTags extends LitElement {
 
   @state() formMsg = '';
 
-  @state() editing: Tag | 'new' | null = null;
+  /** null = alta; Tag = edición de esa fila. El MISMO panel (`slot="create"`) sirve para las dos. */
+  @state() editing: Tag | null = null;
 
   @state() pendingDelete: Tag | null = null;
 
@@ -95,50 +97,54 @@ export class ErpCustomersTags extends LitElement {
     super.disconnectedCallback();
   }
 
+  /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
+  private dataTable(): { open(p?: 'filters' | 'create'): void; close(): void } | null {
+    return this.renderRoot.querySelector('ok-data-table') as
+      | { open(p?: 'filters' | 'create'): void; close(): void }
+      | null;
+  }
+
   private resetForm() {
     this.editing = null;
     this.fName = ''; this.fColor = 'primary'; this.fActive = true;
     this.formError = '';
   }
 
-  private startNew() {
-    this.resetForm();
-    this.editing = 'new';
-    this.formMsg = '';
-  }
-
-  private startEdit(t: Tag) {
-    this.editing = t;
-    this.fName = t.name; this.fColor = t.color || 'primary'; this.fActive = Boolean(t.is_active);
+  private startEdit(tag: Tag) {
+    this.editing = tag;
+    this.fName = tag.name; this.fColor = tag.color || 'primary'; this.fActive = Boolean(tag.is_active);
     this.formError = '';
     this.formMsg = '';
+    this.dataTable()?.open('create'); // el panel de alta, ya relleno con la fila
   }
 
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
-    const t = ev.detail.row as unknown as Tag;
-    if (ev.detail.actionId === 'edit') this.startEdit(t);
-    if (ev.detail.actionId === 'delete') { this.pendingDelete = t; this.formMsg = ''; this.formError = ''; }
+    const tag = ev.detail.row as unknown as Tag;
+    if (ev.detail.actionId === 'edit') this.startEdit(tag);
+    if (ev.detail.actionId === 'delete') { this.pendingDelete = tag; this.formMsg = ''; this.formError = ''; }
   }
 
   private async save(ev: Event) {
     ev.preventDefault();
-    if (!this.fName.trim() || !this.editing) return;
+    if (!this.fName.trim()) return;
+    const editing = this.editing;
     this.saving = true;
     this.formError = '';
     try {
-      if (this.editing === 'new') {
+      if (editing) {
+        await erplora().command('customers.tags.update', {
+          tag_id: editing.id, name: this.fName.trim(),
+          color: this.fColor.trim() || 'primary', is_active: this.fActive ? 1 : 0,
+        });
+        this.formMsg = erplora().t(CATALOG, 'ui.tagUpdated');
+      } else {
         await erplora().command('customers.tags.create', {
           name: this.fName.trim(), color: this.fColor.trim() || 'primary',
         });
         this.formMsg = erplora().t(CATALOG, 'ui.tagCreated');
-      } else {
-        await erplora().command('customers.tags.update', {
-          tag_id: this.editing.id, name: this.fName.trim(),
-          color: this.fColor.trim() || 'primary', is_active: this.fActive ? 1 : 0,
-        });
-        this.formMsg = erplora().t(CATALOG, 'ui.tagUpdated');
       }
       this.resetForm();
+      this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errSaveTag');
@@ -163,20 +169,19 @@ export class ErpCustomersTags extends LitElement {
     }
   }
 
+  /** Formulario del panel `create`: SIEMPRE proyectado (si solo se pintara al editar, el «+» de la
+   *  barra abriría un panel vacío). En alta `editing` es null; en edición trae la fila. */
   private renderForm() {
-    if (!this.editing) return nothing;
-    const isNew = this.editing === 'new';
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
-    return html`<section class="panel">
-      <h3>${isNew ? t('ui.newTagTitle') : t('ui.editTagTitle', { name: (this.editing as Tag).name })}</h3>
-      <form class="form" @submit=${(e: Event) => this.save(e)}>
-        <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-        <ion-input fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
-        ${isNew ? nothing : html`<label class="check"><ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}></ion-checkbox> ${t('ui.fieldActiveTag')}</label>`}
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>
-      </form>
-    </section>`;
+    const editing = this.editing;
+    return html`<form slot="create" class="form" @submit=${(e: Event) => this.save(e)}>
+      ${editing ? html`<h3>${t('ui.editTagTitle', { name: editing.name })}</h3>` : nothing}
+      <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-input fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
+      ${editing ? html`<ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActiveTag')}</ion-checkbox>` : nothing}
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+      ${editing ? html`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
+    </form>`;
   }
 
   private renderDeleteConfirm() {
@@ -192,17 +197,15 @@ export class ErpCustomersTags extends LitElement {
 
   render() {
     const t = (k: string): string => erplora().t(CATALOG, k);
-    return html`<div>
-      <header>
-        <h2>${t('ui.tagsTitle')}</h2>
-        <ion-button size="small" @click=${() => this.startNew()}>${t('ui.newTag')}</ion-button>
-      </header>
+    // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
+    return html`<div class="page">
       ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
-      ${this.renderForm()}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-      <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+        ${this.renderForm()}
+      </ok-data-table>
     </div>`;
   }
 }

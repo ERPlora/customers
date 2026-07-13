@@ -94,11 +94,19 @@ type EditForm = typeof EMPTY_FORM;
 
 export class ErpCustomersList extends LitElement {
   static styles = css`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    /* Lista: la tabla llena el alto (scroll interno en las filas + pie siempre visible); las KPIs
+       y los avisos quedan fijos arriba. La ficha es un documento: scrollea entera. */
+    .page { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+    .page > ok-data-table { flex:1 1 auto; min-height:0; }
+    .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
+    .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
+    /* El panel de alta del data-table es una columna estrecha: los campos van apilados, no en fila. */
+    .create-form { display:flex; flex-direction:column; gap:.7rem; }
     .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1.25rem; }
     .form ion-input, .form ion-select, .form ion-textarea { flex:1 1 11rem; min-width:9rem; }
     .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius:10px; padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
@@ -252,7 +260,14 @@ export class ErpCustomersList extends LitElement {
     await Promise.all([this.ctrl.load(), this.loadStats()]);
   }
 
-  // — Alta rápida (lista) —
+  /** Referencia al ok-data-table para cerrar su panel lateral tras el alta. */
+  private dataTable(): { open(p?: 'filters' | 'create'): void; close(): void } | null {
+    return this.renderRoot.querySelector('ok-data-table') as
+      | { open(p?: 'filters' | 'create'): void; close(): void }
+      | null;
+  }
+
+  // — Alta rápida (panel `create` de la tabla) —
   private async create(ev: Event) {
     ev.preventDefault();
     if (!this.newName.trim()) return;
@@ -267,6 +282,7 @@ export class ErpCustomersList extends LitElement {
         marketing_consent: 0, consent_date: null,
       });
       this.newName = ''; this.newEmail = '';
+      this.dataTable()?.close(); // el panel se cierra al crear: el alta ya está en la tabla
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errCreate');
@@ -536,7 +552,9 @@ export class ErpCustomersList extends LitElement {
   private renderDetail() {
     const d = this.detail!;
     const t = (k: string): string => erplora().t(CATALOG, k);
-    return html`<div>
+    // La ficha es una pantalla propia (no la lista): el `<h2>` es el NOMBRE del cliente, no el
+    // título de la vista, y el topbar del shell no lo conoce.
+    return html`<div class="detail-page">
       <header>
         <h2>${d.name}</h2>
         <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t('ui.back')}</ion-button>
@@ -588,24 +606,30 @@ export class ErpCustomersList extends LitElement {
     </div>`;
   }
 
+  /** Alta rápida: SIEMPRE proyectada en el panel `create` de la tabla (si solo se pintara al pulsar
+   *  el «+», el panel abriría vacío). La ficha completa se edita desde el detalle. */
+  private renderCreateForm() {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    return html`<form slot="create" class="create-form" @submit=${(e: Event) => this.create(e)}>
+      <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
+      <ion-input type="email" fill="outline" label=${t('ui.colEmail')} label-placement="floating" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
+    </form>`;
+  }
+
   render() {
     if (this.detail) return this.renderDetail();
     const t = (k: string): string => erplora().t(CATALOG, k);
-    return html`<div>
-        <header>
-          <h2>${t('ui.customers')}</h2>
-        </header>
+    // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
+    return html`<div class="page">
         ${this.renderStats()}
-        <form class="form" @submit=${(e: Event) => this.create(e)}>
-          <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
-          <ion-input type="email" fill="outline" label=${t('ui.colEmail')} label-placement="floating" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
-        </form>
         ${this.formError ? html`<p class="err">${this.formError}</p>` : nothing}
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-        <ok-data-table .serverSide=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}></ok-data-table>
+        <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+          ${this.renderCreateForm()}
+        </ok-data-table>
       </div>`;
   }
 }
