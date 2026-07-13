@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "module": "customers",
+  "consumes": {
+    "queries": [
+      "customers.activities",
+      "customers.fields.list",
+      "customers.get",
+      "customers.group_ids",
+      "customers.groups.list",
+      "customers.list",
+      "customers.stats",
+      "customers.tag_ids",
+      "customers.tags.list"
+    ],
+    "optional_queries": [],
+    "commands": [
+      "customers.activity.add",
+      "customers.create",
+      "customers.delete",
+      "customers.fields.create",
+      "customers.fields.delete",
+      "customers.fields.update",
+      "customers.groups.create",
+      "customers.groups.delete",
+      "customers.groups.update",
+      "customers.notes.add",
+      "customers.set_groups",
+      "customers.set_tags",
+      "customers.tags.create",
+      "customers.tags.delete",
+      "customers.tags.update",
+      "customers.update"
+    ],
+    "events": [
+      "customer.created",
+      "customer.deleted",
+      "customer.updated"
+    ],
+    "slots": []
+  }
+}
