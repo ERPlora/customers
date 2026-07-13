@@ -13,6 +13,10 @@ const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
 interface ErploraClientLike extends ListClient {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
+  /** TODAS las filas, sin tope (salvo que pases `limit`). Para lo que no es «una página»: la
+   *  rejilla de productos del TPV, un `<ion-select>` de categorías fiscales, el mapa
+   *  producto↔categoría. El viejo `page_size` NO era un parámetro del runtime: truncaba a 50. */
+  queryAll<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T[]>;
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
@@ -297,8 +301,8 @@ export class ErpCustomersList extends LitElement {
   private async loadMemberships(id: string) {
     try {
       const [groupsPage, tagsPage, gids, tids] = await Promise.all([
-        erplora().queryPage<Group>('customers.groups.list', { page: 0, page_size: 50 }),
-        erplora().queryPage<Tag>('customers.tags.list', { page: 0, page_size: 50 }),
+        erplora().queryAll<Group>('customers.groups.list'),
+        erplora().queryAll<Tag>('customers.tags.list'),
         erplora().query<Array<{ id: string }>>('customers.group_ids', { customer_id: id }),
         erplora().query<Array<{ id: string }>>('customers.tag_ids', { customer_id: id }),
       ]);

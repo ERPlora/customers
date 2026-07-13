@@ -96,7 +96,7 @@ export class ErpCustomersPosSearch extends LitElement {
     this.error = '';
     try {
       const r = await erplora()
-        .query('customers.list', { search: q, page_size: 20, sort: 'name', dir: 'asc' })
+        .query('customers.list', { search: q, limit: 20, sort: 'name', dir: 'asc' })
         .catch(() => []);
       this.results = rows<Customer>(r);
     } catch (e) {
