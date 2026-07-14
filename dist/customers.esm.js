@@ -3142,7 +3142,8 @@ var es_default = {
     noResults: "Sin resultados.",
     noCustomers: "No hay clientes.",
     removeCustomer: "Quitar cliente",
-    errLoadCustomers: "No se pudieron cargar los clientes"
+    errLoadCustomers: "No se pudieron cargar los clientes",
+    customFields: "Campos personalizados"
   }
 };
 
@@ -3312,7 +3313,8 @@ var en_default = {
     noResults: "No results.",
     noCustomers: "No customers.",
     removeCustomer: "Remove customer",
-    errLoadCustomers: "Could not load the customers"
+    errLoadCustomers: "Could not load the customers",
+    customFields: "Custom fields"
   }
 };
 
@@ -4025,6 +4027,7 @@ var ErpCustomersList = class extends i3 {
     this.editing = false;
     this.form = { ...EMPTY_FORM };
     this.activities = [];
+    this.fieldValues = [];
     this.groups = [];
     this.tags = [];
     this.groupIds = [];
@@ -4233,10 +4236,21 @@ var ErpCustomersList = class extends i3 {
         return;
       }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id)]);
     } catch (e5) {
       this.formError = e5 instanceof Error ? e5.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
+  }
+  async loadFieldValues(id) {
+    try {
+      this.fieldValues = await erplora3().query("customers.fields.values", { customer_id: id }) ?? [];
+    } catch {
+      this.fieldValues = [];
+    }
+  }
+  /** Edita en memoria el valor de un campo; se persiste al guardar la ficha. */
+  setFieldValue(fieldId, value) {
+    this.fieldValues = this.fieldValues.map((f3) => f3.id === fieldId ? { ...f3, value } : f3);
   }
   async loadActivities(id) {
     try {
@@ -4329,6 +4343,12 @@ var ErpCustomersList = class extends i3 {
         marketing_consent: this.form.marketing_consent ? 1 : 0,
         is_active: this.form.is_active ? 1 : 0
       });
+      const customerId = this.detail.id;
+      await Promise.all(this.fieldValues.map((f3) => erplora3().command("customers._field_value_set", {
+        customer_id: customerId,
+        field_id: f3.id,
+        value: f3.value ?? ""
+      })));
       this.editing = false;
       this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
@@ -4433,6 +4453,46 @@ var ErpCustomersList = class extends i3 {
       </footer>
     </section>`;
   }
+  /** Campos personalizados (ADR-0132): los pinta su `field_type`, no un input de texto para todo.
+   *  Un `select` con opciones es un dominio CERRADO: pintarlo como texto libre lo rompe. */
+  renderCustomFields() {
+    if (!this.fieldValues.length) return A;
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    const set = (id) => (e5) => this.setFieldValue(id, String(e5.target.value ?? ""));
+    return b2`<section class="custom-fields">
+      <h3>${t5("ui.customFields")}</h3>
+      <div class="grid2">
+        ${this.fieldValues.map((f3) => {
+      const label = f3.is_required ? `${f3.name} *` : f3.name;
+      if (f3.field_type === "select") {
+        let opts = [];
+        try {
+          opts = JSON.parse(f3.options || "[]");
+        } catch {
+          opts = [];
+        }
+        return b2`<ion-select data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+              .value=${f3.value} @ionChange=${set(f3.id)}>
+              ${opts.map((o7) => b2`<ion-select-option value=${o7}>${o7}</ion-select-option>`)}
+            </ion-select>`;
+      }
+      if (f3.field_type === "textarea") {
+        return b2`<ion-textarea data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+              auto-grow .value=${f3.value} @ionInput=${set(f3.id)}></ion-textarea>`;
+      }
+      if (f3.field_type === "boolean") {
+        return b2`<ion-checkbox data-field=${f3.id} .checked=${f3.value === "1"}
+              @ionChange=${(e5) => this.setFieldValue(f3.id, e5.target.checked ? "1" : "")}>
+              ${label}
+            </ion-checkbox>`;
+      }
+      const type = f3.field_type === "number" ? "number" : f3.field_type === "date" ? "date" : "text";
+      return b2`<ion-input data-field=${f3.id} type=${type} fill="outline" label=${label}
+            label-placement="floating" .value=${f3.value} @ionInput=${set(f3.id)}></ion-input>`;
+    })}
+      </div>
+    </section>`;
+  }
   renderEditForm() {
     const f3 = this.form;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
@@ -4466,6 +4526,7 @@ var ErpCustomersList = class extends i3 {
         <ion-textarea fill="outline" label=${t5("ui.fieldInternalNotes")} label-placement="floating" auto-grow .value=${f3.notes}
           @ionInput=${(e5) => this.form = { ...this.form, notes: e5.target.value }}></ion-textarea>
       </div>
+      ${this.renderCustomFields()}
       <label class="check"><ion-checkbox .checked=${f3.marketing_consent}
         @ionChange=${(e5) => this.form = { ...this.form, marketing_consent: e5.target.checked }}></ion-checkbox> ${t5("ui.marketingConsent")}</label>
       <label class="check"><ion-checkbox .checked=${f3.is_active}
@@ -4612,6 +4673,9 @@ __decorateClass([
 ], ErpCustomersList.prototype, "activities", 2);
 __decorateClass([
   r5()
+], ErpCustomersList.prototype, "fieldValues", 2);
+__decorateClass([
+  r5()
 ], ErpCustomersList.prototype, "groups", 2);
 __decorateClass([
   r5()
@@ -4639,6 +4703,11 @@ function rows(r6) {
   if (r6 && typeof r6 === "object" && Array.isArray(r6.rows)) return r6.rows;
   return [];
 }
+function direccionFiscal(c5) {
+  const localidad = [c5.postal_code, c5.city].filter(Boolean).join(" ");
+  return [c5.address, localidad, c5.country].filter((p4) => p4 && String(p4).trim()).join(", ");
+}
+var VACIO = { customer_id: null, customer_name: "", customer_tax_id: "", customer_address: "" };
 var ErpCustomersPosSearch = class extends i3 {
   constructor() {
     super(...arguments);
@@ -4657,19 +4726,23 @@ var ErpCustomersPosSearch = class extends i3 {
   static {
     this.styles = i`
     :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    .open { width:100%; }
+    .trigger { --padding-start:.5rem; --padding-end:.5rem; }
+    .trigger[data-assigned] { --color: var(--ion-color-primary,#0091ce); }
+    .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ctx { display:flex; align-items:center; gap:.15rem; }
     .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:60; }
     .sheet { background:var(--ion-background-color,#fff); border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.35); }
-    .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.8rem; }
+    .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
     .sheet-h .t { font-size:1.2rem; font-weight:700; }
-    .x { background:none; border:none; font-size:1.3rem; cursor:pointer; color:#8b897f; }
+    .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
     .list { display:flex; flex-direction:column; gap:.4rem; margin-top:.6rem; max-height:55vh; overflow:auto; }
-    .item { display:flex; flex-direction:column; gap:.1rem; border:1px solid var(--ion-border-color,#e0ddd4); border-radius:10px; padding:.5rem .7rem; background:var(--ion-background-color,#fff); cursor:pointer; font:inherit; color:inherit; text-align:left; width:100%; }
+    .item { display:flex; flex-direction:column; gap:.1rem; border:1px solid var(--ion-border-color,#e0ddd4); border-radius:10px; padding:.6rem .7rem; background:var(--ion-background-color,#fff); cursor:pointer; font:inherit; color:inherit; text-align:left; width:100%; }
     .item[aria-pressed=true] { outline:3px solid var(--ion-color-primary,#0091ce); outline-offset:1px; }
     .nm { font-weight:700; }
     .meta { font-size:.8rem; color:#8b897f; }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
-    .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
+    .err { color:#d9480f; }
   `;
   }
   connectedCallback() {
@@ -4703,51 +4776,67 @@ var ErpCustomersPosSearch = class extends i3 {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.search(v3), 300);
   }
-  emit(customer_id, customer_name) {
+  emit(snap) {
     this.dispatchEvent(new CustomEvent("erp:customer-context", {
-      detail: { customer_id, customer_name },
+      detail: snap,
       bubbles: true,
       composed: true
     }));
   }
-  pick(c5) {
+  async pick(c5) {
     this.selectedId = c5.id;
     this.selectedName = c5.name;
-    this.emit(c5.id, c5.name);
     this.open = false;
+    const ficha = rows(
+      await erplora4().query("customers.get", { customer_id: c5.id }).catch(() => [])
+    )[0];
+    this.emit({
+      customer_id: c5.id,
+      customer_name: c5.name,
+      customer_tax_id: ficha?.tax_id ?? "",
+      customer_address: ficha ? direccionFiscal(ficha) : ""
+    });
   }
   clear() {
     this.selectedId = void 0;
     this.selectedName = "";
-    this.emit(null, "");
     this.open = false;
+    this.emit(VACIO);
   }
   render() {
     const t5 = (k2) => erplora4().t(CATALOG4, k2);
+    const etiqueta = this.selectedName || t5("ui.assignCustomer");
     return b2`
-      <ion-button class="open" fill=${this.selectedId ? "solid" : "outline"} size="small" @click=${() => this.openPicker()}>
-        ${this.selectedName || t5("ui.assignCustomer")}
-      </ion-button>
+      <div class="ctx">
+        <ion-button class="trigger" fill="clear" size="small" aria-label=${etiqueta} title=${etiqueta}
+          ?data-assigned=${!!this.selectedId} @click=${() => this.openPicker()}>
+          <ion-icon slot="icon-only" name=${this.selectedId ? "person" : "person-add-outline"}></ion-icon>
+        </ion-button>
+        ${this.selectedName ? b2`<span class="name" title=${this.selectedName}>${this.selectedName}</span>` : A}
+      </div>
 
       ${this.open ? b2`<div class="scrim" @click=${(e5) => {
       if (e5.target.classList.contains("scrim")) this.open = false;
     }}>
-            <div class="sheet">
+            <div class="sheet" role="dialog" aria-modal="true" aria-label=${t5("ui.chooseCustomer")}>
               <div class="sheet-h">
                 <span class="t">${t5("ui.chooseCustomer")}</span>
-                <button class="x" @click=${() => {
+                <ion-button class="close" fill="clear" size="small" aria-label=${t5("ui.close")}
+                  @click=${() => {
       this.open = false;
-    }}>✕</button>
+    }}>
+                  <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+                </ion-button>
               </div>
 
               <ion-searchbar placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
                 @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
 
-              ${this.error ? b2`<p style="color:#d9480f">${this.error}</p>` : A}
+              ${this.error ? b2`<p class="err">${this.error}</p>` : A}
 
               <div class="list">
                 ${this.results.map((c5) => b2`
-                  <button class="item" aria-pressed=${this.selectedId === c5.id} @click=${() => this.pick(c5)}>
+                  <button class="item" aria-pressed=${this.selectedId === c5.id} @click=${() => void this.pick(c5)}>
                     <span class="nm">${c5.name}</span>
                     ${c5.phone || c5.email ? b2`<span class="meta">${c5.phone || c5.email}</span>` : A}
                   </button>`)}
@@ -4756,7 +4845,8 @@ var ErpCustomersPosSearch = class extends i3 {
               </div>
 
               <div class="foot">
-                <ion-button fill="clear" size="small" ?disabled=${!this.selectedId} @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
+                <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
+                  @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
               </div>
             </div>
           </div>` : A}

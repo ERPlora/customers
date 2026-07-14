@@ -163,6 +163,7 @@
     "noResults": "Sin resultados.",
     "noCustomers": "No hay clientes.",
     "removeCustomer": "Quitar cliente",
-    "errLoadCustomers": "No se pudieron cargar los clientes"
+    "errLoadCustomers": "No se pudieron cargar los clientes",
+    "customFields": "Campos personalizados"
   }
 }

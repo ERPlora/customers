@@ -92,6 +92,9 @@
   "migrations": {
     "sqlite": [
       "migrations/sqlite/001_init.sql"
+    ],
+    "postgres": [
+      "migrations/postgres/001_init.sql"
     ]
   },
   "queries": {
@@ -302,6 +305,13 @@
       },
       "ai": {
         "description": "Lists the custom fields defined for customers"
+      }
+    },
+    "customers.fields.values": {
+      "permission": "customers.view_customer",
+      "sql": "queries/field_values.sql",
+      "ai": {
+        "description": "Custom field definitions with this customer's values (empty string when unset)"
       }
     },
     "customers.activities": {

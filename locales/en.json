@@ -163,6 +163,7 @@
     "noResults": "No results.",
     "noCustomers": "No customers.",
     "removeCustomer": "Remove customer",
-    "errLoadCustomers": "Could not load the customers"
+    "errLoadCustomers": "Could not load the customers",
+    "customFields": "Custom fields"
   }
 }

@@ -57,6 +57,18 @@ interface Group { id: string; name: string; discount_percent: number; color: str
 
 interface Tag { id: string; name: string; color: string }
 
+// Campo personalizado + el valor de ESTE cliente (ADR-0132). `value` es siempre TEXT: el tipo lo
+// gobierna `field_type`, que decide cómo se pinta y se valida.
+interface FieldValue {
+  id: string;
+  name: string;
+  field_type: string;
+  options: string;
+  is_required: number;
+  sort_order: number;
+  value: string;
+}
+
 interface Activity {
   id: string; activity_type: string; title: string; description: string; created_at: string;
 }
@@ -150,6 +162,8 @@ export class ErpCustomersList extends LitElement {
   @state() form: EditForm = { ...EMPTY_FORM };
 
   @state() activities: Activity[] = [];
+  /** Campos personalizados del cliente abierto: definición + valor (ADR-0132). */
+  @state() fieldValues: FieldValue[] = [];
 
   @state() groups: Group[] = [];
 
@@ -302,10 +316,21 @@ export class ErpCustomersList extends LitElement {
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id)]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
+  }
+
+  private async loadFieldValues(id: string) {
+    try {
+      this.fieldValues = (await erplora().query<FieldValue[]>('customers.fields.values', { customer_id: id })) ?? [];
+    } catch { this.fieldValues = []; }
+  }
+
+  /** Edita en memoria el valor de un campo; se persiste al guardar la ficha. */
+  private setFieldValue(fieldId: string, value: string) {
+    this.fieldValues = this.fieldValues.map((f) => (f.id === fieldId ? { ...f, value } : f));
   }
 
   private async loadActivities(id: string) {
@@ -382,6 +407,15 @@ export class ErpCustomersList extends LitElement {
         marketing_consent: this.form.marketing_consent ? 1 : 0,
         is_active: this.form.is_active ? 1 : 0,
       });
+      // Campos personalizados (ADR-0132): un UPSERT por campo. El comando ya existía
+      // (`_field_value_set`) y NO tenía ni un solo llamante: se definían campos que nunca se
+      // rellenaban. Se guardan todos, incluido el vacío — vaciar un campo es un cambio real
+      // («ya no usa ese tinte»), no un no-op.
+      const customerId = this.detail.id;
+      await Promise.all(this.fieldValues.map((f) => erplora().command('customers._field_value_set', {
+        customer_id: customerId, field_id: f.id, value: f.value ?? '',
+      })));
+
       this.editing = false;
       this.formMsg = erplora().t(CATALOG, 'ui.customerUpdated');
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
@@ -487,6 +521,44 @@ export class ErpCustomersList extends LitElement {
     </section>`;
   }
 
+  /** Campos personalizados (ADR-0132): los pinta su `field_type`, no un input de texto para todo.
+   *  Un `select` con opciones es un dominio CERRADO: pintarlo como texto libre lo rompe. */
+  private renderCustomFields() {
+    if (!this.fieldValues.length) return nothing;
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    const set = (id: string) => (e: Event) => this.setFieldValue(id, String((e.target as HTMLInputElement).value ?? ''));
+
+    return html`<section class="custom-fields">
+      <h3>${t('ui.customFields')}</h3>
+      <div class="grid2">
+        ${this.fieldValues.map((f) => {
+          const label = f.is_required ? `${f.name} *` : f.name;
+          if (f.field_type === 'select') {
+            let opts: string[] = [];
+            try { opts = JSON.parse(f.options || '[]') as string[]; } catch { opts = []; }
+            return html`<ion-select data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+              .value=${f.value} @ionChange=${set(f.id)}>
+              ${opts.map((o) => html`<ion-select-option value=${o}>${o}</ion-select-option>`)}
+            </ion-select>`;
+          }
+          if (f.field_type === 'textarea') {
+            return html`<ion-textarea data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+              auto-grow .value=${f.value} @ionInput=${set(f.id)}></ion-textarea>`;
+          }
+          if (f.field_type === 'boolean') {
+            return html`<ion-checkbox data-field=${f.id} .checked=${f.value === '1'}
+              @ionChange=${(e: Event) => this.setFieldValue(f.id, (e.target as HTMLInputElement).checked ? '1' : '')}>
+              ${label}
+            </ion-checkbox>`;
+          }
+          const type = f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text';
+          return html`<ion-input data-field=${f.id} type=${type} fill="outline" label=${label}
+            label-placement="floating" .value=${f.value} @ionInput=${set(f.id)}></ion-input>`;
+        })}
+      </div>
+    </section>`;
+  }
+
   private renderEditForm() {
     const f = this.form;
     const t = (k: string): string => erplora().t(CATALOG, k);
@@ -520,6 +592,7 @@ export class ErpCustomersList extends LitElement {
         <ion-textarea fill="outline" label=${t('ui.fieldInternalNotes')} label-placement="floating" auto-grow .value=${f.notes}
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
+      ${this.renderCustomFields()}
       <label class="check"><ion-checkbox .checked=${f.marketing_consent}
         @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> ${t('ui.marketingConsent')}</label>
       <label class="check"><ion-checkbox .checked=${f.is_active}

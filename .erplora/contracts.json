@@ -5,6 +5,7 @@
     "queries": [
       "customers.activities",
       "customers.fields.list",
+      "customers.fields.values",
       "customers.get",
       "customers.group_ids",
       "customers.groups.list",
@@ -15,6 +16,7 @@
     ],
     "optional_queries": [],
     "commands": [
+      "customers._field_value_set",
       "customers.activity.add",
       "customers.create",
       "customers.delete",
