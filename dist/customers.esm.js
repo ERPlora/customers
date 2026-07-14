@@ -2369,6 +2369,8 @@ var OkDataTable = class extends i3 {
       (a3) => {
         const loading = a3.loading?.(row) === true;
         const disabled = loading || a3.disabled?.(row) === true;
+        const iconOnly = !!a3.icon;
+        const name = iconOnly && a3.label ? a3.label : A;
         return b2`
             <ion-button
               size="small"
@@ -2376,6 +2378,8 @@ var OkDataTable = class extends i3 {
               color=${a3.color ?? "medium"}
               ?disabled=${disabled}
               aria-disabled=${disabled ? "true" : A}
+              title=${name}
+              aria-label=${name}
               @click=${() => this.emit("rowAction", { actionId: a3.id, row })}
             >
               ${loading ? b2`<ion-spinner slot="icon-only" name="dots"></ion-spinner>` : a3.icon ? b2`<ion-icon slot="icon-only" .icon=${okIcon(a3.icon)}></ion-icon>` : a3.label}
@@ -3397,8 +3401,8 @@ var ErpCustomersFields = class extends i3 {
   get rowActions() {
     const t5 = (k2) => erplora().t(CATALOG, k2);
     return [
-      { id: "edit", label: t5("ui.actionEdit") },
-      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+      { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
+      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
     ];
   }
   async connectedCallback() {
@@ -3552,7 +3556,7 @@ var ErpCustomersFields = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${"name"} .cardIcon=${"layers-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -3644,8 +3648,8 @@ var ErpCustomersGroups = class extends i3 {
   get rowActions() {
     const t5 = (k2) => erplora2().t(CATALOG2, k2);
     return [
-      { id: "edit", label: t5("ui.actionEdit") },
-      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+      { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
+      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
     ];
   }
   async connectedCallback() {
@@ -3784,7 +3788,7 @@ var ErpCustomersGroups = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${"name"} .cardIcon=${"people-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -4098,8 +4102,8 @@ var ErpCustomersList = class extends i3 {
   get rowActions() {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return [
-      { id: "view", label: t5("ui.actionView") },
-      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+      { id: "view", label: t5("ui.actionView"), icon: "eye-outline" },
+      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
     ];
   }
   async connectedCallback() {
@@ -4632,7 +4636,7 @@ var ErpCustomersList = class extends i3 {
         ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-        <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+        <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${"name"} .cardIcon=${"person-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e5) => this.onRowAction(e5)} @csvImport=${(e5) => this.onCsvImport(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
@@ -4921,8 +4925,8 @@ var ErpCustomersTags = class extends i3 {
   get rowActions() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
     return [
-      { id: "edit", label: t5("ui.actionEdit") },
-      { id: "delete", label: t5("ui.actionDelete"), color: "danger" }
+      { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
+      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
     ];
   }
   async connectedCallback() {
@@ -5045,7 +5049,7 @@ var ErpCustomersTags = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<p class="err">${this.ctrl.error}</p>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${"name"} .cardIcon=${"pricetag-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e5) => this.onRowAction(e5)} @pageChange=${(e5) => this.ctrl.setPage(e5.detail)} @pageSizeChange=${(e5) => this.ctrl.setPageSize(e5.detail)} @sortChange=${(e5) => this.ctrl.setSort(e5.detail.sort, e5.detail.dir)} @searchChange=${(e5) => this.ctrl.setSearch(e5.detail)} @filterChange=${(e5) => this.ctrl.setFilter(e5.detail.col, e5.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
