@@ -4741,16 +4741,23 @@ var ErpCustomersPosSearch = class extends i3 {
     .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctx { display:flex; align-items:center; gap:.15rem; }
-    /* <dialog> nativo: showModal() lo pinta en el TOP LAYER, inmune al containing block del
-       ion-toolbar donde vive el botón; y sigue en el shadow root → conserva este CSS. */
-    dialog.sheet { border:none; border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto;
-      background:var(--ion-background-color,#fff); color:var(--ion-text-color,#1c1b18); box-shadow:0 12px 48px rgba(0,0,0,.35); }
-    dialog.sheet::backdrop { background:rgba(0,0,0,.45); }
-    .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
-    .sheet-h .t { font-size:1.2rem; font-weight:700; }
-    .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
-    .list { margin-top:.6rem; max-height:55vh; overflow:auto; }
-    .list .sel { --background: var(--ion-color-light, #f2f1ed); }
+    /* Buscador estilo SPOTLIGHT (macOS): overlay translúcido flotante arriba-centro, no rompe la
+       vista. <dialog> nativo (top layer) → escapa el containing block del ion-toolbar y conserva
+       este CSS en el shadow root. NOTA: pendiente extraer a un ok-* reutilizable de OutfitKit. */
+    dialog.sheet { margin:10vh auto auto; width:min(92vw,34rem); max-height:72vh; border:none; border-radius:16px;
+      padding:0; overflow:hidden; color:var(--ion-text-color,#1c1b18);
+      background:color-mix(in srgb, var(--ion-background-color,#fff) 80%, transparent);
+      -webkit-backdrop-filter:blur(22px) saturate(180%); backdrop-filter:blur(22px) saturate(180%);
+      box-shadow:0 24px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(128,128,128,.18); }
+    dialog.sheet::backdrop { background:rgba(0,0,0,.28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+    .sp-top { display:flex; align-items:center; gap:.15rem; padding:.4rem .4rem .1rem; }
+    .sp-search { flex:1; --background:transparent; --box-shadow:none; --border-radius:12px; --color:var(--ion-text-color); padding:0; }
+    .sp-close { --color:var(--ion-color-medium,#8b897f); }
+    .foot { display:flex; justify-content:flex-end; padding:.1rem .6rem .6rem; }
+    .list { max-height:52vh; overflow:auto; padding:0 .35rem .3rem; background:transparent; }
+    ion-list.list { background:transparent; }
+    .list ion-item { --background:transparent; border-radius:10px; }
+    .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; }
   `;
@@ -4829,21 +4836,19 @@ var ErpCustomersPosSearch = class extends i3 {
         @click=${(e5) => {
       if (e5.target === e5.currentTarget) this.open = false;
     }}>
-        <div class="sheet-h">
-          <span class="t">${t5("ui.chooseCustomer")}</span>
-          <ion-button class="close" fill="clear" size="small" aria-label=${t5("ui.close")} @click=${() => {
+        <div class="sp-top">
+          <ion-searchbar class="sp-search" placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
+            @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
+          <ion-button class="sp-close" fill="clear" size="small" aria-label=${t5("ui.close")} @click=${() => {
       this.open = false;
     }}>
             <ion-icon slot="icon-only" name="close-outline"></ion-icon>
           </ion-button>
         </div>
 
-        <ion-searchbar placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
-          @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
-
         ${this.error ? b2`<p class="err">${this.error}</p>` : A}
 
-        <ion-list class="list" lines="full">
+        <ion-list class="list" lines="none">
           ${this.results.map((c5) => b2`
             <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
               <ion-label>
@@ -4856,10 +4861,9 @@ var ErpCustomersPosSearch = class extends i3 {
           ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
         </ion-list>
 
-        <div class="foot">
-          <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
-            @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
-        </div>
+        ${this.selectedId ? b2`<div class="foot">
+              <ion-button class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
+            </div>` : A}
       </dialog>
     `;
   }
@@ -4868,8 +4872,12 @@ var ErpCustomersPosSearch = class extends i3 {
     const d3 = this.renderRoot.querySelector("dialog");
     if (!d3) return;
     try {
-      if (this.open && !d3.open) d3.showModal();
-      else if (!this.open && d3.open) d3.close();
+      if (this.open && !d3.open) {
+        d3.showModal();
+        this.renderRoot.querySelector(".sp-search")?.setFocus?.();
+      } else if (!this.open && d3.open) {
+        d3.close();
+      }
     } catch {
     }
   }

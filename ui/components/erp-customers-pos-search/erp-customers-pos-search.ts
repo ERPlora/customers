@@ -75,16 +75,23 @@ export class ErpCustomersPosSearch extends LitElement {
     .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctx { display:flex; align-items:center; gap:.15rem; }
-    /* <dialog> nativo: showModal() lo pinta en el TOP LAYER, inmune al containing block del
-       ion-toolbar donde vive el botón; y sigue en el shadow root → conserva este CSS. */
-    dialog.sheet { border:none; border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto;
-      background:var(--ion-background-color,#fff); color:var(--ion-text-color,#1c1b18); box-shadow:0 12px 48px rgba(0,0,0,.35); }
-    dialog.sheet::backdrop { background:rgba(0,0,0,.45); }
-    .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
-    .sheet-h .t { font-size:1.2rem; font-weight:700; }
-    .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
-    .list { margin-top:.6rem; max-height:55vh; overflow:auto; }
-    .list .sel { --background: var(--ion-color-light, #f2f1ed); }
+    /* Buscador estilo SPOTLIGHT (macOS): overlay translúcido flotante arriba-centro, no rompe la
+       vista. <dialog> nativo (top layer) → escapa el containing block del ion-toolbar y conserva
+       este CSS en el shadow root. NOTA: pendiente extraer a un ok-* reutilizable de OutfitKit. */
+    dialog.sheet { margin:10vh auto auto; width:min(92vw,34rem); max-height:72vh; border:none; border-radius:16px;
+      padding:0; overflow:hidden; color:var(--ion-text-color,#1c1b18);
+      background:color-mix(in srgb, var(--ion-background-color,#fff) 80%, transparent);
+      -webkit-backdrop-filter:blur(22px) saturate(180%); backdrop-filter:blur(22px) saturate(180%);
+      box-shadow:0 24px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(128,128,128,.18); }
+    dialog.sheet::backdrop { background:rgba(0,0,0,.28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
+    .sp-top { display:flex; align-items:center; gap:.15rem; padding:.4rem .4rem .1rem; }
+    .sp-search { flex:1; --background:transparent; --box-shadow:none; --border-radius:12px; --color:var(--ion-text-color); padding:0; }
+    .sp-close { --color:var(--ion-color-medium,#8b897f); }
+    .foot { display:flex; justify-content:flex-end; padding:.1rem .6rem .6rem; }
+    .list { max-height:52vh; overflow:auto; padding:0 .35rem .3rem; background:transparent; }
+    ion-list.list { background:transparent; }
+    .list ion-item { --background:transparent; border-radius:10px; }
+    .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; }
   `;
@@ -191,19 +198,17 @@ export class ErpCustomersPosSearch extends LitElement {
       <dialog class="sheet" aria-label=${t('ui.chooseCustomer')}
         @close=${() => { this.open = false; }}
         @click=${(e: Event) => { if (e.target === e.currentTarget) this.open = false; }}>
-        <div class="sheet-h">
-          <span class="t">${t('ui.chooseCustomer')}</span>
-          <ion-button class="close" fill="clear" size="small" aria-label=${t('ui.close')} @click=${() => { this.open = false; }}>
+        <div class="sp-top">
+          <ion-searchbar class="sp-search" placeholder=${t('ui.searchPosCustomer')} value=${this.q}
+            @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
+          <ion-button class="sp-close" fill="clear" size="small" aria-label=${t('ui.close')} @click=${() => { this.open = false; }}>
             <ion-icon slot="icon-only" name="close-outline"></ion-icon>
           </ion-button>
         </div>
 
-        <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
-          @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
-
         ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
 
-        <ion-list class="list" lines="full">
+        <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
             <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
               <ion-label>
@@ -216,10 +221,11 @@ export class ErpCustomersPosSearch extends LitElement {
           ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
         </ion-list>
 
-        <div class="foot">
-          <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
-            @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
-        </div>
+        ${this.selectedId
+          ? html`<div class="foot">
+              <ion-button class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
+            </div>`
+          : nothing}
       </dialog>
     `;
   }
@@ -229,8 +235,13 @@ export class ErpCustomersPosSearch extends LitElement {
     const d = this.renderRoot.querySelector('dialog') as HTMLDialogElement | null;
     if (!d) return;
     try {
-      if (this.open && !d.open) d.showModal();
-      else if (!this.open && d.open) d.close();
+      if (this.open && !d.open) {
+        d.showModal();
+        // Spotlight: el cursor cae en el buscador al abrir.
+        (this.renderRoot.querySelector('.sp-search') as { setFocus?: () => void } | null)?.setFocus?.();
+      } else if (!this.open && d.open) {
+        d.close();
+      }
     } catch { /* entorno sin <dialog> modal (happy-dom): `open` sigue siendo la verdad */ }
   }
 }
