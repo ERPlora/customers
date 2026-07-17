@@ -75,8 +75,11 @@ export class ErpCustomersPosSearch extends LitElement {
     .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctx { display:flex; align-items:center; gap:.15rem; }
-    .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:60; }
-    .sheet { background:var(--ion-background-color,#fff); border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.35); }
+    /* <dialog> nativo: showModal() lo pinta en el TOP LAYER, inmune al containing block del
+       ion-toolbar donde vive el botón; y sigue en el shadow root → conserva este CSS. */
+    dialog.sheet { border:none; border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto;
+      background:var(--ion-background-color,#fff); color:var(--ion-text-color,#1c1b18); box-shadow:0 12px 48px rgba(0,0,0,.35); }
+    dialog.sheet::backdrop { background:rgba(0,0,0,.45); }
     .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
     .sheet-h .t { font-size:1.2rem; font-weight:700; }
     .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
@@ -86,6 +89,7 @@ export class ErpCustomersPosSearch extends LitElement {
     .err { color:#d9480f; }
   `;
 
+  @state() private open = false;
   @state() private results: Customer[] = [];
   @state() private q = '';
   @state() private selectedId?: string;
@@ -105,15 +109,17 @@ export class ErpCustomersPosSearch extends LitElement {
     super.connectedCallback();
     this.addEventListener('erp:customer-context-reset', this.onReset);
     window.addEventListener('erplora:locale-changed', this.onLocaleChange);
-    // Picker INLINE (ADR-0043 B): el WC vive dentro de la pestaña "Cliente" del modal "Asignar" del
-    // POS, así que precarga los clientes al montar (ya no hay botón-trigger que abra un modal propio).
-    void this.search('');
   }
 
   disconnectedCallback() {
     this.removeEventListener('erp:customer-context-reset', this.onReset);
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     super.disconnectedCallback();
+  }
+
+  private async openPicker() {
+    this.open = true;
+    if (!this.results.length) await this.search('');
   }
 
   private async search(q: string) {
@@ -146,6 +152,7 @@ export class ErpCustomersPosSearch extends LitElement {
   private async pick(c: Customer) {
     this.selectedId = c.id;
     this.selectedName = c.name;
+    this.open = false;
 
     // La ficha completa trae el NIF y la dirección; `customers.list` no. Si la ficha no se puede
     // leer, se asocia el cliente igual (la venta no se bloquea) pero SIN datos fiscales: mejor una
@@ -165,37 +172,66 @@ export class ErpCustomersPosSearch extends LitElement {
   private clear() {
     this.selectedId = undefined;
     this.selectedName = '';
+    this.open = false;
     this.emit(VACIO);
   }
 
   render() {
     const t = (k: string): string => erplora().t(CATALOG, k);
-    // Contenido INLINE (ADR-0043 B): sin botón-trigger ni modal propio; el POS lo monta dentro de la
-    // pestaña "Cliente" de su modal "Asignar". Sigue emitiendo `erp:customer-context` al elegir/quitar.
+    const etiqueta = this.selectedName || t('ui.assignCustomer');
+    // Botón propio (ADR-0043 B): el POS monta este WC en el header como UN botón-icono, independiente
+    // del de mesa (sin mezclar funcionalidades). Abre SU modal con buscador + lista; al elegir cliente
+    // se cierra y emite `erp:customer-context` con el snapshot fiscal. El nombre lo muestra el chip del POS.
     return html`
-      <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
-        @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
+      <ion-button class="trigger" fill="clear" size="small" aria-label=${etiqueta} title=${etiqueta}
+        ?data-assigned=${!!this.selectedId} @click=${() => void this.openPicker()}>
+        <ion-icon slot="icon-only" name=${this.selectedId ? 'person' : 'person-add-outline'}></ion-icon>
+      </ion-button>
 
-      ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
+      <dialog class="sheet" aria-label=${t('ui.chooseCustomer')}
+        @close=${() => { this.open = false; }}
+        @click=${(e: Event) => { if (e.target === e.currentTarget) this.open = false; }}>
+        <div class="sheet-h">
+          <span class="t">${t('ui.chooseCustomer')}</span>
+          <ion-button class="close" fill="clear" size="small" aria-label=${t('ui.close')} @click=${() => { this.open = false; }}>
+            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
 
-      <ion-list class="list" lines="full">
-        ${this.results.map((c) => html`
-          <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
-            <ion-label>
-              <h3>${c.name}</h3>
-              ${c.phone || c.email ? html`<p>${c.phone || c.email}</p>` : nothing}
-            </ion-label>
-            ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : nothing}
-          </ion-item>`)}
-        ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
-        ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
-      </ion-list>
+        <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
+          @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
 
-      <div class="foot">
-        <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
-          @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
-      </div>
+        ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
+
+        <ion-list class="list" lines="full">
+          ${this.results.map((c) => html`
+            <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
+              <ion-label>
+                <h3>${c.name}</h3>
+                ${c.phone || c.email ? html`<p>${c.phone || c.email}</p>` : nothing}
+              </ion-label>
+              ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : nothing}
+            </ion-item>`)}
+          ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
+          ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
+        </ion-list>
+
+        <div class="foot">
+          <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
+            @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
+        </div>
+      </dialog>
     `;
+  }
+
+  /** Sincroniza `open` ↔ el <dialog> nativo (top layer, escapa cualquier trap). try/catch por happy-dom. */
+  protected updated() {
+    const d = this.renderRoot.querySelector('dialog') as HTMLDialogElement | null;
+    if (!d) return;
+    try {
+      if (this.open && !d.open) d.showModal();
+      else if (!this.open && d.open) d.close();
+    } catch { /* entorno sin <dialog> modal (happy-dom): `open` sigue siendo la verdad */ }
   }
 }
 

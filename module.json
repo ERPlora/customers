@@ -588,8 +588,6 @@
     {
       "slot": "sales.pos.assign",
       "component": "erp-customers-pos-search",
-      "tab_label": "Cliente",
-      "tab_icon": "person-outline",
       "permission": "customers.view_customer",
       "priority": 200
     }

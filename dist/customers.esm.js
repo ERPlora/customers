@@ -4721,6 +4721,7 @@ var VACIO = { customer_id: null, customer_name: "", customer_tax_id: "", custome
 var ErpCustomersPosSearch = class extends i3 {
   constructor() {
     super(...arguments);
+    this.open = false;
     this.results = [];
     this.q = "";
     this.selectedName = "";
@@ -4740,8 +4741,11 @@ var ErpCustomersPosSearch = class extends i3 {
     .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .ctx { display:flex; align-items:center; gap:.15rem; }
-    .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:60; }
-    .sheet { background:var(--ion-background-color,#fff); border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.35); }
+    /* <dialog> nativo: showModal() lo pinta en el TOP LAYER, inmune al containing block del
+       ion-toolbar donde vive el botón; y sigue en el shadow root → conserva este CSS. */
+    dialog.sheet { border:none; border-radius:16px; padding:1rem; width:min(94vw,28rem); max-height:90vh; overflow:auto;
+      background:var(--ion-background-color,#fff); color:var(--ion-text-color,#1c1b18); box-shadow:0 12px 48px rgba(0,0,0,.35); }
+    dialog.sheet::backdrop { background:rgba(0,0,0,.45); }
     .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
     .sheet-h .t { font-size:1.2rem; font-weight:700; }
     .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
@@ -4755,12 +4759,15 @@ var ErpCustomersPosSearch = class extends i3 {
     super.connectedCallback();
     this.addEventListener("erp:customer-context-reset", this.onReset);
     window.addEventListener("erplora:locale-changed", this.onLocaleChange);
-    void this.search("");
   }
   disconnectedCallback() {
     this.removeEventListener("erp:customer-context-reset", this.onReset);
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
+  }
+  async openPicker() {
+    this.open = true;
+    if (!this.results.length) await this.search("");
   }
   async search(q) {
     this.loading = true;
@@ -4789,6 +4796,7 @@ var ErpCustomersPosSearch = class extends i3 {
   async pick(c5) {
     this.selectedId = c5.id;
     this.selectedName = c5.name;
+    this.open = false;
     const ficha = rows(
       await erplora4().query("customers.get", { customer_id: c5.id }).catch(() => [])
     )[0];
@@ -4802,36 +4810,73 @@ var ErpCustomersPosSearch = class extends i3 {
   clear() {
     this.selectedId = void 0;
     this.selectedName = "";
+    this.open = false;
     this.emit(VACIO);
   }
   render() {
     const t5 = (k2) => erplora4().t(CATALOG4, k2);
+    const etiqueta = this.selectedName || t5("ui.assignCustomer");
     return b2`
-      <ion-searchbar placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
-        @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
+      <ion-button class="trigger" fill="clear" size="small" aria-label=${etiqueta} title=${etiqueta}
+        ?data-assigned=${!!this.selectedId} @click=${() => void this.openPicker()}>
+        <ion-icon slot="icon-only" name=${this.selectedId ? "person" : "person-add-outline"}></ion-icon>
+      </ion-button>
 
-      ${this.error ? b2`<p class="err">${this.error}</p>` : A}
+      <dialog class="sheet" aria-label=${t5("ui.chooseCustomer")}
+        @close=${() => {
+      this.open = false;
+    }}
+        @click=${(e5) => {
+      if (e5.target === e5.currentTarget) this.open = false;
+    }}>
+        <div class="sheet-h">
+          <span class="t">${t5("ui.chooseCustomer")}</span>
+          <ion-button class="close" fill="clear" size="small" aria-label=${t5("ui.close")} @click=${() => {
+      this.open = false;
+    }}>
+            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
 
-      <ion-list class="list" lines="full">
-        ${this.results.map((c5) => b2`
-          <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
-            <ion-label>
-              <h3>${c5.name}</h3>
-              ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
-            </ion-label>
-            ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : A}
-          </ion-item>`)}
-        ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}</div>` : A}
-        ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
-      </ion-list>
+        <ion-searchbar placeholder=${t5("ui.searchPosCustomer")} value=${this.q}
+          @ionInput=${(e5) => this.onInput(e5.target.value || "")}></ion-searchbar>
 
-      <div class="foot">
-        <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
-          @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
-      </div>
+        ${this.error ? b2`<p class="err">${this.error}</p>` : A}
+
+        <ion-list class="list" lines="full">
+          ${this.results.map((c5) => b2`
+            <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
+              <ion-label>
+                <h3>${c5.name}</h3>
+                ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
+              </ion-label>
+              ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : A}
+            </ion-item>`)}
+          ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}</div>` : A}
+          ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
+        </ion-list>
+
+        <div class="foot">
+          <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
+            @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>
+        </div>
+      </dialog>
     `;
   }
+  /** Sincroniza `open` ↔ el <dialog> nativo (top layer, escapa cualquier trap). try/catch por happy-dom. */
+  updated() {
+    const d3 = this.renderRoot.querySelector("dialog");
+    if (!d3) return;
+    try {
+      if (this.open && !d3.open) d3.showModal();
+      else if (!this.open && d3.open) d3.close();
+    } catch {
+    }
+  }
 };
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "open", 2);
 __decorateClass([
   r5()
 ], ErpCustomersPosSearch.prototype, "results", 2);
