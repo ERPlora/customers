@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
+import '@erplora/outfitkit/ok-spotlight-search';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 
@@ -68,32 +69,16 @@ interface Snapshot {
 const VACIO: Snapshot = { customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '' };
 
 export class ErpCustomersPosSearch extends LitElement {
+  // El CHROME del buscador (overlay Spotlight + input + ✕ + trigger) lo pone `ok-spotlight-search`
+  // (OutfitKit). Aquí solo estilamos los RESULTADOS que proyectamos en su slot.
   static styles = css`
-    :host { display:block; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
-    .trigger { --padding-start:.5rem; --padding-end:.5rem; }
-    .trigger[data-assigned] { --color: var(--ion-color-primary,#0091ce); }
-    .name { font-size:.8rem; font-weight:700; color:var(--ion-color-primary,#0091ce); max-width:9rem;
-            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .ctx { display:flex; align-items:center; gap:.15rem; }
-    /* Buscador estilo SPOTLIGHT (macOS): overlay translúcido flotante arriba-centro, no rompe la
-       vista. <dialog> nativo (top layer) → escapa el containing block del ion-toolbar y conserva
-       este CSS en el shadow root. NOTA: pendiente extraer a un ok-* reutilizable de OutfitKit. */
-    dialog.sheet { margin:10vh auto auto; width:min(92vw,34rem); max-height:72vh; border:none; border-radius:16px;
-      padding:0; overflow:hidden; color:var(--ion-text-color,#1c1b18);
-      background:color-mix(in srgb, var(--ion-background-color,#fff) 80%, transparent);
-      -webkit-backdrop-filter:blur(22px) saturate(180%); backdrop-filter:blur(22px) saturate(180%);
-      box-shadow:0 24px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(128,128,128,.18); }
-    dialog.sheet::backdrop { background:rgba(0,0,0,.28); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); }
-    .sp-top { display:flex; align-items:center; gap:.15rem; padding:.4rem .4rem .1rem; }
-    .sp-search { flex:1; --background:transparent; --box-shadow:none; --border-radius:12px; --color:var(--ion-text-color); padding:0; }
-    .sp-close { --color:var(--ion-color-medium,#8b897f); }
-    .foot { display:flex; justify-content:flex-end; padding:.1rem .6rem .6rem; }
-    .list { max-height:52vh; overflow:auto; padding:0 .35rem .3rem; background:transparent; }
+    :host { display:contents; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
+    .list { background:transparent; }
     ion-list.list { background:transparent; }
     .list ion-item { --background:transparent; border-radius:10px; }
     .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
-    .err { color:#d9480f; }
+    .err { color:#d9480f; padding:.6rem 1rem; }
   `;
 
   @state() private open = false;
@@ -124,9 +109,10 @@ export class ErpCustomersPosSearch extends LitElement {
     super.disconnectedCallback();
   }
 
-  private async openPicker() {
-    this.open = true;
-    if (!this.results.length) await this.search('');
+  /** Sincroniza el abierto/cerrado del overlay (ok-spotlight-search) y carga al abrir. */
+  private onOkOpen(open: boolean) {
+    this.open = open;
+    if (open && !this.results.length) void this.search('');
   }
 
   private async search(q: string) {
@@ -156,10 +142,14 @@ export class ErpCustomersPosSearch extends LitElement {
     }));
   }
 
+  private closeOverlay() {
+    (this.renderRoot.querySelector('ok-spotlight-search') as { close?: () => void } | null)?.close?.();
+  }
+
   private async pick(c: Customer) {
     this.selectedId = c.id;
     this.selectedName = c.name;
-    this.open = false;
+    this.closeOverlay();
 
     // La ficha completa trae el NIF y la dirección; `customers.list` no. Si la ficha no se puede
     // leer, se asocia el cliente igual (la venta no se bloquea) pero SIN datos fiscales: mejor una
@@ -179,35 +169,23 @@ export class ErpCustomersPosSearch extends LitElement {
   private clear() {
     this.selectedId = undefined;
     this.selectedName = '';
-    this.open = false;
+    this.closeOverlay();
     this.emit(VACIO);
   }
 
   render() {
     const t = (k: string): string => erplora().t(CATALOG, k);
-    const etiqueta = this.selectedName || t('ui.assignCustomer');
-    // Botón propio (ADR-0043 B): el POS monta este WC en el header como UN botón-icono, independiente
-    // del de mesa (sin mezclar funcionalidades). Abre SU modal con buscador + lista; al elegir cliente
-    // se cierra y emite `erp:customer-context` con el snapshot fiscal. El nombre lo muestra el chip del POS.
+    // El chrome (trigger + overlay Spotlight + input + ✕) lo aporta `ok-spotlight-search`; aquí solo
+    // damos icono/estado del trigger, escuchamos ok-open/ok-input y proyectamos los resultados.
     return html`
-      <ion-button class="trigger" fill="clear" size="small" aria-label=${etiqueta} title=${etiqueta}
-        ?data-assigned=${!!this.selectedId} @click=${() => void this.openPicker()}>
-        <ion-icon slot="icon-only" name=${this.selectedId ? 'person' : 'person-add-outline'}></ion-icon>
-      </ion-button>
-
-      <dialog class="sheet" aria-label=${t('ui.chooseCustomer')}
-        @close=${() => { this.open = false; }}
-        @click=${(e: Event) => { if (e.target === e.currentTarget) this.open = false; }}>
-        <div class="sp-top">
-          <ion-searchbar class="sp-search" placeholder=${t('ui.searchPosCustomer')} value=${this.q}
-            @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
-          <ion-button class="sp-close" fill="clear" size="small" aria-label=${t('ui.close')} @click=${() => { this.open = false; }}>
-            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
-
+      <ok-spotlight-search
+        trigger-icon=${this.selectedId ? 'person' : 'person-add-outline'}
+        trigger-label=${this.selectedName || t('ui.assignCustomer')}
+        placeholder=${t('ui.searchPosCustomer')}
+        .value=${this.q}
+        @ok-open=${(e: CustomEvent) => this.onOkOpen(e.detail.open)}
+        @ok-input=${(e: CustomEvent) => this.onInput(e.detail.value)}>
         ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
-
         <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
             <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
@@ -220,29 +198,11 @@ export class ErpCustomersPosSearch extends LitElement {
           ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
           ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
         </ion-list>
-
         ${this.selectedId
-          ? html`<div class="foot">
-              <ion-button class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
-            </div>`
+          ? html`<ion-button slot="footer" class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>`
           : nothing}
-      </dialog>
+      </ok-spotlight-search>
     `;
-  }
-
-  /** Sincroniza `open` ↔ el <dialog> nativo (top layer, escapa cualquier trap). try/catch por happy-dom. */
-  protected updated() {
-    const d = this.renderRoot.querySelector('dialog') as HTMLDialogElement | null;
-    if (!d) return;
-    try {
-      if (this.open && !d.open) {
-        d.showModal();
-        // Spotlight: el cursor cae en el buscador al abrir.
-        (this.renderRoot.querySelector('.sp-search') as { setFocus?: () => void } | null)?.setFocus?.();
-      } else if (!this.open && d.open) {
-        d.close();
-      }
-    } catch { /* entorno sin <dialog> modal (happy-dom): `open` sigue siendo la verdad */ }
   }
 }
 
