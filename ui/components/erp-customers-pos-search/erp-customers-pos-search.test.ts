@@ -55,7 +55,7 @@ describe('erp-customers-pos-search', () => {
     expect(el.shadowRoot.querySelector('ion-button.trigger'), 'no debe haber botón-trigger').toBeNull();
     expect(el.shadowRoot.querySelector('.scrim'), 'no debe haber overlay propio').toBeNull();
     expect(el.shadowRoot.querySelector('ion-searchbar'), 'lleva su buscador').toBeTruthy();
-    expect(el.shadowRoot.querySelectorAll('.item').length, 'precarga clientes al montar').toBe(1);
+    expect(el.shadowRoot.querySelectorAll('ion-item').length, 'precarga clientes al montar').toBe(1);
   });
 
   it('al elegir cliente emite el snapshot FISCAL, no solo el nombre', async () => {
@@ -63,7 +63,7 @@ describe('erp-customers-pos-search', () => {
     const emitidos: Record<string, unknown>[] = [];
     el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
 
-    el.shadowRoot.querySelector<HTMLElement>('.item')!.click();
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
     await new Promise((r) => setTimeout(r, 0));
 
     expect(consultas.some((c) => c.name === 'customers.get')).toBe(true);
@@ -80,7 +80,7 @@ describe('erp-customers-pos-search', () => {
     const emitidos: Record<string, unknown>[] = [];
     el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
 
-    el.shadowRoot.querySelector<HTMLElement>('.item')!.click();
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
     await new Promise((r) => setTimeout(r, 0));
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
 

@@ -4745,11 +4745,8 @@ var ErpCustomersPosSearch = class extends i3 {
     .sheet-h { display:flex; justify-content:space-between; align-items:center; margin-bottom:.4rem; }
     .sheet-h .t { font-size:1.2rem; font-weight:700; }
     .foot { display:flex; justify-content:space-between; align-items:center; margin-top:1rem; }
-    .list { display:flex; flex-direction:column; gap:.4rem; margin-top:.6rem; max-height:55vh; overflow:auto; }
-    .item { display:flex; flex-direction:column; gap:.1rem; border:1px solid var(--ion-border-color,#e0ddd4); border-radius:10px; padding:.6rem .7rem; background:var(--ion-background-color,#fff); cursor:pointer; font:inherit; color:inherit; text-align:left; width:100%; }
-    .item[aria-pressed=true] { outline:3px solid var(--ion-color-primary,#0091ce); outline-offset:1px; }
-    .nm { font-weight:700; }
-    .meta { font-size:.8rem; color:#8b897f; }
+    .list { margin-top:.6rem; max-height:55vh; overflow:auto; }
+    .list .sel { --background: var(--ion-color-light, #f2f1ed); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; }
   `;
@@ -4815,15 +4812,18 @@ var ErpCustomersPosSearch = class extends i3 {
 
       ${this.error ? b2`<p class="err">${this.error}</p>` : A}
 
-      <div class="list">
+      <ion-list class="list" lines="full">
         ${this.results.map((c5) => b2`
-          <button class="item" aria-pressed=${this.selectedId === c5.id} @click=${() => void this.pick(c5)}>
-            <span class="nm">${c5.name}</span>
-            ${c5.phone || c5.email ? b2`<span class="meta">${c5.phone || c5.email}</span>` : A}
-          </button>`)}
+          <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
+            <ion-label>
+              <h3>${c5.name}</h3>
+              ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
+            </ion-label>
+            ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : A}
+          </ion-item>`)}
         ${!this.loading && !this.results.length ? b2`<div class="empty">${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}</div>` : A}
         ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
-      </div>
+      </ion-list>
 
       <div class="foot">
         <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
