@@ -586,10 +586,12 @@
   },
   "provides_slots": [
     {
-      "slot": "sales.pos.customer_context",
+      "slot": "sales.pos.assign",
       "component": "erp-customers-pos-search",
+      "tab_label": "Cliente",
+      "tab_icon": "person-outline",
       "permission": "customers.view_customer",
-      "priority": 50
+      "priority": 200
     }
   ],
   "ui": {

@@ -89,7 +89,6 @@ export class ErpCustomersPosSearch extends LitElement {
     .err { color:#d9480f; }
   `;
 
-  @state() private open = false;
   @state() private results: Customer[] = [];
   @state() private q = '';
   @state() private selectedId?: string;
@@ -109,17 +108,15 @@ export class ErpCustomersPosSearch extends LitElement {
     super.connectedCallback();
     this.addEventListener('erp:customer-context-reset', this.onReset);
     window.addEventListener('erplora:locale-changed', this.onLocaleChange);
+    // Picker INLINE (ADR-0043 B): el WC vive dentro de la pestaña "Cliente" del modal "Asignar" del
+    // POS, así que precarga los clientes al montar (ya no hay botón-trigger que abra un modal propio).
+    void this.search('');
   }
 
   disconnectedCallback() {
     this.removeEventListener('erp:customer-context-reset', this.onReset);
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     super.disconnectedCallback();
-  }
-
-  private async openPicker() {
-    this.open = true;
-    if (!this.results.length) await this.search('');
   }
 
   private async search(q: string) {
@@ -152,7 +149,6 @@ export class ErpCustomersPosSearch extends LitElement {
   private async pick(c: Customer) {
     this.selectedId = c.id;
     this.selectedName = c.name;
-    this.open = false;
 
     // La ficha completa trae el NIF y la dirección; `customers.list` no. Si la ficha no se puede
     // leer, se asocia el cliente igual (la venta no se bloquea) pero SIN datos fiscales: mejor una
@@ -172,55 +168,33 @@ export class ErpCustomersPosSearch extends LitElement {
   private clear() {
     this.selectedId = undefined;
     this.selectedName = '';
-    this.open = false;
     this.emit(VACIO);
   }
 
   render() {
     const t = (k: string): string => erplora().t(CATALOG, k);
-    const etiqueta = this.selectedName || t('ui.assignCustomer');
+    // Contenido INLINE (ADR-0043 B): sin botón-trigger ni modal propio; el POS lo monta dentro de la
+    // pestaña "Cliente" de su modal "Asignar". Sigue emitiendo `erp:customer-context` al elegir/quitar.
     return html`
-      <div class="ctx">
-        <ion-button class="trigger" fill="clear" size="small" aria-label=${etiqueta} title=${etiqueta}
-          ?data-assigned=${!!this.selectedId} @click=${() => this.openPicker()}>
-          <ion-icon slot="icon-only" name=${this.selectedId ? 'person' : 'person-add-outline'}></ion-icon>
-        </ion-button>
-        ${this.selectedName ? html`<span class="name" title=${this.selectedName}>${this.selectedName}</span>` : nothing}
+      <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
+        @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
+
+      ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
+
+      <div class="list">
+        ${this.results.map((c) => html`
+          <button class="item" aria-pressed=${this.selectedId === c.id} @click=${() => void this.pick(c)}>
+            <span class="nm">${c.name}</span>
+            ${c.phone || c.email ? html`<span class="meta">${c.phone || c.email}</span>` : nothing}
+          </button>`)}
+        ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
+        ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
       </div>
 
-      ${this.open
-        ? html`<div class="scrim" @click=${(e: Event) => { if ((e.target as HTMLElement).classList.contains('scrim')) this.open = false; }}>
-            <div class="sheet" role="dialog" aria-modal="true" aria-label=${t('ui.chooseCustomer')}>
-              <div class="sheet-h">
-                <span class="t">${t('ui.chooseCustomer')}</span>
-                <ion-button class="close" fill="clear" size="small" aria-label=${t('ui.close')}
-                  @click=${() => { this.open = false; }}>
-                  <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-                </ion-button>
-              </div>
-
-              <ion-searchbar placeholder=${t('ui.searchPosCustomer')} value=${this.q}
-                @ionInput=${(e: CustomEvent) => this.onInput((e.target as HTMLInputElement).value || '')}></ion-searchbar>
-
-              ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
-
-              <div class="list">
-                ${this.results.map((c) => html`
-                  <button class="item" aria-pressed=${this.selectedId === c.id} @click=${() => void this.pick(c)}>
-                    <span class="nm">${c.name}</span>
-                    ${c.phone || c.email ? html`<span class="meta">${c.phone || c.email}</span>` : nothing}
-                  </button>`)}
-                ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
-                ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
-              </div>
-
-              <div class="foot">
-                <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
-                  @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
-              </div>
-            </div>
-          </div>`
-        : nothing}
+      <div class="foot">
+        <ion-button class="clear" fill="clear" size="small" ?disabled=${!this.selectedId}
+          @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>
+      </div>
     `;
   }
 }

@@ -1,13 +1,16 @@
-// Contrato del selector de CLIENTE del TPV (slot `sales.pos.customer_context`, ADR-0043).
+// Contrato del selector de CLIENTE del TPV (slot `sales.pos.assign`, ADR-0043 B).
 //
-// El cajero pulsa un ICONO (no un botón de texto: en el TPV el espacio es la barra de contexto del
-// carrito, y la convención de ERPlora es icono + aria-label — ADR-0133), se abre un `ion-modal` con
-// buscador + listado, busca al cliente y lo pulsa. Eso asocia la venta al cliente.
+// El POS agrega mesa y cliente en UN modal de pestañas; este WC es el CONTENIDO de la pestaña
+// "Cliente": se monta INLINE (sin botón-trigger ni modal propio), precarga los clientes al montar,
+// el cajero busca y pulsa uno → asocia la venta al cliente.
 //
 // Y al asociarlo viaja el SNAPSHOT FISCAL (ADR-0132): sin `customer_tax_id`/`customer_address` en el
 // evento, la factura emitida desde el TPV sale sin NIF ni dirección aunque el cliente los tenga en su
 // ficha. `customers.list` no trae la dirección → hay que pedir la ficha completa (`customers.get`).
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+//
+// Nada de `ion-modal` (los overlays de Ionic en un shadow root de Lit se re-parentan a <body> y
+// pierden el CSS, ADR-0028); el modal lo pone el POS, aquí solo va el picker.
+import { beforeEach, describe, expect, it } from 'vitest';
 
 const ANA = { id: 'cus-1', name: 'Ana García', phone: '600111222', email: 'ana@example.com' };
 
@@ -47,43 +50,18 @@ async function montar() {
 }
 
 describe('erp-customers-pos-search', () => {
-  it('el disparador es un icono, no un botón de texto', async () => {
+  it('se monta INLINE: buscador + listado precargado, sin botón-trigger ni overlay propio', async () => {
     const el = await montar();
-    const boton = el.shadowRoot.querySelector('ion-button.trigger');
-    expect(boton).toBeTruthy();
-    // Icono proyectado en el slot `icon-only` de Ionic → el botón no renderiza etiqueta.
-    expect(boton?.querySelector('ion-icon[slot="icon-only"]')).toBeTruthy();
-    expect(boton?.textContent?.trim()).toBe('');
-    // Pero SÍ tiene nombre accesible: icon-only sin aria-label es un botón mudo (ADR-0133).
-    expect(boton?.getAttribute('aria-label')).toBeTruthy();
-  });
-
-  // NO es un `ion-modal`, y es a propósito: un overlay de Ionic declarado dentro de un shadow root
-  // de Lit se RE-PARENTA a <body> al presentarse (ADR-0028) → los estilos del `static styles` dejan
-  // de aplicar y la lista sale sin formato. El overlay es propio (scrim + panel), como en el resto
-  // del repo. El contrato es el COMPORTAMIENTO (diálogo con buscador y listado), no la etiqueta.
-  it('abre un overlay con buscador y listado', async () => {
-    const el = await montar();
-    el.shadowRoot.querySelector<HTMLElement>('ion-button.trigger')!.click();
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-
-    const dialogo = el.shadowRoot.querySelector('[role="dialog"]');
-    expect(dialogo).toBeTruthy();
-    expect(dialogo?.querySelector('ion-searchbar')).toBeTruthy();
-    expect(dialogo?.querySelectorAll('.item').length).toBe(1);
+    expect(el.shadowRoot.querySelector('ion-button.trigger'), 'no debe haber botón-trigger').toBeNull();
+    expect(el.shadowRoot.querySelector('.scrim'), 'no debe haber overlay propio').toBeNull();
+    expect(el.shadowRoot.querySelector('ion-searchbar'), 'lleva su buscador').toBeTruthy();
+    expect(el.shadowRoot.querySelectorAll('.item').length, 'precarga clientes al montar').toBe(1);
   });
 
   it('al elegir cliente emite el snapshot FISCAL, no solo el nombre', async () => {
     const el = await montar();
     const emitidos: Record<string, unknown>[] = [];
     el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
-
-    el.shadowRoot.querySelector<HTMLElement>('ion-button.trigger')!.click();
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
 
     el.shadowRoot.querySelector<HTMLElement>('.item')!.click();
     await new Promise((r) => setTimeout(r, 0));
@@ -102,18 +80,7 @@ describe('erp-customers-pos-search', () => {
     const emitidos: Record<string, unknown>[] = [];
     el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
 
-    el.shadowRoot.querySelector<HTMLElement>('ion-button.trigger')!.click();
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     el.shadowRoot.querySelector<HTMLElement>('.item')!.click();
-    await new Promise((r) => setTimeout(r, 0));
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-
-    // Elegir cliente CIERRA el overlay (el cajero vuelve al cobro). Para quitarlo se reabre el
-    // selector desde el mismo icono y se pulsa «quitar cliente».
-    el.shadowRoot.querySelector<HTMLElement>('ion-button.trigger')!.click();
-    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     await new Promise((r) => setTimeout(r, 0));
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
 
