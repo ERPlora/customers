@@ -15,9 +15,7 @@
       "crm"
     ]
   },
-  "depends_on": [
-    "sales"
-  ],
+  "depends_on": [],
   "permissions": [
     "customers.view_customer",
     "customers.add_customer",
