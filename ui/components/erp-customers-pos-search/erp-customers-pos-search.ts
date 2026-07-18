@@ -97,14 +97,27 @@ export class ErpCustomersPosSearch extends LitElement {
 
   private readonly onLocaleChange = (): void => this.requestUpdate();
 
+  /** El POS abrió un pedido → `customers` escribe SU junction cliente↔pedido (ADR-0141).
+   *  Simétrico a lo que hace `tables`: el dueño de la asociación es quien la escribe; el pedido
+   *  no guarda `customer_id` y `sales` no llama a este módulo. */
+  private readonly onOrderLinked = async (e: Event): Promise<void> => {
+    const d = (e as CustomEvent<{ order_id?: string }>).detail;
+    if (!d?.order_id || !this.selectedId) return;
+    try {
+      await erplora().command('customers.orders.link', { customer_id: this.selectedId, order_id: d.order_id });
+    } catch { /* la asociación es operativa: nunca debe romper la venta */ }
+  };
+
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener('erp:customer-context-reset', this.onReset);
+    this.addEventListener('erp:order-linked', this.onOrderLinked);
     window.addEventListener('erplora:locale-changed', this.onLocaleChange);
   }
 
   disconnectedCallback() {
     this.removeEventListener('erp:customer-context-reset', this.onReset);
+    this.removeEventListener('erp:order-linked', this.onOrderLinked);
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     super.disconnectedCallback();
   }

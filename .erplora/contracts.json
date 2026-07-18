@@ -27,6 +27,7 @@
       "customers.groups.delete",
       "customers.groups.update",
       "customers.notes.add",
+      "customers.orders.link",
       "customers.set_groups",
       "customers.set_tags",
       "customers.tags.create",

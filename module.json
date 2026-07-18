@@ -15,7 +15,9 @@
       "crm"
     ]
   },
-  "depends_on": [],
+  "depends_on": [
+    "sales"
+  ],
   "permissions": [
     "customers.view_customer",
     "customers.add_customer",
@@ -91,10 +93,12 @@
   ],
   "migrations": {
     "sqlite": [
-      "migrations/sqlite/001_init.sql"
+      "migrations/sqlite/001_init.sql",
+      "migrations/sqlite/002_customer_order.sql"
     ],
     "postgres": [
-      "migrations/postgres/001_init.sql"
+      "migrations/postgres/001_init.sql",
+      "migrations/postgres/002_customer_order.sql"
     ]
   },
   "queries": {
@@ -337,6 +341,14 @@
       "ai": {
         "description": "Lists the tag ids assigned to a customer"
       }
+    },
+    "customers.orders.by_customer": {
+      "permission": "customers.view_customer",
+      "expose_api": true,
+      "sql": "queries/orders_by_customer.sql",
+      "ai": {
+        "description": "Lists the order ids linked to a customer (ADR-0141). Amounts come from sales via its declared query; customers stores only the FK."
+      }
     }
   },
   "commands": {
@@ -575,6 +587,17 @@
       "sql": [
         "commands/_field_value_set.sql"
       ]
+    },
+    "customers.orders.link": {
+      "permission": "customers.change_customer",
+      "transaction": true,
+      "sql": [
+        "commands/customer_link_order.sql",
+        "commands/customer_link_order_insert.sql"
+      ],
+      "ai": {
+        "description": "Links a customer to an open order (ADR-0141 customer-order junction). Owned by customers: the order itself knows nothing about customers."
+      }
     }
   },
   "events": {
