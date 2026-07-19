@@ -23,6 +23,9 @@ interface ErploraClientLike extends ListClient {
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
+  /** Dinero (ADR-0059/0123): `formatMoney` recibe CÉNTIMOS y divide según la moneda. */
+  currency: string;
+  formatMoney(cents: number, opts?: { currency?: string; locale?: string }): string;
 }
 
 interface Customer {
@@ -56,6 +59,18 @@ interface Stats { total: number; active: number; vip: number; total_revenue: num
 interface Group { id: string; name: string; discount_percent: number; color: string }
 
 interface Tag { id: string; name: string; color: string }
+
+// Campo personalizado + el valor de ESTE cliente (ADR-0132). `value` es siempre TEXT: el tipo lo
+// gobierna `field_type`, que decide cómo se pinta y se valida.
+interface FieldValue {
+  id: string;
+  name: string;
+  field_type: string;
+  options: string;
+  is_required: number;
+  sort_order: number;
+  value: string;
+}
 
 interface Activity {
   id: string; activity_type: string; title: string; description: string; created_at: string;
@@ -150,6 +165,8 @@ export class ErpCustomersList extends LitElement {
   @state() form: EditForm = { ...EMPTY_FORM };
 
   @state() activities: Activity[] = [];
+  /** Campos personalizados del cliente abierto: definición + valor (ADR-0132). */
+  @state() fieldValues: FieldValue[] = [];
 
   @state() groups: Group[] = [];
 
@@ -187,7 +204,9 @@ export class ErpCustomersList extends LitElement {
         sortable: true,
         filterable: true,
         filterType: 'range',
-        format: (r) => Number(r.total_spent || 0).toFixed(2),
+        // total_spent es CÉNTIMOS (customers.record_purchase acumula el total del evento,
+        // contrato inter-módulo ADR-0123): formatMoney divide. toFixed(2) pintaba ×100.
+        format: (r) => erplora().formatMoney(Number(r.total_spent || 0)),
       },
     ];
   }
@@ -195,8 +214,8 @@ export class ErpCustomersList extends LitElement {
   private get rowActions(): DataTableAction[] {
     const t = (k: string): string => erplora().t(CATALOG, k);
     return [
-      { id: 'view', label: t('ui.actionView') },
-      { id: 'delete', label: t('ui.actionDelete'), color: 'danger' },
+      { id: 'view', label: t('ui.actionView'), icon: 'eye-outline' },
+      { id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' },
     ];
   }
 
@@ -225,7 +244,8 @@ export class ErpCustomersList extends LitElement {
     super.disconnectedCallback();
   }
 
-  private fmt(n: number | null | undefined): string { return n == null ? '—' : Number(n).toFixed(2); }
+  /** Dinero en CÉNTIMOS → texto con moneda (ADR-0123). El toFixed(2) directo pintaba ×100. */
+  private fmt(n: number | null | undefined): string { return n == null ? '—' : erplora().formatMoney(Number(n)); }
 
   private async loadStats() {
     try {
@@ -302,10 +322,21 @@ export class ErpCustomersList extends LitElement {
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id)]);
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id)]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
+  }
+
+  private async loadFieldValues(id: string) {
+    try {
+      this.fieldValues = (await erplora().query<FieldValue[]>('customers.fields.values', { customer_id: id })) ?? [];
+    } catch { this.fieldValues = []; }
+  }
+
+  /** Edita en memoria el valor de un campo; se persiste al guardar la ficha. */
+  private setFieldValue(fieldId: string, value: string) {
+    this.fieldValues = this.fieldValues.map((f) => (f.id === fieldId ? { ...f, value } : f));
   }
 
   private async loadActivities(id: string) {
@@ -382,6 +413,15 @@ export class ErpCustomersList extends LitElement {
         marketing_consent: this.form.marketing_consent ? 1 : 0,
         is_active: this.form.is_active ? 1 : 0,
       });
+      // Campos personalizados (ADR-0132): un UPSERT por campo. El comando ya existía
+      // (`_field_value_set`) y NO tenía ni un solo llamante: se definían campos que nunca se
+      // rellenaban. Se guardan todos, incluido el vacío — vaciar un campo es un cambio real
+      // («ya no usa ese tinte»), no un no-op.
+      const customerId = this.detail.id;
+      await Promise.all(this.fieldValues.map((f) => erplora().command('customers._field_value_set', {
+        customer_id: customerId, field_id: f.id, value: f.value ?? '',
+      })));
+
       this.editing = false;
       this.formMsg = erplora().t(CATALOG, 'ui.customerUpdated');
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
@@ -487,6 +527,44 @@ export class ErpCustomersList extends LitElement {
     </section>`;
   }
 
+  /** Campos personalizados (ADR-0132): los pinta su `field_type`, no un input de texto para todo.
+   *  Un `select` con opciones es un dominio CERRADO: pintarlo como texto libre lo rompe. */
+  private renderCustomFields() {
+    if (!this.fieldValues.length) return nothing;
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    const set = (id: string) => (e: Event) => this.setFieldValue(id, String((e.target as HTMLInputElement).value ?? ''));
+
+    return html`<section class="custom-fields">
+      <h3>${t('ui.customFields')}</h3>
+      <div class="grid2">
+        ${this.fieldValues.map((f) => {
+          const label = f.is_required ? `${f.name} *` : f.name;
+          if (f.field_type === 'select') {
+            let opts: string[] = [];
+            try { opts = JSON.parse(f.options || '[]') as string[]; } catch { opts = []; }
+            return html`<ion-select data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+              .value=${f.value} @ionChange=${set(f.id)}>
+              ${opts.map((o) => html`<ion-select-option value=${o}>${o}</ion-select-option>`)}
+            </ion-select>`;
+          }
+          if (f.field_type === 'textarea') {
+            return html`<ion-textarea data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+              auto-grow .value=${f.value} @ionInput=${set(f.id)}></ion-textarea>`;
+          }
+          if (f.field_type === 'boolean') {
+            return html`<ion-checkbox data-field=${f.id} .checked=${f.value === '1'}
+              @ionChange=${(e: Event) => this.setFieldValue(f.id, (e.target as HTMLInputElement).checked ? '1' : '')}>
+              ${label}
+            </ion-checkbox>`;
+          }
+          const type = f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text';
+          return html`<ion-input data-field=${f.id} type=${type} fill="outline" label=${label}
+            label-placement="floating" .value=${f.value} @ionInput=${set(f.id)}></ion-input>`;
+        })}
+      </div>
+    </section>`;
+  }
+
   private renderEditForm() {
     const f = this.form;
     const t = (k: string): string => erplora().t(CATALOG, k);
@@ -520,6 +598,7 @@ export class ErpCustomersList extends LitElement {
         <ion-textarea fill="outline" label=${t('ui.fieldInternalNotes')} label-placement="floating" auto-grow .value=${f.notes}
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
+      ${this.renderCustomFields()}
       <label class="check"><ion-checkbox .checked=${f.marketing_consent}
         @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> ${t('ui.marketingConsent')}</label>
       <label class="check"><ion-checkbox .checked=${f.is_active}
@@ -630,7 +709,7 @@ export class ErpCustomersList extends LitElement {
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<p class="err">${this.ctrl.error}</p>` : nothing}
-        <ok-data-table .serverSide=${true} .fill=${true} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+        <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;

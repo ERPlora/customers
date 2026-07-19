@@ -24,7 +24,7 @@ Navigation entry `customers` renders the `<erp-customers-list>` Web Component
 
 ```
 module.json                      # manifest (technical contract only)
-migrations/sqlite/001_init.sql   # schema (hub_id + soft-delete + audit per §2.5)
+migrations/sqlite/001_init.sql   # schema (hub_id + soft-delete + audit per architecture/hub/tenancy.md)
 queries/*.sql                    # declarative reads (runtime injects :hub_id)
 commands/*.sql                   # declarative writes (runtime injects :new_id, :current_user_id, :now)
 schemas/list.json                # JSON Schema for query params
@@ -37,7 +37,7 @@ dist/customers.esm.js            # built WC (CSP-safe, no eval)
 - The runtime auto-injects `hub_id` and the audit/system params; module SQL never
   trusts UI-supplied values for them.
 - Marketplace classification (sectors, business types, pricing) lives in the Cloud
-  vendor portal, **not** in `module.json` (ARQUITECTURA.md §2.4).
+  vendor portal, **not** in `module.json` (`architecture/hub/module-system.md`).
 - Group/tag/timeline features from the legacy module are deferred to a later phase.
 
 ## Build
