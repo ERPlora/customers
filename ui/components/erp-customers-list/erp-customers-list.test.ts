@@ -33,6 +33,8 @@ beforeEach(() => {
     on: () => () => {},
     locale: 'es',
     t: (_catalog: unknown, key: string) => key,
+    currency: 'EUR',
+    formatMoney: (cents: number) => `${(cents / 100).toFixed(2)} €`,
   };
 });
 
@@ -219,5 +221,15 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(caoba, 'el campo editado debe persistirse').toBeTruthy();
     expect(caoba!.payload.customer_id).toBe(CLIENTE.id);
     expect(caoba!.payload.value).toBe('Caoba');
+  });
+});
+
+describe('el dinero habla céntimos → formatMoney (bug ×100, issue #16)', () => {
+  it('total_spent divide céntimos: 12550 → «125.50 €», no «12550.00»', async () => {
+    const el = await montar();
+    const cols = (el as unknown as { columns: { key: string; format?: (r: unknown) => string }[] }).columns;
+    const spent = cols.find((c) => c.key === 'total_spent');
+    expect(spent?.format, 'la columna total_spent no tiene formato de dinero').toBeTruthy();
+    expect(spent!.format!({ total_spent: 12550 })).toBe('125.50 €');
   });
 });

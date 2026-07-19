@@ -23,6 +23,9 @@ interface ErploraClientLike extends ListClient {
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
+  /** Dinero (ADR-0059/0123): `formatMoney` recibe CÉNTIMOS y divide según la moneda. */
+  currency: string;
+  formatMoney(cents: number, opts?: { currency?: string; locale?: string }): string;
 }
 
 interface Customer {
@@ -201,7 +204,9 @@ export class ErpCustomersList extends LitElement {
         sortable: true,
         filterable: true,
         filterType: 'range',
-        format: (r) => Number(r.total_spent || 0).toFixed(2),
+        // total_spent es CÉNTIMOS (customers.record_purchase acumula el total del evento,
+        // contrato inter-módulo ADR-0123): formatMoney divide. toFixed(2) pintaba ×100.
+        format: (r) => erplora().formatMoney(Number(r.total_spent || 0)),
       },
     ];
   }
@@ -239,7 +244,8 @@ export class ErpCustomersList extends LitElement {
     super.disconnectedCallback();
   }
 
-  private fmt(n: number | null | undefined): string { return n == null ? '—' : Number(n).toFixed(2); }
+  /** Dinero en CÉNTIMOS → texto con moneda (ADR-0123). El toFixed(2) directo pintaba ×100. */
+  private fmt(n: number | null | undefined): string { return n == null ? '—' : erplora().formatMoney(Number(n)); }
 
   private async loadStats() {
     try {
