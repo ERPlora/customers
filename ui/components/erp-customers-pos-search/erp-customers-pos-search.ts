@@ -1,7 +1,9 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
+import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-spotlight-search';
+import '@erplora/outfitkit/ok-empty-state';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 
@@ -75,7 +77,7 @@ export class ErpCustomersPosSearch extends LitElement {
     :host { display:contents; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
     .list { background:transparent; }
     ion-list.list { background:transparent; }
-    .list ion-item { --background:transparent; border-radius:10px; }
+    .list ion-item { --background:transparent; border-radius: var(--ok-radius-sm, 10px); }
     .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; padding:.6rem 1rem; }
@@ -198,7 +200,7 @@ export class ErpCustomersPosSearch extends LitElement {
         .value=${this.q}
         @ok-open=${(e: CustomEvent) => this.onOkOpen(e.detail.open)}
         @ok-input=${(e: CustomEvent) => this.onInput(e.detail.value)}>
-        ${this.error ? html`<p class="err">${this.error}</p>` : nothing}
+        ${this.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : nothing}
         <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
             <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
@@ -208,7 +210,7 @@ export class ErpCustomersPosSearch extends LitElement {
               </ion-label>
               ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : nothing}
             </ion-item>`)}
-          ${!this.loading && !this.results.length ? html`<div class="empty">${this.q ? t('ui.noResults') : t('ui.noCustomers')}</div>` : nothing}
+          ${!this.loading && !this.results.length ? html`<ok-empty-state icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
           ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
         </ion-list>
         ${this.selectedId
