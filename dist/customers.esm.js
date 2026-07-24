@@ -9,7 +9,7 @@ var __decorateClass = (decorators, target, key, kind) => {
   return result;
 };
 
-// node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/element-internals.js
+// ../module-toolkit/node_modules/@lit-labs/ssr-dom-shim/lib/element-internals.js
 var ElementInternalsShim = class ElementInternals {
   get shadowRoot() {
     return this.__host.__shadowRoot;
@@ -88,7 +88,7 @@ var ElementInternalsShim = class ElementInternals {
   }
 };
 
-// node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/events.js
+// ../module-toolkit/node_modules/@lit-labs/ssr-dom-shim/lib/events.js
 var __classPrivateFieldSet = function(receiver, state, value, kind, f3) {
   if (kind === "m") throw new TypeError("Private method is not writable");
   if (kind === "a" && !f3) throw new TypeError("Private accessor was defined without a setter");
@@ -246,7 +246,7 @@ Object.defineProperties(CustomEventShim.prototype, {
 var EventShimWithRealType = EventShim;
 var CustomEventShimWithRealType = CustomEventShim;
 
-// node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/lib/css.js
+// ../module-toolkit/node_modules/@lit-labs/ssr-dom-shim/lib/css.js
 var _a2;
 var CSSRuleShim = (_a2 = class CSSRule {
   constructor() {
@@ -277,7 +277,7 @@ var CSSRuleShim = (_a2 = class CSSRule {
   }
 }, _a2.STYLE_RULE = 1, _a2.CHARSET_RULE = 2, _a2.IMPORT_RULE = 3, _a2.MEDIA_RULE = 4, _a2.FONT_FACE_RULE = 5, _a2.PAGE_RULE = 6, _a2.NAMESPACE_RULE = 10, _a2.KEYFRAMES_RULE = 7, _a2.KEYFRAME_RULE = 8, _a2.SUPPORTS_RULE = 12, _a2.COUNTER_STYLE_RULE = 11, _a2.FONT_FEATURE_VALUES_RULE = 14, _a2.MARGIN_RULE = 9, _a2);
 
-// node_modules/.pnpm/@lit-labs+ssr-dom-shim@1.6.0/node_modules/@lit-labs/ssr-dom-shim/index.js
+// ../module-toolkit/node_modules/@lit-labs/ssr-dom-shim/index.js
 globalThis.Event ??= EventShimWithRealType;
 globalThis.CustomEvent ??= CustomEventShimWithRealType;
 var constructionToken = Symbol();
@@ -674,7 +674,7 @@ var CustomElementRegistryShimWithRealType = CustomElementRegistry;
 var customElements2 = new CustomElementRegistryShimWithRealType();
 var windowShim = new WindowShim(constructionToken);
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/css-tag.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/css-tag.js
 var t = globalThis;
 var e = t.ShadowRoot && (void 0 === t.ShadyCSS || t.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype;
 var s = Symbol();
@@ -719,7 +719,7 @@ var c = e || void 0 === t.CSSStyleSheet ? (t5) => t5 : (t5) => t5 instanceof CSS
   return r(e6);
 })(t5) : t5;
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/reactive-element.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/reactive-element.js
 var { is: h, defineProperty: r2, getOwnPropertyDescriptor: o2, getOwnPropertyNames: n2, getOwnPropertySymbols: a, getPrototypeOf: c2 } = Object;
 var l = globalThis;
 l.customElements ??= customElements2;
@@ -1226,7 +1226,7 @@ var o4 = s3.litElementPolyfillSupport;
 o4?.({ LitElement: i3 });
 (s3.litElementVersions ??= []).push("4.2.2");
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/property.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/decorators/property.js
 var o5 = { attribute: true, type: String, converter: b, reflect: false, hasChanged: m };
 var r4 = (t5 = o5, e6, r6) => {
   const { kind: n6, metadata: i7 } = r6;
@@ -1256,15 +1256,15 @@ function n4(t5) {
   })(t5, e6, o7);
 }
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/state.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/decorators/state.js
 function r5(r6) {
   return n4({ ...r6, state: true, attribute: false });
 }
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/base.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/decorators/base.js
 var e3 = (e6, t5, c5) => (c5.configurable = true, c5.enumerable = true, Reflect.decorate && "object" != typeof t5 && Object.defineProperty(e6, t5, c5), c5);
 
-// node_modules/.pnpm/@lit+reactive-element@2.1.2/node_modules/@lit/reactive-element/node/decorators/query.js
+// ../module-toolkit/node_modules/@lit/reactive-element/node/decorators/query.js
 function e4(e6, r6) {
   return (n6, s5, i7) => {
     const o7 = (t5) => t5.renderRoot?.querySelector(e6) ?? null;
@@ -1288,14 +1288,14 @@ function e4(e6, r6) {
   };
 }
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/define.js
+// ../outfitkit/dist/define.js
 function define(tag, ctor) {
   if (typeof customElements !== "undefined" && !customElements.get(tag)) {
     customElements.define(tag, ctor);
   }
 }
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/shared/icons.js
+// ../outfitkit/dist/shared/icons.js
 var rawAdd = '<svg viewBox="0 0 512 512" width="1.2em" height="1.2em" ><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 112v288m144-144H112"/></svg>';
 var rawAlertCircle = '<svg viewBox="0 0 512 512" width="1.2em" height="1.2em" ><path fill="currentColor" d="M256 48C141.31 48 48 141.31 48 256s93.31 208 208 208s208-93.31 208-208S370.69 48 256 48m0 319.91a20 20 0 1 1 20-20a20 20 0 0 1-20 20m21.72-201.15l-5.74 122a16 16 0 0 1-32 0l-5.74-121.94v-.05a21.74 21.74 0 1 1 43.44 0Z"/></svg>';
 var rawAlertCircleOutline = '<svg viewBox="0 0 512 512" width="1.2em" height="1.2em" ><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="32" d="M448 256c0-106-86-192-192-192S64 150 64 256s86 192 192 192s192-86 192-192Z"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M250.26 166.05L256 288l5.73-121.95a5.74 5.74 0 0 0-5.79-6h0a5.74 5.74 0 0 0-5.68 6"/><path fill="currentColor" d="M256 367.91a20 20 0 1 1 20-20a20 20 0 0 1-20 20"/></svg>';
@@ -1443,7 +1443,7 @@ function okIcon(value) {
   return BY_NAME[value] ?? value;
 }
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/ok-inline-feedback.js
+// ../outfitkit/dist/ok-inline-feedback.js
 var __defProp2 = Object.defineProperty;
 var __decorateClass2 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -1795,7 +1795,7 @@ var o6 = e5(class extends i4 {
   }
 });
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/ok-data-table.js
+// ../outfitkit/dist/ok-data-table.js
 var CSV_BOM = "\uFEFF";
 function decodeCsvBuffer(buf) {
   let text;
@@ -1851,6 +1851,42 @@ var DEFAULT_LABELS2 = {
   recordSingular: "record",
   recordPlural: "records"
 };
+var ES_LABELS = {
+  search: "Buscar\u2026",
+  empty: "Sin resultados",
+  filters: "Filtros",
+  clear: "Limpiar",
+  apply: "Aplicar",
+  selected: "{n} seleccionados",
+  importCsv: "Importar CSV",
+  exportCsv: "Exportar CSV",
+  add: "A\xF1adir",
+  moreActions: "M\xE1s acciones",
+  rowsPerPage: "Filas por p\xE1gina",
+  perPageShort: "{n} / p\xE1g.",
+  viewList: "Vista lista",
+  viewCards: "Vista tarjetas",
+  columnsVisible: "Columnas visibles",
+  columns: "Columnas",
+  actions: "Acciones",
+  close: "Cerrar",
+  newRecord: "Nuevo",
+  form: "Formulario",
+  filterPlaceholder: "Filtrar\u2026",
+  from: "Desde",
+  to: "Hasta",
+  fromOf: "{label} desde",
+  toOf: "{label} hasta",
+  gte: "\u2265",
+  lte: "\u2264",
+  noValues: "Sin valores",
+  selectAll: "Seleccionar todo",
+  selectRow: "Seleccionar fila",
+  select: "Seleccionar",
+  showing: "Mostrando {from}\u2013{to} de",
+  recordSingular: "registro",
+  recordPlural: "registros"
+};
 var OkDataTable = class extends i3 {
   constructor() {
     super(...arguments);
@@ -1892,6 +1928,7 @@ var OkDataTable = class extends i3 {
     this.hiddenKeys = /* @__PURE__ */ new Set();
     this.internalSelection = /* @__PURE__ */ new Set();
     this.menuOpen = false;
+    this.onLocaleChanged = () => this.requestUpdate();
     this.onSearch = (ev) => {
       const value = ev.target.value ?? "";
       if (this.serverSide) {
@@ -2127,9 +2164,22 @@ var OkDataTable = class extends i3 {
     ion-button { --box-shadow: none; }
   `;
   }
-  // ── i18n: textos efectivos (default inglés ← overrides de `.labels`) ──────────────────────
+  connectedCallback() {
+    super.connectedCallback();
+    if (typeof window !== "undefined") {
+      window.addEventListener("erplora:locale-changed", this.onLocaleChanged);
+    }
+  }
+  disconnectedCallback() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("erplora:locale-changed", this.onLocaleChanged);
+    }
+    super.disconnectedCallback();
+  }
+  // ── i18n: idioma del documento ← overrides explícitos de `.labels` ─────────────────────────
   get t() {
-    return { ...DEFAULT_LABELS2, ...this.labels };
+    const lang = typeof document === "undefined" ? "en" : document.documentElement.lang.toLowerCase();
+    return { ...lang.startsWith("es") ? ES_LABELS : DEFAULT_LABELS2, ...this.labels };
   }
   /** Placeholder efectivo del buscador (prop explícita → label i18n → default inglés). */
   get effSearchPlaceholder() {
@@ -2630,6 +2680,8 @@ var OkDataTable = class extends i3 {
               color=${a3.color ?? "medium"}
               ?disabled=${disabled}
               aria-disabled=${disabled ? "true" : A}
+              aria-label=${a3.label}
+              title=${a3.label}
               @click=${() => this.emit("rowAction", { actionId: a3.id, row })}
             >
               ${loading ? b2`<ion-spinner slot="icon-only" name="dots"></ion-spinner>` : a3.icon ? b2`<ion-icon slot="icon-only" .icon=${okIcon(a3.icon)}></ion-icon>` : a3.label}
@@ -3112,7 +3164,82 @@ __decorateClass3([
 ], OkDataTable.prototype, "menuOpen");
 define("ok-data-table", OkDataTable);
 
-// node_modules/.pnpm/@erplora+module-sdk@file+..+hub+packages+module-sdk/node_modules/@erplora/module-sdk/src/index.ts
+// ../hub/packages/module-sdk/src/index.ts
+var DATA_TABLE_LABELS_ES = {
+  search: "Buscar\u2026",
+  empty: "Sin resultados",
+  filters: "Filtros",
+  clear: "Limpiar",
+  apply: "Aplicar",
+  selected: "{n} seleccionados",
+  importCsv: "Importar CSV",
+  exportCsv: "Exportar CSV",
+  add: "A\xF1adir",
+  moreActions: "M\xE1s acciones",
+  rowsPerPage: "Filas por p\xE1gina",
+  perPageShort: "{n} / p\xE1g.",
+  viewList: "Vista lista",
+  viewCards: "Vista tarjetas",
+  columnsVisible: "Columnas visibles",
+  columns: "Columnas",
+  actions: "Acciones",
+  close: "Cerrar",
+  newRecord: "Nuevo",
+  form: "Formulario",
+  filterPlaceholder: "Filtrar\u2026",
+  from: "Desde",
+  to: "Hasta",
+  fromOf: "{label} desde",
+  toOf: "{label} hasta",
+  gte: "\u2265",
+  lte: "\u2264",
+  noValues: "Sin valores",
+  selectAll: "Seleccionar todo",
+  selectRow: "Seleccionar fila",
+  select: "Seleccionar",
+  showing: "Mostrando {from}\u2013{to} de",
+  recordSingular: "registro",
+  recordPlural: "registros"
+};
+var DATA_TABLE_LABELS_EN = {
+  search: "Search\u2026",
+  empty: "No results",
+  filters: "Filters",
+  clear: "Clear",
+  apply: "Apply",
+  selected: "{n} selected",
+  importCsv: "Import CSV",
+  exportCsv: "Export CSV",
+  add: "Add",
+  moreActions: "More actions",
+  rowsPerPage: "Rows per page",
+  perPageShort: "{n} / page",
+  viewList: "List view",
+  viewCards: "Card view",
+  columnsVisible: "Visible columns",
+  columns: "Columns",
+  actions: "Actions",
+  close: "Close",
+  newRecord: "New",
+  form: "Form",
+  filterPlaceholder: "Filter\u2026",
+  from: "From",
+  to: "To",
+  fromOf: "{label} from",
+  toOf: "{label} to",
+  gte: "\u2265",
+  lte: "\u2264",
+  noValues: "No values",
+  selectAll: "Select all",
+  selectRow: "Select row",
+  select: "Select",
+  showing: "Showing {from}\u2013{to} of",
+  recordSingular: "record",
+  recordPlural: "records"
+};
+function dataTableLabels(locale = "es") {
+  return locale.toLowerCase().startsWith("en") ? DATA_TABLE_LABELS_EN : DATA_TABLE_LABELS_ES;
+}
 function isEmpty(v3) {
   return v3 === null || v3 === void 0 || v3 === "";
 }
@@ -3579,6 +3706,9 @@ function erplora() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
+function can(permission) {
+  return erplora().hasPermission?.(permission) ?? true;
+}
 var TYPE_KEY = {
   text: "ui.typeText",
   number: "ui.typeNumber",
@@ -3650,6 +3780,7 @@ var ErpCustomersFields = class extends i3 {
   }
   get rowActions() {
     const t5 = (k2) => erplora().t(CATALOG, k2);
+    if (!can("customers.manage_custom_fields")) return [];
     return [
       { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
       { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
@@ -3684,6 +3815,7 @@ var ErpCustomersFields = class extends i3 {
     this.formError = "";
   }
   startEdit(f3) {
+    if (!can("customers.manage_custom_fields")) return;
     this.editing = f3;
     this.fName = f3.name;
     this.fType = f3.field_type || "text";
@@ -3710,6 +3842,7 @@ var ErpCustomersFields = class extends i3 {
     return JSON.stringify(arr);
   }
   onRowAction(ev) {
+    if (!can("customers.manage_custom_fields")) return;
     const f3 = ev.detail.row;
     if (ev.detail.actionId === "edit") this.startEdit(f3);
     if (ev.detail.actionId === "delete") {
@@ -3721,6 +3854,7 @@ var ErpCustomersFields = class extends i3 {
   async save(ev) {
     ev.preventDefault();
     if (!this.fName.trim()) return;
+    if (!can("customers.manage_custom_fields")) return;
     const editing = this.editing;
     this.saving = true;
     this.formError = "";
@@ -3756,7 +3890,7 @@ var ErpCustomersFields = class extends i3 {
     }
   }
   async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!this.pendingDelete || !can("customers.manage_custom_fields")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -3806,7 +3940,7 @@ var ErpCustomersFields = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -3854,6 +3988,9 @@ function erplora2() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
+function can2(permission) {
+  return erplora2().hasPermission?.(permission) ?? true;
+}
 var ErpCustomersGroups = class extends i3 {
   constructor() {
     super(...arguments);
@@ -3897,10 +4034,14 @@ var ErpCustomersGroups = class extends i3 {
   }
   get rowActions() {
     const t5 = (k2) => erplora2().t(CATALOG2, k2);
-    return [
-      { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
-      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
-    ];
+    const actions = [];
+    if (can2("customers.change_customergroup")) {
+      actions.push({ id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" });
+    }
+    if (can2("customers.delete_customergroup")) {
+      actions.push({ id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" });
+    }
+    return actions;
   }
   async connectedCallback() {
     super.connectedCallback();
@@ -3931,6 +4072,7 @@ var ErpCustomersGroups = class extends i3 {
     this.formError = "";
   }
   startEdit(g3) {
+    if (!can2("customers.change_customergroup")) return;
     this.editing = g3;
     this.fName = g3.name;
     this.fDescription = g3.description ?? "";
@@ -3944,8 +4086,8 @@ var ErpCustomersGroups = class extends i3 {
   }
   onRowAction(ev) {
     const g3 = ev.detail.row;
-    if (ev.detail.actionId === "edit") this.startEdit(g3);
-    if (ev.detail.actionId === "delete") {
+    if (ev.detail.actionId === "edit" && can2("customers.change_customergroup")) this.startEdit(g3);
+    if (ev.detail.actionId === "delete" && can2("customers.delete_customergroup")) {
       this.pendingDelete = g3;
       this.formMsg = "";
       this.formError = "";
@@ -3955,6 +4097,7 @@ var ErpCustomersGroups = class extends i3 {
     ev.preventDefault();
     if (!this.fName.trim()) return;
     const editing = this.editing;
+    if (!can2(editing ? "customers.change_customergroup" : "customers.add_customergroup")) return;
     const discount = Math.min(100, Math.max(0, Number(this.fDiscount) || 0));
     this.saving = true;
     this.formError = "";
@@ -3990,7 +4133,7 @@ var ErpCustomersGroups = class extends i3 {
     }
   }
   async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!this.pendingDelete || !can2("customers.delete_customergroup")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -4038,7 +4181,7 @@ var ErpCustomersGroups = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -4079,7 +4222,7 @@ __decorateClass([
 ], ErpCustomersGroups.prototype, "fActive", 2);
 define("erp-customers-groups", ErpCustomersGroups);
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/ok-kpi.js
+// ../outfitkit/dist/ok-kpi.js
 var __defProp4 = Object.defineProperty;
 var __decorateClass4 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -4229,6 +4372,10 @@ function erplora3() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
+function can3(permission) {
+  const client = erplora3();
+  return typeof client.hasPermission === "function" ? client.hasPermission(permission) : true;
+}
 var STAGE_KEY = {
   lead: "ui.stageLead",
   prospect: "ui.stageProspect",
@@ -4355,7 +4502,7 @@ var ErpCustomersList = class extends i3 {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return [
       { id: "view", label: t5("ui.actionView"), icon: "eye-outline" },
-      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
+      ...can3("customers.delete_customer") ? [{ id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }] : []
     ];
   }
   async connectedCallback() {
@@ -4408,6 +4555,7 @@ var ErpCustomersList = class extends i3 {
   // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
   // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
   async onCsvImport(ev) {
+    if (!can3("customers.add_customer")) return;
     const rows2 = ev.detail?.rows ?? [];
     for (const r6 of rows2) {
       const name = (r6.name ?? r6.Nombre ?? "").trim();
@@ -4445,7 +4593,7 @@ var ErpCustomersList = class extends i3 {
   // — Alta rápida (panel `create` de la tabla) —
   async create(ev) {
     ev.preventDefault();
-    if (!this.newName.trim()) return;
+    if (!can3("customers.add_customer") || !this.newName.trim()) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -4541,7 +4689,7 @@ var ErpCustomersList = class extends i3 {
   onRowAction(ev) {
     const row = ev.detail.row;
     if (ev.detail.actionId === "view") this.openDetail(String(row.id));
-    if (ev.detail.actionId === "delete") {
+    if (ev.detail.actionId === "delete" && can3("customers.delete_customer")) {
       this.pendingDelete = row;
       this.formMsg = "";
       this.formError = "";
@@ -4549,7 +4697,7 @@ var ErpCustomersList = class extends i3 {
   }
   // — Edición → customers.update (set completo de binds, ver schemas/update.json) —
   startEdit() {
-    if (!this.detail) return;
+    if (!this.detail || !can3("customers.change_customer")) return;
     const d3 = this.detail;
     this.form = {
       name: d3.name ?? "",
@@ -4576,7 +4724,7 @@ var ErpCustomersList = class extends i3 {
   }
   async saveEdit(ev) {
     ev.preventDefault();
-    if (!this.detail || !this.form.name.trim()) return;
+    if (!can3("customers.change_customer") || !this.detail || !this.form.name.trim()) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -4617,7 +4765,7 @@ var ErpCustomersList = class extends i3 {
   }
   // — Borrado (soft-delete) → customers.delete, confirmación en dos pasos —
   async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!can3("customers.delete_customer") || !this.pendingDelete) return;
     const target = this.pendingDelete;
     this.saving = true;
     this.formError = "";
@@ -4638,7 +4786,7 @@ var ErpCustomersList = class extends i3 {
     return list.includes(id) ? list.filter((x2) => x2 !== id) : [...list, id];
   }
   async saveMembership(kind) {
-    if (!this.detail) return;
+    if (!can3("customers.change_customer") || !this.detail) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -4658,7 +4806,7 @@ var ErpCustomersList = class extends i3 {
   // — Notas → notes.add + entrada 'note' en el timeline (activity.add) —
   async addNote(ev) {
     ev.preventDefault();
-    if (!this.detail || !this.newNote.trim()) return;
+    if (!can3("customers.add_note") || !this.detail || !this.newNote.trim()) return;
     const content = this.newNote.trim();
     this.saving = true;
     this.formError = "";
@@ -4699,7 +4847,7 @@ var ErpCustomersList = class extends i3 {
     </div>`;
   }
   renderDeleteConfirm() {
-    if (!this.pendingDelete) return A;
+    if (!this.pendingDelete || !can3("customers.delete_customer")) return A;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
     return b2`<section class="panel">
       <h3>${t5("ui.deleteCustomerTitle")}</h3>
@@ -4798,20 +4946,23 @@ var ErpCustomersList = class extends i3 {
     const isGroups = kind === "groups";
     const items = isGroups ? this.groups : this.tags;
     const selected = isGroups ? this.groupIds : this.tagIds;
+    const editable = can3("customers.change_customer");
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     if (!items.length) return b2`<p>${t5(isGroups ? "ui.noGroupsDefined" : "ui.noTagsDefined")}</p>`;
     return b2`<div>
       <div class="chips">
         ${items.map((it) => b2`<label class="check">
           <ion-checkbox .checked=${selected.includes(String(it.id))}
+            ?disabled=${!editable}
             @ionChange=${() => {
+      if (!editable) return;
       if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
       else this.tagIds = this.toggleId(this.tagIds, String(it.id));
     }}></ion-checkbox>
           ${it.name}${isGroups && Number(it.discount_percent) > 0 ? ` (\u2212${Number(it.discount_percent)}%)` : ""}
         </label>`)}
       </div>
-      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>
+      ${editable ? b2`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
     </div>`;
   }
   renderDetail() {
@@ -4821,10 +4972,10 @@ var ErpCustomersList = class extends i3 {
       <header>
         <h2>${d3.name}</h2>
         <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
-        ${this.editing ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
-        <ion-button size="small" color="danger" fill="outline" @click=${() => {
+        ${this.editing || !can3("customers.change_customer") ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
+        ${can3("customers.delete_customer") ? b2`<ion-button size="small" color="danger" fill="outline" @click=${() => {
       this.pendingDelete = d3;
-    }}>${t5("ui.delete")}</ion-button>
+    }}>${t5("ui.delete")}</ion-button>` : A}
       </header>
       ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
@@ -4846,28 +4997,26 @@ var ErpCustomersList = class extends i3 {
           <div><dt>${t5("ui.fieldActive")}</dt><dd>${d3.is_active ? t5("ui.yes") : t5("ui.no")}</dd></div>
         </dl>`}
       </section>
-      <section class="panel">
-        <h3>${t5("ui.groupsHeading")}</h3>
-        ${this.renderMembership("groups")}
-        <h3 style="margin-top:.75rem">${t5("ui.tagsHeading")}</h3>
-        ${this.renderMembership("tags")}
-      </section>
-      <section class="panel">
-        <h3>${t5("ui.addNote")}</h3>
-        <form class="form" @submit=${(e6) => this.addNote(e6)}>
-          <ion-textarea fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
-            @ionInput=${(e6) => this.newNote = e6.target.value}></ion-textarea>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
-        </form>
-        <h3>${t5("ui.activityHeading")}</h3>
-        ${this.activities.length ? b2`<ul class="timeline">
-          ${this.activities.map((a3) => b2`<li>
-            <div class="t">${a3.title} <small>(${a3.activity_type})</small></div>
-            ${a3.description ? b2`<div class="d">${a3.description}</div>` : A}
-            <div class="when">${a3.created_at}</div>
-          </li>`)}
-        </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}
-      </section>
+      ${can3("customers.view_customergroup") || can3("customers.view_customertag") ? b2`<section class="panel">
+            ${can3("customers.view_customergroup") ? b2`<h3>${t5("ui.groupsHeading")}</h3>${this.renderMembership("groups")}` : A}
+            ${can3("customers.view_customertag") ? b2`<h3 style="margin-top:.75rem">${t5("ui.tagsHeading")}</h3>${this.renderMembership("tags")}` : A}
+          </section>` : A}
+      ${can3("customers.add_note") || can3("customers.view_activity") ? b2`<section class="panel">
+            ${can3("customers.add_note") ? b2`<h3>${t5("ui.addNote")}</h3>
+                  <form class="form" @submit=${(e6) => this.addNote(e6)}>
+                    <ion-textarea fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
+                      @ionInput=${(e6) => this.newNote = e6.target.value}></ion-textarea>
+                    <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
+                  </form>` : A}
+            ${can3("customers.view_activity") ? b2`<h3>${t5("ui.activityHeading")}</h3>
+                  ${this.activities.length ? b2`<ul class="timeline">
+                    ${this.activities.map((a3) => b2`<li>
+                      <div class="t">${a3.title} <small>(${a3.activity_type})</small></div>
+                      ${a3.description ? b2`<div class="d">${a3.description}</div>` : A}
+                      <div class="when">${a3.created_at}</div>
+                    </li>`)}
+                  </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}` : A}
+          </section>` : A}
     </div>`;
   }
   /** Alta rápida: SIEMPRE proyectada en el panel `create` de la tabla (si solo se pintara al pulsar
@@ -4889,7 +5038,7 @@ var ErpCustomersList = class extends i3 {
         ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
-        <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .csv=${true} .csvName=${"clientes.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e6) => this.onRowAction(e6)} @csvImport=${(e6) => this.onCsvImport(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e6) => this.onRowAction(e6)} @csvImport=${(e6) => this.onCsvImport(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
@@ -4948,7 +5097,7 @@ __decorateClass([
 ], ErpCustomersList.prototype, "newNote", 2);
 define("erp-customers-list", ErpCustomersList);
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/ok-spotlight-search.js
+// ../outfitkit/dist/ok-spotlight-search.js
 var __defProp5 = Object.defineProperty;
 var __decorateClass5 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -5154,7 +5303,7 @@ __decorateClass5([
 ], OkSpotlightSearch.prototype, "input");
 define("ok-spotlight-search", OkSpotlightSearch);
 
-// node_modules/.pnpm/@erplora+outfitkit@file+..+outfitkit/node_modules/@erplora/outfitkit/dist/ok-empty-state.js
+// ../outfitkit/dist/ok-empty-state.js
 var __defProp6 = Object.defineProperty;
 var __decorateClass6 = (decorators, target, key, kind) => {
   var result = void 0;
@@ -5432,6 +5581,9 @@ function erplora5() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
+function can4(permission) {
+  return erplora5().hasPermission?.(permission) ?? true;
+}
 var ErpCustomersTags = class extends i3 {
   constructor() {
     super(...arguments);
@@ -5469,10 +5621,14 @@ var ErpCustomersTags = class extends i3 {
   }
   get rowActions() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
-    return [
-      { id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" },
-      { id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" }
-    ];
+    const actions = [];
+    if (can4("customers.change_customertag")) {
+      actions.push({ id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" });
+    }
+    if (can4("customers.delete_customertag")) {
+      actions.push({ id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" });
+    }
+    return actions;
   }
   async connectedCallback() {
     super.connectedCallback();
@@ -5500,6 +5656,7 @@ var ErpCustomersTags = class extends i3 {
     this.formError = "";
   }
   startEdit(tag) {
+    if (!can4("customers.change_customertag")) return;
     this.editing = tag;
     this.fName = tag.name;
     this.fColor = tag.color || "primary";
@@ -5510,8 +5667,8 @@ var ErpCustomersTags = class extends i3 {
   }
   onRowAction(ev) {
     const tag = ev.detail.row;
-    if (ev.detail.actionId === "edit") this.startEdit(tag);
-    if (ev.detail.actionId === "delete") {
+    if (ev.detail.actionId === "edit" && can4("customers.change_customertag")) this.startEdit(tag);
+    if (ev.detail.actionId === "delete" && can4("customers.delete_customertag")) {
       this.pendingDelete = tag;
       this.formMsg = "";
       this.formError = "";
@@ -5521,6 +5678,7 @@ var ErpCustomersTags = class extends i3 {
     ev.preventDefault();
     if (!this.fName.trim()) return;
     const editing = this.editing;
+    if (!can4(editing ? "customers.change_customertag" : "customers.add_customertag")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -5549,7 +5707,7 @@ var ErpCustomersTags = class extends i3 {
     }
   }
   async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!this.pendingDelete || !can4("customers.delete_customertag")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -5594,7 +5752,7 @@ var ErpCustomersTags = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can4("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;

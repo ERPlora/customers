@@ -5,7 +5,7 @@ import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
 import '@erplora/outfitkit/ok-kpi';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
-import { createListController } from '@erplora/module-sdk';
+import { createListController, dataTableLabels } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
@@ -21,6 +21,7 @@ interface ErploraClientLike extends ListClient {
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
+  hasPermission?(permission: string): boolean;
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
@@ -81,6 +82,12 @@ function erplora(): ErploraClientLike {
   const c = (globalThis as { erplora?: ErploraClientLike }).erplora;
   if (!c) throw new Error('erplora SDK no inicializado por el shell');
   return c;
+}
+
+/** Visibilidad de UI; el runtime vuelve a validar el permiso en cada command. */
+function can(permission: string): boolean {
+  const client = erplora();
+  return typeof client.hasPermission === 'function' ? client.hasPermission(permission) : true;
 }
 
 /** value (enum, no traducir) → clave i18n `ui.*` para su etiqueta. */
@@ -216,7 +223,9 @@ export class ErpCustomersList extends LitElement {
     const t = (k: string): string => erplora().t(CATALOG, k);
     return [
       { id: 'view', label: t('ui.actionView'), icon: 'eye-outline' },
-      { id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' },
+      ...(can('customers.delete_customer')
+        ? [{ id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' }]
+        : []),
     ];
   }
 
@@ -259,6 +268,7 @@ export class ErpCustomersList extends LitElement {
   // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
   // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
   private async onCsvImport(ev: CustomEvent<{ rows: Record<string, string>[] }>): Promise<void> {
+    if (!can('customers.add_customer')) return;
     const rows = ev.detail?.rows ?? [];
     for (const r of rows) {
       const name = (r.name ?? r.Nombre ?? '').trim();
@@ -291,7 +301,7 @@ export class ErpCustomersList extends LitElement {
   // — Alta rápida (panel `create` de la tabla) —
   private async create(ev: Event) {
     ev.preventDefault();
-    if (!this.newName.trim()) return;
+    if (!can('customers.add_customer') || !this.newName.trim()) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -375,12 +385,16 @@ export class ErpCustomersList extends LitElement {
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
     const row = ev.detail.row as unknown as Customer;
     if (ev.detail.actionId === 'view') this.openDetail(String(row.id));
-    if (ev.detail.actionId === 'delete') { this.pendingDelete = row; this.formMsg = ''; this.formError = ''; }
+    if (ev.detail.actionId === 'delete' && can('customers.delete_customer')) {
+      this.pendingDelete = row;
+      this.formMsg = '';
+      this.formError = '';
+    }
   }
 
   // — Edición → customers.update (set completo de binds, ver schemas/update.json) —
   private startEdit() {
-    if (!this.detail) return;
+    if (!this.detail || !can('customers.change_customer')) return;
     const d = this.detail;
     this.form = {
       name: d.name ?? '', email: d.email ?? '', phone: d.phone ?? '', tax_id: d.tax_id ?? '',
@@ -398,7 +412,7 @@ export class ErpCustomersList extends LitElement {
 
   private async saveEdit(ev: Event) {
     ev.preventDefault();
-    if (!this.detail || !this.form.name.trim()) return;
+    if (!can('customers.change_customer') || !this.detail || !this.form.name.trim()) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -435,7 +449,7 @@ export class ErpCustomersList extends LitElement {
 
   // — Borrado (soft-delete) → customers.delete, confirmación en dos pasos —
   private async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!can('customers.delete_customer') || !this.pendingDelete) return;
     const target = this.pendingDelete;
     this.saving = true;
     this.formError = '';
@@ -458,7 +472,7 @@ export class ErpCustomersList extends LitElement {
   }
 
   private async saveMembership(kind: 'groups' | 'tags') {
-    if (!this.detail) return;
+    if (!can('customers.change_customer') || !this.detail) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -479,7 +493,7 @@ export class ErpCustomersList extends LitElement {
   // — Notas → notes.add + entrada 'note' en el timeline (activity.add) —
   private async addNote(ev: Event) {
     ev.preventDefault();
-    if (!this.detail || !this.newNote.trim()) return;
+    if (!can('customers.add_note') || !this.detail || !this.newNote.trim()) return;
     const content = this.newNote.trim();
     this.saving = true;
     this.formError = '';
@@ -516,7 +530,7 @@ export class ErpCustomersList extends LitElement {
   }
 
   private renderDeleteConfirm() {
-    if (!this.pendingDelete) return nothing;
+    if (!this.pendingDelete || !can('customers.delete_customer')) return nothing;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     return html`<section class="panel">
       <h3>${t('ui.deleteCustomerTitle')}</h3>
@@ -615,20 +629,25 @@ export class ErpCustomersList extends LitElement {
     const isGroups = kind === 'groups';
     const items = isGroups ? this.groups : this.tags;
     const selected = isGroups ? this.groupIds : this.tagIds;
+    const editable = can('customers.change_customer');
     const t = (k: string): string => erplora().t(CATALOG, k);
     if (!items.length) return html`<p>${t(isGroups ? 'ui.noGroupsDefined' : 'ui.noTagsDefined')}</p>`;
     return html`<div>
       <div class="chips">
         ${items.map((it) => html`<label class="check">
           <ion-checkbox .checked=${selected.includes(String(it.id))}
+            ?disabled=${!editable}
             @ionChange=${() => {
+              if (!editable) return;
               if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
               else this.tagIds = this.toggleId(this.tagIds, String(it.id));
             }}></ion-checkbox>
           ${it.name}${isGroups && Number((it as Group).discount_percent) > 0 ? ` (−${Number((it as Group).discount_percent)}%)` : ''}
         </label>`)}
       </div>
-      <ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>
+      ${editable
+        ? html`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>`
+        : nothing}
     </div>`;
   }
 
@@ -641,8 +660,12 @@ export class ErpCustomersList extends LitElement {
       <header>
         <h2>${d.name}</h2>
         <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t('ui.back')}</ion-button>
-        ${this.editing ? nothing : html`<ion-button size="small" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
-        <ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>
+        ${this.editing || !can('customers.change_customer')
+          ? nothing
+          : html`<ion-button size="small" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
+        ${can('customers.delete_customer')
+          ? html`<ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
+          : nothing}
       </header>
       ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
@@ -664,28 +687,38 @@ export class ErpCustomersList extends LitElement {
           <div><dt>${t('ui.fieldActive')}</dt><dd>${d.is_active ? t('ui.yes') : t('ui.no')}</dd></div>
         </dl>`}
       </section>
-      <section class="panel">
-        <h3>${t('ui.groupsHeading')}</h3>
-        ${this.renderMembership('groups')}
-        <h3 style="margin-top:.75rem">${t('ui.tagsHeading')}</h3>
-        ${this.renderMembership('tags')}
-      </section>
-      <section class="panel">
-        <h3>${t('ui.addNote')}</h3>
-        <form class="form" @submit=${(e: Event) => this.addNote(e)}>
-          <ion-textarea fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
-            @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
-          <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
-        </form>
-        <h3>${t('ui.activityHeading')}</h3>
-        ${this.activities.length ? html`<ul class="timeline">
-          ${this.activities.map((a) => html`<li>
-            <div class="t">${a.title} <small>(${a.activity_type})</small></div>
-            ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
-            <div class="when">${a.created_at}</div>
-          </li>`)}
-        </ul>` : html`<p>${t('ui.noActivity')}</p>`}
-      </section>
+      ${can('customers.view_customergroup') || can('customers.view_customertag')
+        ? html`<section class="panel">
+            ${can('customers.view_customergroup')
+              ? html`<h3>${t('ui.groupsHeading')}</h3>${this.renderMembership('groups')}`
+              : nothing}
+            ${can('customers.view_customertag')
+              ? html`<h3 style="margin-top:.75rem">${t('ui.tagsHeading')}</h3>${this.renderMembership('tags')}`
+              : nothing}
+          </section>`
+        : nothing}
+      ${can('customers.add_note') || can('customers.view_activity')
+        ? html`<section class="panel">
+            ${can('customers.add_note')
+              ? html`<h3>${t('ui.addNote')}</h3>
+                  <form class="form" @submit=${(e: Event) => this.addNote(e)}>
+                    <ion-textarea fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
+                      @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
+                    <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
+                  </form>`
+              : nothing}
+            ${can('customers.view_activity')
+              ? html`<h3>${t('ui.activityHeading')}</h3>
+                  ${this.activities.length ? html`<ul class="timeline">
+                    ${this.activities.map((a) => html`<li>
+                      <div class="t">${a.title} <small>(${a.activity_type})</small></div>
+                      ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
+                      <div class="when">${a.created_at}</div>
+                    </li>`)}
+                  </ul>` : html`<p>${t('ui.noActivity')}</p>`}`
+              : nothing}
+          </section>`
+        : nothing}
     </div>`;
   }
 
@@ -710,7 +743,7 @@ export class ErpCustomersList extends LitElement {
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
-        <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .csv=${true} .csvName=${'clientes.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${can('customers.add_customer')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .importable=${can('customers.add_customer')} .exportable=${can('customers.export_customer')} .csvName=${'customers.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
