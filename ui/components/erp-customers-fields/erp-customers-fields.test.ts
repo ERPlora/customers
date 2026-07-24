@@ -86,6 +86,15 @@ describe('el alta vive DENTRO de la tabla (paridad con /employees e inventory)',
   });
 });
 
+describe('permisos efectivos del usuario', () => {
+  it('deja la tabla en modo consulta sin manage_custom_fields', async () => {
+    ((globalThis as Record<string, any>).erplora).hasPermission = () => false;
+    const el = await montar();
+    expect(tabla(el)?.addable).toBe(false);
+    expect((tabla(el) as unknown as { actions: unknown[] }).actions).toEqual([]);
+  });
+});
+
 describe('los filtros de dominio cerrado son `select`', () => {
   it('el tipo de campo se filtra con un select (enum text|number|date|boolean|select|textarea)', async () => {
     const el = await montar();

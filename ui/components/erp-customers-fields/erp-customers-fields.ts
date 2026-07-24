@@ -4,7 +4,7 @@ import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
-import { createListController } from '@erplora/module-sdk';
+import { createListController, dataTableLabels } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
@@ -16,6 +16,7 @@ interface ErploraClientLike extends ListClient {
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
+  hasPermission?(permission: string): boolean;
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
@@ -30,6 +31,10 @@ function erplora(): ErploraClientLike {
   const c = (globalThis as { erplora?: ErploraClientLike }).erplora;
   if (!c) throw new Error('erplora SDK no inicializado por el shell');
   return c;
+}
+
+function can(permission: string): boolean {
+  return erplora().hasPermission?.(permission) ?? true;
 }
 
 /** value (enum, no traducir) → clave i18n `ui.*` para su etiqueta. */
@@ -113,6 +118,7 @@ export class ErpCustomersFields extends LitElement {
 
   private get rowActions(): DataTableAction[] {
     const t = (k: string): string => erplora().t(CATALOG, k);
+    if (!can('customers.manage_custom_fields')) return [];
     return [
       { id: 'edit', label: t('ui.actionEdit'), icon: 'create-outline' },
       { id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' },
@@ -152,6 +158,7 @@ export class ErpCustomersFields extends LitElement {
   }
 
   private startEdit(f: Field) {
+    if (!can('customers.manage_custom_fields')) return;
     this.editing = f;
     this.fName = f.name; this.fType = f.field_type || 'text';
     this.fOptions = this.optionsToText(f.options);
@@ -177,6 +184,7 @@ export class ErpCustomersFields extends LitElement {
   }
 
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
+    if (!can('customers.manage_custom_fields')) return;
     const f = ev.detail.row as unknown as Field;
     if (ev.detail.actionId === 'edit') this.startEdit(f);
     if (ev.detail.actionId === 'delete') { this.pendingDelete = f; this.formMsg = ''; this.formError = ''; }
@@ -185,6 +193,7 @@ export class ErpCustomersFields extends LitElement {
   private async save(ev: Event) {
     ev.preventDefault();
     if (!this.fName.trim()) return;
+    if (!can('customers.manage_custom_fields')) return;
     const editing = this.editing;
     this.saving = true;
     this.formError = '';
@@ -215,7 +224,7 @@ export class ErpCustomersFields extends LitElement {
   }
 
   private async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!this.pendingDelete || !can('customers.manage_custom_fields')) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -269,7 +278,7 @@ export class ErpCustomersFields extends LitElement {
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
-      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${can('customers.manage_custom_fields')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;

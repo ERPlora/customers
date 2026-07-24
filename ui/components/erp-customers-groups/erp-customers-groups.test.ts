@@ -80,6 +80,15 @@ describe('el alta vive DENTRO de la tabla (paridad con /employees e inventory)',
   });
 });
 
+describe('permisos efectivos del usuario', () => {
+  it('oculta alta, edición y borrado cuando el usuario solo puede consultar grupos', async () => {
+    ((globalThis as Record<string, any>).erplora).hasPermission = () => false;
+    const el = await montar();
+    expect(tabla(el)?.addable).toBe(false);
+    expect((tabla(el) as unknown as { actions: unknown[] }).actions).toEqual([]);
+  });
+});
+
 describe('alta y edición comparten el panel de la tabla', () => {
   it('el alta manda customers.groups.create', async () => {
     const el = await montar();

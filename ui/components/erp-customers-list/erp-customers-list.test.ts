@@ -30,6 +30,7 @@ beforeEach(() => {
       comandos.push({ name, payload });
       return {};
     },
+    hasPermission: () => true,
     on: () => () => {},
     locale: 'es',
     t: (_catalog: unknown, key: string) => key,
@@ -80,6 +81,24 @@ describe('el alta vive DENTRO de la tabla (paridad con /employees e inventory)',
   it('no repite el título de la vista: lo pinta el topbar del shell', async () => {
     const el = await montar();
     expect(el.shadowRoot.querySelector('h2'), 'la vista duplica el título del topbar').toBeNull();
+  });
+});
+
+describe('permisos visibles del CRUD', () => {
+  it('la lectura sola oculta altas, importación, exportación y borrado', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.hasPermission = () => false;
+    const el = await montar();
+    const table = tabla(el) as HTMLElement & {
+      addable: boolean;
+      importable: boolean;
+      exportable: boolean;
+      actions: Array<{ id: string }>;
+    };
+    expect(table.addable).toBe(false);
+    expect(table.importable).toBe(false);
+    expect(table.exportable).toBe(false);
+    expect(table.actions.map((action) => action.id)).toEqual(['view']);
   });
 });
 

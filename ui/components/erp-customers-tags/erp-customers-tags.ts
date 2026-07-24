@@ -4,7 +4,7 @@ import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
-import { createListController } from '@erplora/module-sdk';
+import { createListController, dataTableLabels } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
@@ -16,6 +16,7 @@ interface ErploraClientLike extends ListClient {
   queryPage<R = unknown>(name: string, params: ListParams): Promise<ListPage<R>>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   on(event: string, cb: (payload: unknown) => void): () => void;
+  hasPermission?(permission: string): boolean;
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
@@ -27,6 +28,10 @@ function erplora(): ErploraClientLike {
   const c = (globalThis as { erplora?: ErploraClientLike }).erplora;
   if (!c) throw new Error('erplora SDK no inicializado por el shell');
   return c;
+}
+
+function can(permission: string): boolean {
+  return erplora().hasPermission?.(permission) ?? true;
 }
 
 /** CRUD de etiquetas de clientes (tags.list/create/update/delete). */
@@ -74,10 +79,14 @@ export class ErpCustomersTags extends LitElement {
 
   private get rowActions(): DataTableAction[] {
     const t = (k: string): string => erplora().t(CATALOG, k);
-    return [
-      { id: 'edit', label: t('ui.actionEdit'), icon: 'create-outline' },
-      { id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' },
-    ];
+    const actions: DataTableAction[] = [];
+    if (can('customers.change_customertag')) {
+      actions.push({ id: 'edit', label: t('ui.actionEdit'), icon: 'create-outline' });
+    }
+    if (can('customers.delete_customertag')) {
+      actions.push({ id: 'delete', label: t('ui.actionDelete'), icon: 'trash-outline', color: 'danger' });
+    }
+    return actions;
   }
 
   private readonly onLocaleChange = (): void => this.requestUpdate();
@@ -112,6 +121,7 @@ export class ErpCustomersTags extends LitElement {
   }
 
   private startEdit(tag: Tag) {
+    if (!can('customers.change_customertag')) return;
     this.editing = tag;
     this.fName = tag.name; this.fColor = tag.color || 'primary'; this.fActive = Boolean(tag.is_active);
     this.formError = '';
@@ -121,14 +131,17 @@ export class ErpCustomersTags extends LitElement {
 
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
     const tag = ev.detail.row as unknown as Tag;
-    if (ev.detail.actionId === 'edit') this.startEdit(tag);
-    if (ev.detail.actionId === 'delete') { this.pendingDelete = tag; this.formMsg = ''; this.formError = ''; }
+    if (ev.detail.actionId === 'edit' && can('customers.change_customertag')) this.startEdit(tag);
+    if (ev.detail.actionId === 'delete' && can('customers.delete_customertag')) {
+      this.pendingDelete = tag; this.formMsg = ''; this.formError = '';
+    }
   }
 
   private async save(ev: Event) {
     ev.preventDefault();
     if (!this.fName.trim()) return;
     const editing = this.editing;
+    if (!can(editing ? 'customers.change_customertag' : 'customers.add_customertag')) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -155,7 +168,7 @@ export class ErpCustomersTags extends LitElement {
   }
 
   private async confirmDelete() {
-    if (!this.pendingDelete) return;
+    if (!this.pendingDelete || !can('customers.delete_customertag')) return;
     this.saving = true;
     this.formError = '';
     try {
@@ -204,7 +217,7 @@ export class ErpCustomersTags extends LitElement {
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
-      <ok-data-table .serverSide=${true} .fill=${true} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'pricetag-outline'} .addable=${true} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'pricetag-outline'} .addable=${can('customers.add_customertag')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
