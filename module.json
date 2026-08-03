@@ -1,7 +1,7 @@
 {
   "id": "customers",
   "name": "Customers",
-  "version": "2.3.10",
+  "version": "2.4.0",
   "description": "Customer directory with groups, tags, custom fields, notes and activity history.",
   "agent": {
     "description": "Manages customers, groups, tags, custom fields, notes, and activity history: create, update, delete customers and look up their purchase records.",
@@ -17,6 +17,17 @@
     ]
   },
   "depends_on": [],
+  "notification_recipient_resolvers": {
+    "customers.customer": {
+      "query": "customers.notification_contact",
+      "id_param": "customer_id",
+      "channels": {
+        "email": "email",
+        "sms": "phone",
+        "whatsapp": "phone"
+      }
+    }
+  },
   "permissions": [
     "customers.view_customer",
     "customers.add_customer",
@@ -172,6 +183,11 @@
       "ai": {
         "description": "Retrieves a customer's details by their identifier"
       }
+    },
+    "customers.notification_contact": {
+      "permission": "customers.view_customer",
+      "sql": "queries/notification_contact.sql",
+      "schema": "schemas/get.json"
     },
     "customers.stats": {
       "permission": "customers.view_customer",
