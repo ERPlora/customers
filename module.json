@@ -1,7 +1,7 @@
 {
   "id": "customers",
   "name": "Customers",
-  "version": "2.3.11",
+  "version": "2.3.12",
   "description": "Customer directory with groups, tags, custom fields, notes and activity history.",
   "agent": {
     "description": "Manages customers, groups, tags, custom fields, notes, and activity history: create, update, delete customers and look up their purchase records.",
@@ -600,7 +600,12 @@
       "sale.completed": {
         "command": "customers.record_purchase"
       }
-    }
+    },
+    "emits": [
+      "customer.created",
+      "customer.deleted",
+      "customer.updated"
+    ]
   },
   "provides_slots": [
     {
