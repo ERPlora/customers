@@ -600,7 +600,12 @@
       "sale.completed": {
         "command": "customers.record_purchase"
       }
-    }
+    },
+    "emits": [
+      "customer.created",
+      "customer.deleted",
+      "customer.updated"
+    ]
   },
   "provides_slots": [
     {
