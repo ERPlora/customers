@@ -563,7 +563,13 @@
       "permission": "customers.change_customer",
       "sql": [
         "commands/_group_add.sql"
-      ]
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.group_unavailable",
+        "message": "That group is not available: it does not exist in this business or it has been deleted."
+      }
     },
     "customers._tag_clear": {
       "permission": "customers.change_customer",
@@ -575,7 +581,13 @@
       "permission": "customers.change_customer",
       "sql": [
         "commands/_tag_add.sql"
-      ]
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.tag_unavailable",
+        "message": "That tag is not available: it does not exist in this business or it has been deleted."
+      }
     },
     "customers._field_value_set": {
       "permission": "customers.change_customer",
