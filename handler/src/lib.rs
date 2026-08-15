@@ -25,7 +25,10 @@ pub fn bulk_create(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Outpu
 #[cfg(feature = "guest")]
 #[plugin_fn]
 pub fn set_groups(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output>> {
-    Ok(Json(set_membership(input.into_inner().into_value(), "group")))
+    Ok(Json(set_membership(
+        input.into_inner().into_value(),
+        "group",
+    )))
 }
 
 #[cfg(feature = "guest")]
@@ -54,7 +57,11 @@ fn opt_str(item: &Value, key: &str) -> Value {
 
 fn str_or(item: &Value, key: &str, default: &str) -> String {
     let s = as_str(item.get(key).unwrap_or(&Value::Null));
-    if s.is_empty() { default.to_string() } else { s }
+    if s.is_empty() {
+        default.to_string()
+    } else {
+        s
+    }
 }
 
 fn payload_context(input: &Value) -> (Value, Vec<Value>) {
@@ -72,21 +79,31 @@ fn payload_context(input: &Value) -> (Value, Vec<Value>) {
 /// Normaliza el lifecycle: "customer" → "active" (fiel a create_customer del legacy).
 fn norm_stage(item: &Value) -> String {
     let s = str_or(item, "lifecycle_stage", "active");
-    if s == "customer" { "active".to_string() } else { s }
+    if s == "customer" {
+        "active".to_string()
+    } else {
+        s
+    }
 }
 
 /// Lógica pura de `bulk_create`.
 pub fn bulk_create_pure(input: Value) -> Output {
     let (payload, new_ids) = payload_context(&input);
     let empty: Vec<Value> = Vec::new();
-    let items = payload.get("items").and_then(|v| v.as_array()).unwrap_or(&empty);
+    let items = payload
+        .get("items")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
 
     let mut ops: Vec<Operation> = Vec::new();
     for (i, item) in items.iter().take(MAX_BULK).enumerate() {
         let id = new_ids.get(i).cloned().unwrap_or(Value::Null);
         let mut p = Map::new();
         p.insert("new_id".into(), id); // create.sql usa :new_id
-        p.insert("name".into(), json!(as_str(item.get("name").unwrap_or(&Value::Null))));
+        p.insert(
+            "name".into(),
+            json!(as_str(item.get("name").unwrap_or(&Value::Null))),
+        );
         p.insert("email".into(), json!(str_or(item, "email", "")));
         p.insert("phone".into(), json!(str_or(item, "phone", "")));
         p.insert("tax_id".into(), json!(str_or(item, "tax_id", "")));
@@ -98,15 +115,31 @@ pub fn bulk_create_pure(input: Value) -> Output {
         p.insert("notes".into(), json!(str_or(item, "notes", "")));
         p.insert("lifecycle_stage".into(), json!(norm_stage(item)));
         p.insert("source".into(), json!(str_or(item, "source", "import")));
-        p.insert("company_name".into(), json!(str_or(item, "company_name", "")));
+        p.insert(
+            "company_name".into(),
+            json!(str_or(item, "company_name", "")),
+        );
         p.insert("birthday".into(), opt_str(item, "birthday"));
         p.insert("anniversary".into(), opt_str(item, "anniversary"));
-        p.insert("preferred_channel".into(), json!(str_or(item, "preferred_channel", "none")));
-        p.insert("marketing_consent".into(), json!(item.get("marketing_consent").and_then(|v| v.as_bool()).unwrap_or(false) as i64));
+        p.insert(
+            "preferred_channel".into(),
+            json!(str_or(item, "preferred_channel", "none")),
+        );
+        p.insert(
+            "marketing_consent".into(),
+            json!(item
+                .get("marketing_consent")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false) as i64),
+        );
         p.insert("consent_date".into(), opt_str(item, "consent_date"));
         ops.push(Operation::sql("customers.create", p));
     }
-    Output { operations: ops, events: vec![] }
+    Output {
+        operations: ops,
+        events: vec![],
+        ..Default::default()
+    }
 }
 
 /// Lógica de set_groups / set_tags: clear + N adds (reemplazo de colección M2M).
@@ -118,7 +151,10 @@ fn set_membership(input: Value, kind: &str) -> Output {
     let (payload, _ids) = payload_context(&input);
     let customer_id = payload.get("customer_id").cloned().unwrap_or(Value::Null);
     let empty: Vec<Value> = Vec::new();
-    let ids = payload.get("ids").and_then(|v| v.as_array()).unwrap_or(&empty);
+    let ids = payload
+        .get("ids")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
 
     let (clear_cmd, add_cmd, id_key) = match kind {
         "group" => ("customers._group_clear", "customers._group_add", "group_id"),
@@ -132,13 +168,19 @@ fn set_membership(input: Value, kind: &str) -> Output {
     ops.push(Operation::sql(clear_cmd, clear));
     // 2) añadir cada id (INSERT OR IGNORE).
     for ref_id in ids {
-        if ref_id.is_null() { continue; }
+        if ref_id.is_null() {
+            continue;
+        }
         let mut a = Map::new();
         a.insert("customer_id".into(), customer_id.clone());
         a.insert(id_key.into(), ref_id.clone());
         ops.push(Operation::sql(add_cmd, a));
     }
-    Output { operations: ops, events: vec![] }
+    Output {
+        operations: ops,
+        events: vec![],
+        ..Default::default()
+    }
 }
 
 #[cfg(test)]
@@ -174,7 +216,9 @@ mod tests {
 
     #[test]
     fn bulk_create_caps_at_50() {
-        let items: Vec<Value> = (0..80).map(|i| json!({ "name": format!("C{i}") })).collect();
+        let items: Vec<Value> = (0..80)
+            .map(|i| json!({ "name": format!("C{i}") }))
+            .collect();
         let out = bulk_create_pure(with(json!({ "items": items }), ctx(80)));
         assert_eq!(out.operations.len(), MAX_BULK);
     }
@@ -193,7 +237,10 @@ mod tests {
 
     #[test]
     fn set_tags_clear_only_when_empty() {
-        let out = set_membership(with(json!({ "customer_id": "c1", "ids": [] }), ctx(0)), "tag");
+        let out = set_membership(
+            with(json!({ "customer_id": "c1", "ids": [] }), ctx(0)),
+            "tag",
+        );
         assert_eq!(out.operations.len(), 1);
         assert_eq!(out.operations[0].command, "customers._tag_clear");
     }

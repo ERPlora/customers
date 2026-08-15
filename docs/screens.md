@@ -1,0 +1,109 @@
+# Customers — Screens
+
+The module contributes four tabs to the hub navigation: **Customers**, **Groups**, **Tags** and
+**Fields**. It also injects a customer search into the sell screen of the POS.
+
+## Customers
+
+Summary cards on top (`customers.stats`) and the customer list below (`customers.list`, 50 rows per
+page). Requires `customers.view_customer`.
+
+- **Search** by name, email, phone, tax id or company name.
+- **Sort** by name, email, phone, tax id, company, lifecycle stage, source, active flag, number of
+  purchases, total spent or last purchase date. Default: name, ascending.
+- **Filter** by any of those, with ranges on tax id, purchases, spend and last purchase date.
+
+### Create a customer
+
+1. Use the quick-add on the list, or open the full form.
+2. Fill in the name. Contact details (email, phone, address, city, postal code, country), tax details
+   (tax id, company name) and CRM fields are optional.
+3. Save.
+
+Requires `customers.add_customer` — an employee can do this.
+
+### Open a customer record
+
+The record shows contact and tax details, the purchase metrics, and the timeline. From here you can:
+
+| Action | Needs |
+|---|---|
+| Edit the record | `customers.change_customer` |
+| Delete it (two-step confirmation) | `customers.delete_customer` (admin only) |
+| Assign groups and tags with checkboxes | `customers.change_customer` |
+| Add a note | `customers.add_note` |
+| Read the activity timeline | `customers.view_activity` |
+
+Assigning groups or tags **replaces** the whole selection — see [concepts.md](concepts.md).
+
+### The CRM fields on a record
+
+| Field | Values |
+|---|---|
+| Lifecycle stage | `lead`, `prospect`, `first_purchase`, `active`, `at_risk`, `dormant`, `churned`, `vip` |
+| Preferred channel | `email`, `sms`, `whatsapp`, `phone`, `none` |
+| Marketing consent | yes/no, with the date it was given |
+| Source | free text — where this customer came from |
+| Birthday, anniversary | dates |
+
+## Groups
+
+Segmentation groups (`customers.groups.list`, 50 rows per page). Requires
+`customers.view_customergroup`.
+
+A group carries a name, a description, a **discount percentage** (0–100), a colour, a sort order and
+an active flag. The list shows how many customers are in each.
+
+- **Search** by name, description or customer count.
+- **Sort** by name, description, discount, colour, order, active flag or customer count. Default:
+  name, ascending.
+
+Creating and changing a group needs `customers.add_customergroup` /
+`customers.change_customergroup`; deleting needs `customers.delete_customergroup` (admin only).
+
+## Tags
+
+Simple labels with a colour (`customers.tags.list`, 50 rows per page). Requires
+`customers.view_customertag`. Search and sort by name, colour or active flag; name ascending by
+default.
+
+Same permission pattern as groups: add and change for manager and admin, delete for admin only.
+
+## Fields
+
+Custom fields you define for your own customer records (`customers.fields.list`, 50 rows per page).
+Requires `customers.view_customer` to see; `customers.manage_custom_fields` to change.
+
+### Define a custom field
+
+1. Open **Fields** and create one.
+2. Give it a name and a **type**: `text`, `number`, `date`, `boolean`, `select` or `textarea`.
+3. For a `select`, enter the options as a comma-separated list; they are stored as a list.
+4. Mark it required if it must be filled, and set its sort order.
+5. Save.
+
+> Defining the field is all the UI does today. **Filling in a field's value for a given customer has
+> no screen yet** — the values exist in the data model and can be read, but not edited from here.
+
+## In the till: assign a customer to a check
+
+The sell screen shows a customer button, contributed by this module (requires
+`customers.view_customer`).
+
+1. Press it. A search opens over the customer list.
+2. Pick a customer. The check now carries their name and their fiscal snapshot.
+3. Charge normally. The invoice will carry the customer's tax details.
+4. After charging, the till clears the customer — the next check starts anonymous.
+
+When the check is materialised as an order, this module records the link between that customer and
+that order, so "which checks does this customer have open" is answerable.
+
+## Dashboard widgets
+
+All three are off by default; turn them on from the dashboard. All need `customers.view_customer`.
+
+| Widget | Shows |
+|---|---|
+| Clientes | Total number of customers |
+| Clientes activos | Customers marked active |
+| Ingresos de clientes | Sum of what all customers have spent |

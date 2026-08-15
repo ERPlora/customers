@@ -1,48 +1,63 @@
-# Customers — ERPlora hub module
+# Módulo `customers` — CRM del POS
 
-Declarative (`manifest_kind: declarative`) hub module. Customer directory with
-CRUD over a single `customers` entity (Tier 0/1: pure-SQL queries/commands + a Lit
-Web Component). Ported from the legacy `m_customers` Python module.
+Ficha de cliente con datos de contacto y fiscales, segmentación por **grupos** (con descuento) y
+**etiquetas**, **campos personalizados** por tenant, **timeline** de actividad y notas, y métricas de
+compra (nº de compras, gasto, última compra, etapa de ciclo de vida). Recibe automáticamente las
+ventas completadas para actualizar el historial del cliente.
 
-> **Module id:** `customers` (canonical, no prefix). **Repo name:** `module-customers`.
+> **Module id:** `customers`. **Depende de:** nada (`depends_on: []` a propósito — declarar `sales`
+> haría que instalar un CRM arrastre el POS entero, ADR-0141).
+> Módulo híbrido: SQL + handler WASM (`bulk_create`, `set_groups`, `set_tags`).
 
-## What it provides
+## Documentación de usuario — [`docs/`](docs/)
 
-| Kind | Name | Permission |
-|------|------|-----------|
-| query | `customers.list` | `customers.view` |
-| query | `customers.get` | `customers.view` |
-| query | `customers.stats` | `customers.view` |
-| command | `customers.create` → emits `customers.created` | `customers.manage` |
-| command | `customers.update` → emits `customers.updated` | `customers.manage` |
-| command | `customers.delete` (soft-delete) → emits `customers.deleted` | `customers.manage` |
+Viaja **dentro** del módulo y se versiona con él: el asistente del hub (ADR-0282) la indexa por
+versión instalada y cita la de TU versión, no la de la última publicada. En inglés (idioma fuente).
 
-Navigation entry `customers` renders the `<erp-customers-list>` Web Component
-(`dist/customers.esm.js`).
+| Fichero | Para qué |
+| ------- | -------- |
+| [`docs/overview.md`](docs/overview.md) | Qué hace y qué NO hace; el slot que aporta al TPV |
+| [`docs/screens.md`](docs/screens.md) | Customers / Groups / Tags / Fields y el selector de cliente en la venta |
+| [`docs/concepts.md`](docs/concepts.md) | El cliente de la factura es un **snapshot congelado**, la junction la owna customers, `set_groups`/`set_tags` REEMPLAZAN, transiciones de lifecycle |
+| [`docs/limits.md`](docs/limits.md) | Huecos conocidos, validaciones, permisos por acción y diagnóstico |
+
+## Qué expone hoy
+
+| Tipo | Nombre | Permiso |
+| ---- | ------ | ------- |
+| query | `customers.list` / `.get` / `.stats` / `.group_ids` / `.tag_ids` / `.orders.by_customer` | `view_customer` |
+| query | `customers.groups.list` · `customers.tags.list` | `view_customergroup` · `view_customertag` |
+| query | `customers.fields.list` / `.fields.values` | `view_customer` |
+| query | `customers.activities` | `view_activity` |
+| command | `customers.create` / `.bulk_create` (WASM, cap 50) | `add_customer` |
+| command | `customers.update` / `.set_groups` (WASM) / `.set_tags` (WASM) / `.orders.link` / `.record_purchase` | `change_customer` |
+| command | `customers.delete` | `delete_customer` (solo admin) |
+| command | `customers.groups.*` / `customers.tags.*` / `customers.fields.*` | los `*_customergroup` / `*_customertag` / `manage_custom_fields` |
+| command | `customers.notes.add` · `customers.activity.add` | `add_note` · `view_activity` |
+| escucha | `sale.completed` → `customers.record_purchase` (venta anónima = no-op) | — |
+| emite | `customer.created` / `.updated` / `.deleted` | — |
+| slot | `sales.pos.assign` → `erp-customers-pos-search` (prioridad 200) | `view_customer` |
+
+Navegación: `erp-customers-list`, `erp-customers-groups`, `erp-customers-tags`,
+`erp-customers-fields`.
 
 ## Layout
 
+```text
+module.json                   # manifest (contrato técnico)
+migrations/postgres/          # esquema §2.5 (hub_id + soft-delete + auditoría)
+queries/*.sql                 # lecturas declarativas (:hub_id inyectado)
+commands/*.sql                # escrituras declarativas (las `_` son intenciones del WASM)
+schemas/*.json                # JSON Schemas de input (draft 2020-12)
+handler/                      # WASM Tier 2 → dist/handler.wasm
+ui/                           # Web Components (Lit/Ionic/OutfitKit)
+docs/                         # documentación de usuario + corpus del asistente
 ```
-module.json                      # manifest (technical contract only)
-migrations/sqlite/001_init.sql   # schema (hub_id + soft-delete + audit per architecture/hub/tenancy.md)
-queries/*.sql                    # declarative reads (runtime injects :hub_id)
-commands/*.sql                   # declarative writes (runtime injects :new_id, :current_user_id, :now)
-schemas/list.json                # JSON Schema for query params
-src/customers-list.js            # Lit Web Component source
-dist/customers.esm.js            # built WC (CSP-safe, no eval)
-```
 
-## Notes
+## Estado y trabajo abierto
 
-- The runtime auto-injects `hub_id` and the audit/system params; module SQL never
-  trusts UI-supplied values for them.
-- Marketplace classification (sectors, business types, pricing) lives in the Cloud
-  vendor portal, **not** in `module.json` (`architecture/hub/module-system.md`).
-- Group/tag/timeline features from the legacy module are deferred to a later phase.
+El estado vive en las **Issues de este repo**, no aquí. Huecos conocidos y documentados en
+`docs/limits.md`: sin pantalla para los **valores** de campos personalizados y sin pantalla de
+import masivo (`bulk_create` es solo API).
 
-## Build
-
-```bash
-pnpm install
-pnpm build   # produces dist/customers.esm.js
-```
+Doc de arquitectura: `architecture/modules/customers.md` (cargarlo antes de tocar el módulo).
