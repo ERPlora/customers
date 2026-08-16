@@ -1,5 +1,6 @@
 {
   "name": "Clientes",
+  "description": "Fichero de clientes con grupos, etiquetas, campos propios, notas e historial de actividad.",
   "navigation": {
     "customers": {
       "label": "Clientes"
