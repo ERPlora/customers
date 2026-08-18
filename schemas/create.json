@@ -1,8 +1,6 @@
 { "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "customers.create payload", "type": "object", "additionalProperties": true,
-  "required": ["name", "email", "phone", "tax_id", "address", "city", "postal_code", "country",
-               "avatar", "notes", "lifecycle_stage", "source", "company_name",
-               "birthday", "anniversary", "preferred_channel", "marketing_consent", "consent_date"],
+  "required": ["name"],
   "properties": {
     "name": { "type": "string", "minLength": 1 },
     "email": { "type": "string", "anyOf": [ { "format": "email" }, { "const": "" } ] },
