@@ -84,6 +84,20 @@ function erplora(): ErploraClientLike {
   return c;
 }
 
+/** A business rejection (hub#139) carries a stable `code` (`customers.field_required`…): translate it
+ *  through `errors.<code>` in the module catalog, with the handler's message as `{message}`; anything
+ *  else falls back to the error text or the generic key. */
+function domainErrorText(e: unknown, fallbackKey: string): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  const message = e instanceof Error ? e.message : '';
+  if (typeof code === 'string' && code.startsWith('customers.')) {
+    const key = `errors.${code}`;
+    const text = erplora().t(CATALOG, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora().t(CATALOG, fallbackKey);
+}
+
 /** Visibilidad de UI; el runtime vuelve a validar el permiso en cada command. */
 function can(permission: string): boolean {
   const client = erplora();
@@ -416,8 +430,13 @@ export class ErpCustomersList extends LitElement {
     this.saving = true;
     this.formError = '';
     try {
-      await erplora().command('customers.update', {
-        customer_id: this.detail.id,
+      // ONE command (customers#13): the sheet AND its custom-field values. The WASM handler validates
+      // every value against the definitions it reads server-side (required/type/options) and the host
+      // writes both in one transaction — a rejected value leaves the base data untouched. Before this
+      // it was `customers.update` + N × `_field_value_set` in parallel from here: half-saved sheets.
+      const customerId = this.detail.id;
+      await erplora().command('customers.update_with_fields', {
+        customer_id: customerId,
         name: this.form.name.trim(), email: this.form.email.trim(), phone: this.form.phone.trim(),
         tax_id: this.form.tax_id.trim(), address: this.form.address.trim(), city: this.form.city.trim(),
         postal_code: this.form.postal_code.trim(), country: this.form.country.trim(),
@@ -427,21 +446,16 @@ export class ErpCustomersList extends LitElement {
         preferred_channel: this.form.preferred_channel,
         marketing_consent: this.form.marketing_consent ? 1 : 0,
         is_active: this.form.is_active ? 1 : 0,
+        // Every field travels, the empty ones too: clearing a field ("no longer uses that dye") is a
+        // real change, not a no-op.
+        fields: this.fieldValues.map((f) => ({ field_id: f.id, value: f.value ?? '' })),
       });
-      // Campos personalizados (ADR-0132): un UPSERT por campo. El comando ya existía
-      // (`_field_value_set`) y NO tenía ni un solo llamante: se definían campos que nunca se
-      // rellenaban. Se guardan todos, incluido el vacío — vaciar un campo es un cambio real
-      // («ya no usa ese tinte»), no un no-op.
-      const customerId = this.detail.id;
-      await Promise.all(this.fieldValues.map((f) => erplora().command('customers._field_value_set', {
-        customer_id: customerId, field_id: f.id, value: f.value ?? '',
-      })));
 
       this.editing = false;
       this.formMsg = erplora().t(CATALOG, 'ui.customerUpdated');
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errUpdate');
+      this.formError = domainErrorText(e, 'ui.errUpdate');
     } finally {
       this.saving = false;
     }

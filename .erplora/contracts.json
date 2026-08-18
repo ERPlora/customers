@@ -16,7 +16,6 @@
     ],
     "optional_queries": [],
     "commands": [
-      "customers._field_value_set",
       "customers.create",
       "customers.delete",
       "customers.fields.create",
@@ -32,7 +31,7 @@
       "customers.tags.create",
       "customers.tags.delete",
       "customers.tags.update",
-      "customers.update"
+      "customers.update_with_fields"
     ],
     "events": [
       "customer.created",

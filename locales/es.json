@@ -166,5 +166,15 @@
     "removeCustomer": "Quitar cliente",
     "errLoadCustomers": "No se pudieron cargar los clientes",
     "customFields": "Campos personalizados"
+  },
+  "errors": {
+    "customers": {
+      "field_required": "Falta un campo obligatorio: {message}",
+      "field_invalid_number": "Número no válido: {message}",
+      "field_invalid_date": "Fecha no válida (usa AAAA-MM-DD): {message}",
+      "field_invalid_boolean": "Valor sí/no no válido: {message}",
+      "field_invalid_option": "El valor no está entre las opciones del campo: {message}",
+      "field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado)."
+    }
   }
 }
