@@ -3585,6 +3585,16 @@ var es_default = {
     removeCustomer: "Quitar cliente",
     errLoadCustomers: "No se pudieron cargar los clientes",
     customFields: "Campos personalizados"
+  },
+  errors: {
+    customers: {
+      field_required: "Falta un campo obligatorio: {message}",
+      field_invalid_number: "N\xFAmero no v\xE1lido: {message}",
+      field_invalid_date: "Fecha no v\xE1lida (usa AAAA-MM-DD): {message}",
+      field_invalid_boolean: "Valor s\xED/no no v\xE1lido: {message}",
+      field_invalid_option: "El valor no est\xE1 entre las opciones del campo: {message}",
+      field_unavailable: "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado)."
+    }
   }
 };
 
@@ -3756,6 +3766,16 @@ var en_default = {
     removeCustomer: "Remove customer",
     errLoadCustomers: "Could not load the customers",
     customFields: "Custom fields"
+  },
+  errors: {
+    customers: {
+      field_required: "A required field is missing: {message}",
+      field_invalid_number: "Invalid number: {message}",
+      field_invalid_date: "Invalid date (use YYYY-MM-DD): {message}",
+      field_invalid_boolean: "Invalid yes/no value: {message}",
+      field_invalid_option: "Value not among the field's options: {message}",
+      field_unavailable: "That field is not available in this business (it may have been deleted)."
+    }
   }
 };
 
@@ -4432,6 +4452,16 @@ function erplora3() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
+function domainErrorText(e6, fallbackKey) {
+  const code = e6?.code;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (typeof code === "string" && code.startsWith("customers.")) {
+    const key = `errors.${code}`;
+    const text = erplora3().t(CATALOG3, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora3().t(CATALOG3, fallbackKey);
+}
 function can3(permission) {
   const client = erplora3();
   return typeof client.hasPermission === "function" ? client.hasPermission(permission) : true;
@@ -4788,8 +4818,9 @@ var ErpCustomersList = class extends i3 {
     this.saving = true;
     this.formError = "";
     try {
-      await erplora3().command("customers.update", {
-        customer_id: this.detail.id,
+      const customerId = this.detail.id;
+      await erplora3().command("customers.update_with_fields", {
+        customer_id: customerId,
         name: this.form.name.trim(),
         email: this.form.email.trim(),
         phone: this.form.phone.trim(),
@@ -4806,19 +4837,16 @@ var ErpCustomersList = class extends i3 {
         anniversary: this.form.anniversary || null,
         preferred_channel: this.form.preferred_channel,
         marketing_consent: this.form.marketing_consent ? 1 : 0,
-        is_active: this.form.is_active ? 1 : 0
+        is_active: this.form.is_active ? 1 : 0,
+        // Every field travels, the empty ones too: clearing a field ("no longer uses that dye") is a
+        // real change, not a no-op.
+        fields: this.fieldValues.map((f3) => ({ field_id: f3.id, value: f3.value ?? "" }))
       });
-      const customerId = this.detail.id;
-      await Promise.all(this.fieldValues.map((f3) => erplora3().command("customers._field_value_set", {
-        customer_id: customerId,
-        field_id: f3.id,
-        value: f3.value ?? ""
-      })));
       this.editing = false;
       this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errUpdate");
+      this.formError = domainErrorText(e6, "ui.errUpdate");
     } finally {
       this.saving = false;
     }

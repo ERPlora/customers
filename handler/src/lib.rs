@@ -10,7 +10,7 @@
 //! por nombre de command del mismo módulo + params) que el host valida y ejecuta en una
 //! transacción. Los ids de filas nuevas salen de `context.new_ids` (autoridad del host).
 
-use erplora_guest_sdk::{Operation, Output};
+use erplora_guest_sdk::{DomainError, Operation, Output};
 use serde_json::{json, Map, Value};
 
 #[cfg(feature = "guest")]
@@ -29,6 +29,12 @@ pub fn set_groups(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output
         input.into_inner().into_value(),
         "group",
     )))
+}
+
+#[cfg(feature = "guest")]
+#[plugin_fn]
+pub fn update_with_fields(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output>> {
+    Ok(Json(update_with_fields_pure(input.into_inner().into_value())))
 }
 
 #[cfg(feature = "guest")]
@@ -142,6 +148,139 @@ pub fn bulk_create_pure(input: Value) -> Output {
     }
 }
 
+/// The binds `customers.update` expects (schemas/update.json): the handler forwards the sheet as
+/// the caller sent it — the SQL is the one place that knows the columns.
+const UPDATE_BINDS: &[&str] = &[
+    "customer_id", "name", "email", "phone", "tax_id", "address", "city", "postal_code",
+    "country", "notes", "lifecycle_stage", "source", "company_name", "birthday", "anniversary",
+    "preferred_channel", "marketing_consent", "is_active",
+];
+
+fn domain_error(code: &str, message: String) -> Output {
+    Output {
+        error: Some(DomainError::new(format!("customers.{code}"), message)),
+        ..Default::default()
+    }
+}
+
+/// Validates ONE value against its field definition. `Ok(())` or `(error code, message)`.
+/// The stored value is TEXT for every type; the type governs its shape (customers#13):
+/// number = decimal, date = ISO `YYYY-MM-DD`, boolean = `1`/`0`, select = one of `options`.
+/// The empty string is "unset" for every type — `required` is checked apart.
+fn validate_field_value(field: &Value, value: &str) -> Result<(), (&'static str, String)> {
+    if value.is_empty() {
+        return Ok(());
+    }
+    let name = as_str(field.get("name").unwrap_or(&Value::Null));
+    match as_str(field.get("field_type").unwrap_or(&Value::Null)).as_str() {
+        "number" => value
+            .parse::<f64>()
+            .ok()
+            .filter(|n| n.is_finite())
+            .map(|_| ())
+            .ok_or_else(|| ("field_invalid_number", format!("`{name}` must be a number, got `{value}`."))),
+        "date" => {
+            let b = value.as_bytes();
+            let ok = b.len() == 10
+                && b[4] == b'-'
+                && b[7] == b'-'
+                && b.iter().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+                && (1..=12).contains(&value[5..7].parse::<u8>().unwrap_or(0))
+                && (1..=31).contains(&value[8..10].parse::<u8>().unwrap_or(0));
+            if ok { Ok(()) } else { Err(("field_invalid_date", format!("`{name}` must be a date `YYYY-MM-DD`, got `{value}`."))) }
+        }
+        "boolean" => {
+            if value == "1" || value == "0" { Ok(()) } else { Err(("field_invalid_boolean", format!("`{name}` must be `1` or `0`, got `{value}`."))) }
+        }
+        "select" => {
+            let raw = as_str(field.get("options").unwrap_or(&Value::Null));
+            let options: Vec<String> = serde_json::from_str::<Vec<Value>>(&raw)
+                .unwrap_or_default()
+                .iter()
+                .map(as_str)
+                .collect();
+            if options.iter().any(|o| o == value) {
+                Ok(())
+            } else {
+                Err(("field_invalid_option", format!("`{name}` must be one of {options:?}, got `{value}`.")))
+            }
+        }
+        _ => Ok(()), // text | textarea: free text
+    }
+}
+
+/// `customers.update_with_fields` (customers#13): the customer sheet AND its custom-field values in
+/// one validated, atomic write. `context.reads["customers.fields.values"]` (a `required` read) is
+/// the hub's active field definitions with this customer's current values, so the handler — not the
+/// browser — decides: unknown field → `field_unavailable`; wrong shape for the type →
+/// `field_invalid_*`; a required field left empty (after applying the payload over the stored
+/// value) → `field_required`. Any rejection aborts the whole command: the sheet is never half-saved.
+///
+/// Scope of `required` (market: Square/Toast/Lightspeed/Fresha/Odoo enforce custom-field rules on
+/// the profile form, never on the walk-in): it applies to the FULL SHEET (this command). The walk-in
+/// `customers.create`, `bulk_create` and the CSV import may leave required fields pending.
+pub fn update_with_fields_pure(input: Value) -> Output {
+    let (payload, _ids) = payload_context(&input);
+    let empty: Vec<Value> = Vec::new();
+    let defs = input
+        .get("context")
+        .and_then(|c| c.get("reads"))
+        .and_then(|r| r.get("customers.fields.values"))
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty);
+    let sent = payload.get("fields").and_then(|v| v.as_array()).unwrap_or(&empty);
+
+    // 1) every sent field must be a live field of this hub, with a value of the right shape.
+    let mut values: Vec<(String, String)> = Vec::new();
+    for item in sent {
+        let field_id = as_str(item.get("field_id").unwrap_or(&Value::Null));
+        let value = as_str(item.get("value").unwrap_or(&Value::Null)).trim().to_string();
+        let Some(field) = defs.iter().find(|d| as_str(d.get("id").unwrap_or(&Value::Null)) == field_id) else {
+            return domain_error(
+                "field_unavailable",
+                "That field is not available: it does not exist in this business or it has been deleted.".into(),
+            );
+        };
+        if let Err((code, msg)) = validate_field_value(field, &value) {
+            return domain_error(code, msg);
+        }
+        values.push((field_id, value));
+    }
+    // 2) every required field must end up with a value (payload wins over the stored one).
+    for field in defs {
+        let required = field.get("is_required").map(|v| as_str(v) == "1" || v == &Value::Bool(true)).unwrap_or(false);
+        if !required {
+            continue;
+        }
+        let id = as_str(field.get("id").unwrap_or(&Value::Null));
+        let effective = values
+            .iter()
+            .find(|(fid, _)| *fid == id)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_else(|| as_str(field.get("value").unwrap_or(&Value::Null)));
+        if effective.trim().is_empty() {
+            let name = as_str(field.get("name").unwrap_or(&Value::Null));
+            return domain_error("field_required", format!("`{name}` is required."));
+        }
+    }
+
+    // 3) intentions: the sheet, then one upsert per sent value — one transaction in the host.
+    let mut update = Map::new();
+    for k in UPDATE_BINDS {
+        update.insert((*k).into(), payload.get(*k).cloned().unwrap_or(Value::Null));
+    }
+    let customer_id = update.get("customer_id").cloned().unwrap_or(Value::Null);
+    let mut ops = vec![Operation::sql("customers.update", update)];
+    for (field_id, value) in values {
+        let mut p = Map::new();
+        p.insert("customer_id".into(), customer_id.clone());
+        p.insert("field_id".into(), json!(field_id));
+        p.insert("value".into(), json!(value));
+        ops.push(Operation::sql("customers._field_value_set", p));
+    }
+    Output { operations: ops, events: vec![], ..Default::default() }
+}
+
 /// Lógica de set_groups / set_tags: clear + N adds (reemplazo de colección M2M).
 /// `kind` = "group" | "tag". payload: { customer_id, ids: [..] }.
 /// Sin la feature `guest` solo lo ejercitan los tests; el `allow` evita el warning
@@ -233,6 +372,103 @@ mod tests {
         assert_eq!(out.operations[1].command, "customers._group_add");
         assert_eq!(out.operations[1].params["group_id"], json!("g1"));
         assert_eq!(out.operations[2].params["group_id"], json!("g2"));
+    }
+
+    // ── customers#13: sheet + custom field values in ONE validated, atomic write ──────────
+
+    fn fields_ctx(defs: Vec<Value>) -> Value {
+        json!({ "context": { "new_ids": ["id-0", "id-1", "id-2"],
+                             "reads": { "customers.fields.values": defs } } })
+    }
+    fn def(id: &str, ty: &str, required: i64, options: &str, value: &str) -> Value {
+        json!({ "id": id, "name": id, "field_type": ty, "options": options,
+                "is_required": required, "sort_order": 0, "value": value })
+    }
+    fn sheet(fields: Value) -> Value {
+        json!({ "customer_id": "c1", "name": "Ana", "email": "", "phone": "", "tax_id": "",
+                "address": "", "city": "", "postal_code": "", "country": "", "notes": "",
+                "lifecycle_stage": "lead", "source": "walk_in", "company_name": "",
+                "birthday": null, "anniversary": null, "preferred_channel": "none",
+                "marketing_consent": 0, "is_active": 1, "fields": fields })
+    }
+
+    #[test]
+    fn update_with_fields_emits_update_then_one_set_per_field() {
+        let ctx = fields_ctx(vec![def("f-dye", "text", 0, "[]", ""), def("f-vip", "boolean", 0, "[]", "")]);
+        let out = update_with_fields_pure(with(sheet(json!([{ "field_id": "f-dye", "value": "7.1" }])), ctx));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 2);
+        assert_eq!(out.operations[0].command, "customers.update");
+        assert_eq!(out.operations[0].params["customer_id"], json!("c1"));
+        assert_eq!(out.operations[0].params["name"], json!("Ana"));
+        assert_eq!(out.operations[1].command, "customers._field_value_set");
+        assert_eq!(out.operations[1].params["customer_id"], json!("c1"));
+        assert_eq!(out.operations[1].params["field_id"], json!("f-dye"));
+        assert_eq!(out.operations[1].params["value"], json!("7.1"));
+    }
+
+    #[test]
+    fn update_with_fields_rejects_missing_required_field() {
+        let ctx = fields_ctx(vec![def("f-dye", "text", 1, "[]", "")]);
+        let out = update_with_fields_pure(with(sheet(json!([{ "field_id": "f-dye", "value": "  " }])), ctx));
+        let err = out.error.expect("required field must reject");
+        assert_eq!(err.code, "customers.field_required");
+        assert!(out.operations.is_empty(), "nothing is written when a field is invalid");
+    }
+
+    #[test]
+    fn update_with_fields_required_is_satisfied_by_the_stored_value_when_omitted() {
+        // The sheet did not send the field: the stored value counts, the write is not blocked.
+        let ctx = fields_ctx(vec![def("f-dye", "text", 1, "[]", "7.1")]);
+        let out = update_with_fields_pure(with(sheet(json!([])), ctx));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 1);
+    }
+
+    #[test]
+    fn update_with_fields_validates_number_date_boolean_and_select() {
+        let defs = || vec![
+            def("f-num", "number", 0, "[]", ""),
+            def("f-date", "date", 0, "[]", ""),
+            def("f-bool", "boolean", 0, "[]", ""),
+            def("f-sel", "select", 0, "[\"Blonde\",\"Brown\"]", ""),
+        ];
+        let bad = [
+            ("f-num", "abc", "customers.field_invalid_number"),
+            ("f-date", "31/12/2026", "customers.field_invalid_date"),
+            ("f-bool", "yes", "customers.field_invalid_boolean"),
+            ("f-sel", "Red", "customers.field_invalid_option"),
+        ];
+        for (id, v, code) in bad {
+            let out = update_with_fields_pure(with(sheet(json!([{ "field_id": id, "value": v }])), fields_ctx(defs())));
+            let err = out.error.unwrap_or_else(|| panic!("{id}={v} must reject"));
+            assert_eq!(err.code, code, "{id}={v}");
+        }
+        let good = json!([
+            { "field_id": "f-num", "value": "12.5" },
+            { "field_id": "f-date", "value": "2026-12-31" },
+            { "field_id": "f-bool", "value": "1" },
+            { "field_id": "f-sel", "value": "Brown" },
+        ]);
+        let out = update_with_fields_pure(with(sheet(good), fields_ctx(defs())));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 5);
+    }
+
+    #[test]
+    fn update_with_fields_rejects_unknown_field_of_this_hub() {
+        let ctx = fields_ctx(vec![def("f-dye", "text", 0, "[]", "")]);
+        let out = update_with_fields_pure(with(sheet(json!([{ "field_id": "f-other-hub", "value": "x" }])), ctx));
+        assert_eq!(out.error.expect("unknown field must reject").code, "customers.field_unavailable");
+    }
+
+    #[test]
+    fn update_with_fields_empty_value_is_allowed_on_optional_field() {
+        // Clearing an optional field ("no longer uses that dye") is a real change, not a no-op.
+        let ctx = fields_ctx(vec![def("f-num", "number", 0, "[]", "3")]);
+        let out = update_with_fields_pure(with(sheet(json!([{ "field_id": "f-num", "value": "" }])), ctx));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations[1].params["value"], json!(""));
     }
 
     #[test]

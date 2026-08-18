@@ -2,8 +2,9 @@
 
 ## Known gaps you should know about
 
-- **No screen fills a custom field's value.** You can define fields; entering data per customer is
-  not exposed.
+- **Required custom fields are enforced on the full sheet only.** The walk-in quick add, the bulk
+  command and the CSV import may leave a required field pending; the sheet refuses to save until it
+  is filled.
 - **No import screen.** Bulk creation is API-only.
 - **A group's discount is not an automatic price rule.** It is segmentation data.
 

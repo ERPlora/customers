@@ -377,6 +377,30 @@
         "description": "Updates an existing customer's data"
       }
     },
+    "customers.update_with_fields": {
+      "permission": "customers.change_customer",
+      "handler": {
+        "type": "wasm",
+        "file": "dist/handler.wasm",
+        "function": "update_with_fields"
+      },
+      "schema": "schemas/update_with_fields.json",
+      "reads": [
+        {
+          "query": "customers.fields.values",
+          "params": {
+            "customer_id": "payload.customer_id"
+          },
+          "required": true
+        }
+      ],
+      "emit": [
+        "customer.updated"
+      ],
+      "ai": {
+        "description": "Updates a customer's sheet AND its custom-field values in one validated, atomic write (customers#13): required fields must end up filled, number/date/boolean/select values must match their type; any rejection reverts everything."
+      }
+    },
     "customers.delete": {
       "permission": "customers.delete_customer",
       "transaction": true,

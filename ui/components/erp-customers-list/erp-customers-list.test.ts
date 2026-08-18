@@ -218,7 +218,12 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(zona!.querySelector('ion-input[data-field="f1"]'), 'un campo text se pinta como ion-input').toBeTruthy();
   });
 
-  it('guardar la ficha PERSISTE los campos personalizados', async () => {
+  // customers#13: the sheet and its values used to be `customers.update` + N × `_field_value_set`
+  // fired in parallel from the browser — if one value failed the base data was already changed, and
+  // `required`/type were purely visual. Now the UI calls ONE command; the WASM handler validates
+  // every value against the definitions it READS (never trusting the browser) and the host writes
+  // sheet + values in one transaction.
+  it('guardar la ficha es UN command atómico: customers.update_with_fields con los valores', async () => {
     const el = await montar();
     await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
     const wc = el as unknown as {
@@ -226,20 +231,37 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
       setFieldValue(id: string, v: string): void;
       saveEdit(e: Event): Promise<void>;
     };
-    // Como el usuario: pulsar «Editar» es lo que rellena el formulario desde la ficha.
     wc.startEdit();
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
 
     wc.setFieldValue('f2', 'Caoba');
     await wc.saveEdit(new Event('submit'));
 
-    // Sin esto, el campo se define y NUNCA se rellena: es el bug que se está arreglando.
-    const guardado = comandos.filter((c) => c.name === 'customers._field_value_set');
-    expect(guardado.length, 'debe guardar los campos personalizados').toBeGreaterThan(0);
-    const caoba = guardado.find((c) => c.payload.field_id === 'f2');
-    expect(caoba, 'el campo editado debe persistirse').toBeTruthy();
-    expect(caoba!.payload.customer_id).toBe(CLIENTE.id);
-    expect(caoba!.payload.value).toBe('Caoba');
+    expect(comandos.map((c) => c.name), 'un solo command: nada de update + N sets').toEqual(['customers.update_with_fields']);
+    const p = comandos[0].payload;
+    expect(p.customer_id).toBe(CLIENTE.id);
+    expect(p.name).toBe(CLIENTE.name);
+    const fields = p.fields as { field_id: string; value: string }[];
+    expect(fields.find((f) => f.field_id === 'f2')?.value).toBe('Caoba');
+    expect(fields.find((f) => f.field_id === 'f1')?.value, 'the untouched value travels too (the sheet is saved whole)').toBe('6.34');
+    expect(comandos.some((c) => c.name === 'customers._field_value_set'), 'the private sub-command is never called from the browser').toBe(false);
+  });
+
+  it('un rechazo del handler se muestra traducido por su código y la ficha sigue en edición', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.command = async () => {
+      throw Object.assign(new Error('`Tinte habitual` is required.'), { code: 'customers.field_required' });
+    };
+    sdk.t = (_c: unknown, key: string, params?: Record<string, unknown>) =>
+      key === 'errors.customers.field_required' ? `Falta un campo obligatorio: ${params?.message ?? ''}` : key;
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; editing: boolean; formError: string };
+    wc.startEdit();
+    await wc.saveEdit(new Event('submit'));
+    expect(wc.editing, 'a rejected save keeps the form open to fix it').toBe(true);
+    expect(wc.formError).toContain('Falta un campo obligatorio');
+    expect(wc.formError).toContain('Tinte habitual');
   });
 });
 
