@@ -21,6 +21,11 @@
 
 A bulk call accepts `customer` as a lifecycle stage and stores it as `active`.
 
+Creating a customer needs **only a name** (a phone or an email is welcome, not required): the
+walk-in of the counter is "name, and charge". Everything else — address, birthday, company,
+channel — is enrichment you add later from the sheet. Marketing consent is never demanded at
+creation: it is recorded when the customer actually gives it.
+
 ## Caps and sizes
 
 | Limit | Value |
