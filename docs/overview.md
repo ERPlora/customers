@@ -42,9 +42,12 @@ installing a CRM drags the whole point of sale in with it.
 
 | Event | Runs | Effect |
 |---|---|---|
-| `sale.completed` (from `sales`) | `customers.record_purchase` | Raises the customer's purchase count and spend, sets the last purchase date and advances their lifecycle stage |
+| `sale.completed` (from `sales`) | `customers.record_purchase` | Writes ONE ledger entry per sale (the same sale delivered twice counts once), raises the customer's purchase count and spend, sets the last purchase date, advances their lifecycle stage and adds a `purchase` entry to the timeline |
+| `sale.voided` (from `sales`) | `customers._reverse_purchase` | Marks that ledger entry as voided (history is kept), takes the amount and the count back, recomputes the last purchase date and steps the stage back; adds a `purchase_voided` entry to the timeline |
 
-A sale with no customer is anonymous and does nothing here.
+A sale with no customer is anonymous and does nothing here. The purchase history of a customer is
+`customers.purchases` (paginated, with the source document id); `customers.purchases.divergences`
+lists customers whose totals disagree with their ledger (empty = healthy).
 
 **It fills a slot in the till.** The POS sell screen has a named slot for assigning things to a
 check; this module fills it with a customer search. Pick a customer and the check carries them, along

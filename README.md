@@ -29,12 +29,13 @@ versión instalada y cita la de TU versión, no la de la última publicada. En i
 | query | `customers.groups.list` · `customers.tags.list` | `view_customergroup` · `view_customertag` |
 | query | `customers.fields.list` / `.fields.values` | `view_customer` |
 | query | `customers.activities` | `view_activity` |
+| query | `customers.purchases` (historial de compras del ledger, paginado) / `.purchases.divergences` (reconciliación) | `view_customer` |
 | command | `customers.create` / `.bulk_create` (WASM, cap 50) | `add_customer` |
 | command | `customers.update` / `.set_groups` (WASM) / `.set_tags` (WASM) / `.orders.link` / `.record_purchase` | `change_customer` |
 | command | `customers.delete` | `delete_customer` (solo admin) |
 | command | `customers.groups.*` / `customers.tags.*` / `customers.fields.*` | los `*_customergroup` / `*_customertag` / `manage_custom_fields` |
 | command | `customers.notes.add` (nota + entrada del timeline en una transacción) · `customers.activity.add` | `add_note` · `add_activity` (admin/manager; el rol de lectura no muta el timeline) |
-| escucha | `sale.completed` → `customers.record_purchase` (venta anónima = no-op) | — |
+| escucha | `sale.completed` → `customers.record_purchase` (ledger idempotente por venta; anónima = no-op) · `sale.voided` → `customers._reverse_purchase` (revierte y conserva historial) | — |
 | emite | `customer.created` / `.updated` / `.deleted` | — |
 | slot | `sales.pos.assign` → `erp-customers-pos-search` (prioridad 200) | `view_customer` |
 

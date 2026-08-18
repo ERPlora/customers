@@ -95,7 +95,8 @@
   "migrations": {
     "postgres": [
       "migrations/postgres/001_init.sql",
-      "migrations/postgres/002_customer_order.sql"
+      "migrations/postgres/002_customer_order.sql",
+      "migrations/postgres/003_purchase_ledger.sql"
     ]
   },
   "queries": {
@@ -346,6 +347,46 @@
       "ai": {
         "description": "Lists the order ids linked to a customer (ADR-0141). Amounts come from sales via its declared query; customers stores only the FK."
       }
+    },
+    "customers.purchases": {
+      "permission": "customers.view_customer",
+      "sql": "queries/purchases.sql",
+      "schema": "schemas/purchases.json",
+      "list": {
+        "search": [
+          "source_id"
+        ],
+        "sort": [
+          "created_at",
+          "amount",
+          "status",
+          "source_type"
+        ],
+        "default_sort": "created_at",
+        "default_dir": "desc",
+        "filters": {
+          "status": {
+            "op": "eq"
+          },
+          "source_type": {
+            "op": "eq"
+          },
+          "created_at": {
+            "op": "range"
+          }
+        },
+        "page_size": 50
+      },
+      "ai": {
+        "description": "Paginated purchase history of a customer from the ledger (customers#8): source document (opaque sale id), amount in cents, currency, status confirmed|voided. Voided rows are kept."
+      }
+    },
+    "customers.purchases.divergences": {
+      "permission": "customers.view_customer",
+      "sql": "queries/purchases_divergences.sql",
+      "ai": {
+        "description": "Reconciliation audit (customers#8): customers whose total_purchases/total_spent disagree with their purchase ledger. Empty = healthy."
+      }
     }
   },
   "commands": {
@@ -418,11 +459,24 @@
       "permission": "customers.change_customer",
       "transaction": true,
       "sql": [
-        "commands/record_purchase.sql"
+        "commands/record_purchase.sql",
+        "commands/record_purchase_activity.sql"
       ],
       "schema": "schemas/record_purchase.json",
       "ai": {
-        "description": "Records a purchase in the customer's history"
+        "description": "Records a purchase in the customer's history: ONE idempotent ledger row per (hub, source_type, source_id) — the same sale delivered twice moves the totals once — plus the aggregate update and a `purchase` timeline entry (customers#8)."
+      },
+      "internal": true
+    },
+    "customers._reverse_purchase": {
+      "permission": "customers.change_customer",
+      "transaction": true,
+      "sql": [
+        "commands/_reverse_purchase.sql",
+        "commands/_reverse_purchase_activity.sql"
+      ],
+      "ai": {
+        "description": "Listener of sale.voided (customers#8): flips the ledger row to voided (history kept), reverts amount/count/last purchase, steps the stage back deterministically and writes a `purchase_voided` timeline entry. Idempotent."
       }
     },
     "customers.bulk_create": {
@@ -650,6 +704,9 @@
     "listen": {
       "sale.completed": {
         "command": "customers.record_purchase"
+      },
+      "sale.voided": {
+        "command": "customers._reverse_purchase"
       }
     },
     "emits": [

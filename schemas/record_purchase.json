@@ -3,6 +3,9 @@
   "required": ["total"],
   "properties": {
     "customer_id": { "type": ["string", "null"],
-      "description": "NULL = venta anónima (no-op seguro: el WHERE no casa ninguna fila)" },
+      "description": "NULL = anonymous sale (safe no-op: nothing is selected, nothing is written)" },
+    "sale_id": { "type": ["string", "null"],
+      "description": "Source document (sales_sale.id, opaque). Idempotency key with the hub: the same sale recorded twice moves the totals once (customers#8). Absent = a `manual` ledger entry, not deduplicable." },
     "total": { "type": "integer", "minimum": 0,
-      "description": "Importe de la compra en CÉNTIMOS enteros (ADR-0007). Alimenta el total gastado del cliente: un 2.20 aquí lo dejaría en 2 céntimos." } } }
+      "description": "Purchase amount in whole CENTS (ADR-0007). Feeds the customer's total_spent: a 2.20 here would leave it at 2 cents." },
+    "currency": { "type": ["string", "null"], "description": "ISO 4217 code as delivered by the event; stored on the ledger row." } } }
