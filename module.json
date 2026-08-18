@@ -593,7 +593,13 @@
       "permission": "customers.change_customer",
       "sql": [
         "commands/_field_value_set.sql"
-      ]
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.field_unavailable",
+        "message": "That field or customer is not available: it does not exist in this business or it has been deleted."
+      }
     },
     "customers.orders.link": {
       "permission": "customers.change_customer",
