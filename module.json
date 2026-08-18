@@ -32,6 +32,7 @@
     "customers.change_customertag",
     "customers.delete_customertag",
     "customers.view_activity",
+    "customers.add_activity",
     "customers.add_note",
     "customers.manage_custom_fields",
     "customers.manage_settings"
@@ -41,6 +42,7 @@
       "*"
     ],
     "manager": [
+      "customers.add_activity",
       "customers.add_customer",
       "customers.add_customergroup",
       "customers.add_customertag",
@@ -550,7 +552,7 @@
       }
     },
     "customers.activity.add": {
-      "permission": "customers.view_activity",
+      "permission": "customers.add_activity",
       "transaction": true,
       "sql": [
         "commands/activity_add.sql"

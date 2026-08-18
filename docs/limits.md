@@ -44,7 +44,8 @@ A bulk call accepts `customer` as a lifecycle stage and stores it as `active`.
 | Create or change a tag | `customers.add_customertag` / `customers.change_customertag` |
 | Delete a group or a tag | `customers.delete_customergroup` / `customers.delete_customertag` |
 | See the activity timeline | `customers.view_activity` |
-| Add a note | `customers.add_note` |
+| Add a note (it also writes its own timeline entry) | `customers.add_note` |
+| Record an activity in the timeline by hand or by API | `customers.add_activity` |
 | Define custom fields | `customers.manage_custom_fields` |
 | Change the module settings | `customers.manage_settings` |
 
@@ -54,7 +55,8 @@ By role:
 - **manager** — everything except the three deletes and `manage_settings`.
 - **employee** — can **see** customers, groups and tags, **create** a customer, **read** the timeline
   and **add a note**. An employee cannot edit or delete a customer, cannot manage groups, tags or
-  custom fields, and cannot export.
+  custom fields, cannot export, and cannot write arbitrary entries into the timeline
+  (`customers.add_activity` is manager/admin: reading the timeline never grants writing it).
 
 The asymmetry is deliberate: taking down a new customer at the counter is routine; changing or
 removing one is not.
