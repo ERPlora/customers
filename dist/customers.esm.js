@@ -1887,7 +1887,7 @@ var ES_LABELS = {
   recordSingular: "registro",
   recordPlural: "registros"
 };
-var OkDataTable = class extends i3 {
+var _OkDataTable = class _OkDataTable2 extends i3 {
   constructor() {
     super(...arguments);
     this.columns = [];
@@ -1925,6 +1925,8 @@ var OkDataTable = class extends i3 {
     this.filterDraft = {};
     this.panel = "none";
     this.viewMode = "table";
+    this.viewChosenByUser = false;
+    this.isMobile = false;
     this.hiddenKeys = /* @__PURE__ */ new Set();
     this.internalSelection = /* @__PURE__ */ new Set();
     this.menuOpen = false;
@@ -2144,6 +2146,13 @@ var OkDataTable = class extends i3 {
     .empty .empty-ic { display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 999px; background: var(--header-background); font-size: 26px; }
 
     .actions { display: flex; gap: 0.25rem; justify-content: flex-end; }
+    /* Las acciones de fila son icon-only y de tamaño small en escritorio. En tablet/móvil se
+     * amplía el host completo (no solo el icono) para que el área táctil alcance 44×44 px. */
+    @media (pointer: coarse), (max-width: 834px) {
+      .actions ion-button { min-width: 44px; min-height: 44px; margin: 0; }
+      .toolbtn { width: 44px; height: 44px; }
+      .pager .nav ion-button { min-width: 44px; min-height: 44px; margin: 0; }
+    }
     /* Spinner de acción en curso (loading): contenido dentro del ion-button small (Ionic lo fija
      * a 28px en el :host, por eso width/height y no font-size). Cubre tabla y tarjetas: los
      * botones de fila siempre van dentro de .actions. */
@@ -2164,15 +2173,36 @@ var OkDataTable = class extends i3 {
     ion-button { --box-shadow: none; }
   `;
   }
+  static {
+    this.MOBILE_BREAKPOINT = 640;
+  }
   connectedCallback() {
     super.connectedCallback();
     if (typeof window !== "undefined") {
       window.addEventListener("erplora:locale-changed", this.onLocaleChanged);
     }
+    if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+      this.mq = window.matchMedia(`(max-width: ${_OkDataTable2.MOBILE_BREAKPOINT}px)`);
+      this.isMobile = this.mq.matches;
+      const handler = (e6) => {
+        const matches = "matches" in e6 ? e6.matches : this.mq?.matches ?? false;
+        if (this.isMobile === matches) return;
+        this.isMobile = matches;
+        if (matches && this.cardViewEnabled) this.viewMode = "cards";
+        else if (!matches && this.viewMode === "cards") this.viewMode = "table";
+      };
+      this.mq.addEventListener("change", handler);
+      this._mqHandler = handler;
+    }
   }
   disconnectedCallback() {
     if (typeof window !== "undefined") {
       window.removeEventListener("erplora:locale-changed", this.onLocaleChanged);
+    }
+    if (this.mq) {
+      const handler = this._mqHandler;
+      if (handler) this.mq.removeEventListener("change", handler);
+      this.mq = void 0;
     }
     super.disconnectedCallback();
   }
@@ -2532,10 +2562,35 @@ var OkDataTable = class extends i3 {
   // forma robusta de arrancar en tarjetas sin depender de fijar `viewMode` por referencia (que
   // falla si la tabla monta detrás de un `v-if`/loading y el ref aún es null).
   firstUpdated() {
-    if (this.defaultView === "cards" && this.cardViewEnabled) this.viewMode = "cards";
-    else if (this.defaultView === "table") this.viewMode = "table";
+    this.applyInitialView();
+  }
+  /** Re-evalúa la vista inicial cada render mientras el usuario no haya elegido a mano.
+   *
+   * `firstUpdated` NO basta: decide una sola vez, y los consumidores que asignan las props por JS
+   * DESPUÉS de insertar el elemento —lo normal en páginas renderizadas por el servidor— llegan
+   * tarde. En ese momento `cardViewEnabled` aún era `false`, así que no se conmutaba; y el
+   * listener de `matchMedia` solo dispara al CAMBIAR el viewport, cosa que en un móvil no pasa
+   * nunca. La tabla se quedaba con scroll lateral para siempre.
+   *
+   * Medido en Android contra producción el 2026-08-02 con el bundle ya actualizado:
+   *   `views` antes de insertar  → tarjetas
+   *   `views` después de insertar → tabla   ← lo que hace la página
+   */
+  willUpdate() {
+    this.applyInitialView();
+  }
+  applyInitialView() {
+    if (this.viewChosenByUser) return;
+    if (this.isMobile && this.cardViewEnabled) {
+      this.viewMode = "cards";
+    } else if (this.defaultView === "cards" && this.cardViewEnabled) {
+      this.viewMode = "cards";
+    } else if (this.defaultView === "table") {
+      this.viewMode = "table";
+    }
   }
   setViewMode(mode) {
+    this.viewChosenByUser = true;
     if (this.viewMode === mode) return;
     this.viewMode = mode;
     this.emit("viewChange", mode);
@@ -3017,151 +3072,155 @@ var OkDataTable = class extends i3 {
 };
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "columns");
+], _OkDataTable.prototype, "columns");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "rows");
+], _OkDataTable.prototype, "rows");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "searchKeys");
+], _OkDataTable.prototype, "searchKeys");
 __decorateClass3([
   n4({ attribute: "row-key-field" })
-], OkDataTable.prototype, "rowKeyField");
+], _OkDataTable.prototype, "rowKeyField");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "rowKey");
+], _OkDataTable.prototype, "rowKey");
 __decorateClass3([
   n4({ type: Number, attribute: "page-size" })
-], OkDataTable.prototype, "pageSize");
+], _OkDataTable.prototype, "pageSize");
 __decorateClass3([
   n4({ attribute: "empty-message" })
-], OkDataTable.prototype, "emptyMessage");
+], _OkDataTable.prototype, "emptyMessage");
 __decorateClass3([
   n4({ attribute: "search-placeholder" })
-], OkDataTable.prototype, "searchPlaceholder");
+], _OkDataTable.prototype, "searchPlaceholder");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "labels");
+], _OkDataTable.prototype, "labels");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "actions");
+], _OkDataTable.prototype, "actions");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "addable");
+], _OkDataTable.prototype, "addable");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "pageSizeOptions");
+], _OkDataTable.prototype, "pageSizeOptions");
 __decorateClass3([
   n4({ type: Boolean, reflect: true })
-], OkDataTable.prototype, "fill");
+], _OkDataTable.prototype, "fill");
 __decorateClass3([
   n4({ type: Boolean, attribute: "column-picker" })
-], OkDataTable.prototype, "columnPicker");
+], _OkDataTable.prototype, "columnPicker");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "csv");
+], _OkDataTable.prototype, "csv");
 __decorateClass3([
   n4({ attribute: "csv-name" })
-], OkDataTable.prototype, "csvName");
+], _OkDataTable.prototype, "csvName");
 __decorateClass3([
   n4({ type: Boolean, attribute: "server-side" })
-], OkDataTable.prototype, "serverSide");
+], _OkDataTable.prototype, "serverSide");
 __decorateClass3([
   n4({ type: Number })
-], OkDataTable.prototype, "total");
+], _OkDataTable.prototype, "total");
 __decorateClass3([
   n4({ type: Number })
-], OkDataTable.prototype, "page");
+], _OkDataTable.prototype, "page");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "searchable");
+], _OkDataTable.prototype, "searchable");
 __decorateClass3([
   n4({ type: String })
-], OkDataTable.prototype, "sort");
+], _OkDataTable.prototype, "sort");
 __decorateClass3([
   n4({ attribute: "sort-dir" })
-], OkDataTable.prototype, "sortDir");
+], _OkDataTable.prototype, "sortDir");
 __decorateClass3([
   n4()
-], OkDataTable.prototype, "title");
+], _OkDataTable.prototype, "title");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "views");
+], _OkDataTable.prototype, "views");
 __decorateClass3([
   n4({ attribute: "default-view" })
-], OkDataTable.prototype, "defaultView");
+], _OkDataTable.prototype, "defaultView");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "exportable");
+], _OkDataTable.prototype, "exportable");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "importable");
+], _OkDataTable.prototype, "importable");
 __decorateClass3([
   n4({ type: Boolean, attribute: "column-selector" })
-], OkDataTable.prototype, "columnSelector");
+], _OkDataTable.prototype, "columnSelector");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "pageSizes");
+], _OkDataTable.prototype, "pageSizes");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "selectable");
+], _OkDataTable.prototype, "selectable");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "selectedKeys");
+], _OkDataTable.prototype, "selectedKeys");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "primaryAction");
+], _OkDataTable.prototype, "primaryAction");
 __decorateClass3([
   n4({ type: Boolean })
-], OkDataTable.prototype, "inlineFilters");
+], _OkDataTable.prototype, "inlineFilters");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "menuActions");
+], _OkDataTable.prototype, "menuActions");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "cardTitle");
+], _OkDataTable.prototype, "cardTitle");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "cardIcon");
+], _OkDataTable.prototype, "cardIcon");
 __decorateClass3([
   n4({ attribute: false })
-], OkDataTable.prototype, "renderCard");
+], _OkDataTable.prototype, "renderCard");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "q");
+], _OkDataTable.prototype, "q");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "clientPage");
+], _OkDataTable.prototype, "clientPage");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "clientPageSize");
+], _OkDataTable.prototype, "clientPageSize");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "clientSort");
+], _OkDataTable.prototype, "clientSort");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "clientSortDir");
+], _OkDataTable.prototype, "clientSortDir");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "clientFilters");
+], _OkDataTable.prototype, "clientFilters");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "filterDraft");
+], _OkDataTable.prototype, "filterDraft");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "panel");
+], _OkDataTable.prototype, "panel");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "viewMode");
+], _OkDataTable.prototype, "viewMode");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "hiddenKeys");
+], _OkDataTable.prototype, "isMobile");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "internalSelection");
+], _OkDataTable.prototype, "hiddenKeys");
 __decorateClass3([
   r5()
-], OkDataTable.prototype, "menuOpen");
+], _OkDataTable.prototype, "internalSelection");
+__decorateClass3([
+  r5()
+], _OkDataTable.prototype, "menuOpen");
+var OkDataTable = _OkDataTable;
 define("ok-data-table", OkDataTable);
 
 // ../hub/packages/module-sdk/src/index.ts
@@ -3360,6 +3419,7 @@ function createListController(client, queryName, onChange = () => {
 // modules/customers/locales/es.json
 var es_default = {
   name: "Clientes",
+  description: "Fichero de clientes con grupos, etiquetas, campos propios, notas e historial de actividad.",
   navigation: {
     customers: {
       label: "Clientes"
@@ -4803,7 +4863,9 @@ var ErpCustomersList = class extends i3 {
       this.saving = false;
     }
   }
-  // — Notas → notes.add + entrada 'note' en el timeline (activity.add) —
+  // — Notes → ONE command: `notes.add` writes the note AND its timeline entry in one transaction
+  // (customers#14). Chaining `activity.add` from here left invisible notes when the second call
+  // failed, and any other producer (the automation kernel) never made the second call at all.
   async addNote(ev) {
     ev.preventDefault();
     if (!can3("customers.add_note") || !this.detail || !this.newNote.trim()) return;
@@ -4814,16 +4876,8 @@ var ErpCustomersList = class extends i3 {
       await erplora3().command("customers.notes.add", {
         customer_id: this.detail.id,
         content,
-        author_name: ""
-      });
-      await erplora3().command("customers.activity.add", {
-        customer_id: this.detail.id,
-        activity_type: "note",
-        title: erplora3().t(CATALOG3, "ui.noteAddedTitle"),
-        description: content,
-        extra_metadata: "{}",
-        related_object_id: null,
-        related_object_type: ""
+        author_name: "",
+        title: erplora3().t(CATALOG3, "ui.noteAddedTitle")
       });
       this.newNote = "";
       this.formMsg = erplora3().t(CATALOG3, "ui.noteAdded");
