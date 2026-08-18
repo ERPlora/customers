@@ -77,3 +77,37 @@ describe('una relación solo se escribe contra un padre del mismo hub (pm#146)',
     expect(gate!.message, 'ningún shell traduce estos códigos todavía: hace falta el texto').toBeTruthy();
   });
 });
+
+// customers#7 — the OTHER half: the writes that are not an `add`.
+//
+// `_group_clear`/`_tag_clear` deleted by `customer_id` alone: a caller of hub A that knew a UUID of
+// hub B could empty its groups/tags. `_field_value_set` wrote the caller's hub but never checked
+// that the customer or the field belong to it. The live-database proof is
+// `tests/tenant_scope_writes.pg.test.py` (two hubs, real Postgres); this is the lexical tripwire so
+// the next edit of these files is born red if it drops the scope.
+describe('the other writes are scoped to the hub too (customers#7)', () => {
+  it.each(['customers._group_clear', 'customers._tag_clear'])(
+    '%s only deletes relations of a customer of the injected hub',
+    (command) => {
+      const sql = sqlOf(command);
+      expect(sql).toMatch(/customers_customer\b/);
+      expect(sql, 'the scope comes from the parent: the junction table has no hub_id').toMatch(
+        /hub_id\s*=\s*:hub_id/,
+      );
+    },
+  );
+
+  it('customers._field_value_set resolves BOTH parents against the injected hub and fails otherwise', () => {
+    const sql = sqlOf('customers._field_value_set');
+    expect(sql).toMatch(/customers_customerfield\b/);
+    expect(sql).toMatch(/customers_customer\b/);
+    expect((sql.match(/hub_id\s*=\s*:hub_id/g) ?? []).length).toBeGreaterThanOrEqual(2);
+
+    const gate = manifest.commands['customers._field_value_set'].expect_rows;
+    expect(gate, 'a conditional INSERT without `expect_rows` is a silent no-op that says OK').toBeTruthy();
+    expect(gate!.op).toBe('min');
+    expect(gate!.n).toBeGreaterThanOrEqual(1);
+    expect(gate!.error.split('.')[0]).toBe(manifest.id);
+    expect(gate!.message).toBeTruthy();
+  });
+});
