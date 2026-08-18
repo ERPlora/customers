@@ -17,7 +17,6 @@
     "optional_queries": [],
     "commands": [
       "customers._field_value_set",
-      "customers.activity.add",
       "customers.create",
       "customers.delete",
       "customers.fields.create",

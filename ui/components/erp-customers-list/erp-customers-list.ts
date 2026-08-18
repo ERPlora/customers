@@ -490,7 +490,9 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
-  // — Notas → notes.add + entrada 'note' en el timeline (activity.add) —
+  // — Notes → ONE command: `notes.add` writes the note AND its timeline entry in one transaction
+  // (customers#14). Chaining `activity.add` from here left invisible notes when the second call
+  // failed, and any other producer (the automation kernel) never made the second call at all.
   private async addNote(ev: Event) {
     ev.preventDefault();
     if (!can('customers.add_note') || !this.detail || !this.newNote.trim()) return;
@@ -500,11 +502,7 @@ export class ErpCustomersList extends LitElement {
     try {
       await erplora().command('customers.notes.add', {
         customer_id: this.detail.id, content, author_name: '',
-      });
-      // El legacy registraba la nota también como actividad; aquí lo hace la UI.
-      await erplora().command('customers.activity.add', {
-        customer_id: this.detail.id, activity_type: 'note', title: erplora().t(CATALOG, 'ui.noteAddedTitle'),
-        description: content, extra_metadata: '{}', related_object_id: null, related_object_type: '',
+        title: erplora().t(CATALOG, 'ui.noteAddedTitle'),
       });
       this.newNote = '';
       this.formMsg = erplora().t(CATALOG, 'ui.noteAdded');

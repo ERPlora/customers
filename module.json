@@ -535,11 +535,18 @@
       "permission": "customers.add_note",
       "transaction": true,
       "sql": [
-        "commands/note_create.sql"
+        "commands/note_create.sql",
+        "commands/note_activity.sql"
       ],
       "schema": "schemas/note_create.json",
       "ai": {
-        "description": "Adds a note to a customer's history"
+        "description": "Adds a note to a customer and records it in the customer's activity timeline"
+      },
+      "expect_rows": {
+        "op": "min",
+        "n": 2,
+        "error": "customers.customer_unavailable",
+        "message": "That customer is not available: it does not exist in this business or it has been deleted."
       }
     },
     "customers.activity.add": {

@@ -1,7 +1,8 @@
 { "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "customers.notes.add payload", "type": "object", "additionalProperties": true,
-  "required": ["customer_id", "content", "author_name"],
+  "required": ["customer_id", "content"],
   "properties": {
     "customer_id": { "type": "string", "minLength": 1 },
     "content": { "type": "string", "minLength": 1 },
-    "author_name": { "type": "string" } } }
+    "author_name": { "type": "string" },
+    "title": { "type": "string", "description": "Timeline entry title (defaults to 'Note added')" } } }

@@ -252,3 +252,24 @@ describe('el dinero habla céntimos → formatMoney (bug ×100, issue #16)', () 
     expect(spent!.format!({ total_spent: 12550 })).toBe('125.50 €');
   });
 });
+
+// NOTAS (customers#14). Añadir una nota era DOS commands desde el navegador: `notes.add` y luego
+// `activity.add`. Si el segundo fallaba, la nota existía pero desaparecía de la experiencia (la
+// ficha solo lee `customers.activities`); y cualquier productor que llamase solo al command de
+// dominio (el kernel de automatización lo hizo) escribía una nota invisible. Ahora la proyección
+// al timeline la hace el propio command, en su transacción: la UI llama a UNO.
+describe('añadir una nota es UN solo command (customers#14)', () => {
+  it('addNote llama a customers.notes.add y a nada más', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.query = async (name: string) => (name === 'customers.get' ? [CLIENTE] : []);
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { newNote: string; addNote(e: Event): Promise<void> };
+    wc.newNote = 'Prefiere mesa junto a la ventana';
+    await wc.addNote(new Event('submit'));
+
+    expect(comandos.map((c) => c.name)).toEqual(['customers.notes.add']);
+    expect(comandos[0].payload.customer_id).toBe(CLIENTE.id);
+    expect(comandos[0].payload.content).toBe('Prefiere mesa junto a la ventana');
+  });
+});
