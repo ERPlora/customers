@@ -51,12 +51,13 @@ Assigning groups or tags **replaces** the whole selection — see [concepts.md](
 Segmentation groups (`customers.groups.list`, 50 rows per page). Requires
 `customers.view_customergroup`.
 
-A group carries a name, a description, a **discount percentage** (0–100), a colour, a sort order and
-an active flag. The list shows how many customers are in each.
+A group carries a name, a description, a colour, a sort order and an active flag. The list shows how
+many customers are in each. There is **no discount field**: a group says who the customer is, not
+what they pay (customers#17).
 
 - **Search** by name, description or customer count.
-- **Sort** by name, description, discount, colour, order, active flag or customer count. Default:
-  name, ascending.
+- **Sort** by name, description, colour, order, active flag or customer count. Default: name,
+  ascending.
 
 Creating and changing a group needs `customers.add_customergroup` /
 `customers.change_customergroup`; deleting needs `customers.delete_customergroup` (admin only).

@@ -58,7 +58,8 @@ interface Customer {
 
 interface Stats { total: number; active: number; vip: number; total_revenue: number }
 
-interface Group { id: string; name: string; discount_percent: number; color: string }
+/** El grupo es SEGMENTACIÓN de identidad: no lleva descuento (customers#17). */
+interface Group { id: string; name: string; color: string }
 
 interface Tag { id: string; name: string; color: string }
 
@@ -798,7 +799,7 @@ export class ErpCustomersList extends LitElement {
               if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
               else this.tagIds = this.toggleId(this.tagIds, String(it.id));
             }}></ion-checkbox>
-          ${it.name}${isGroups && Number((it as Group).discount_percent) > 0 ? ` (−${Number((it as Group).discount_percent)}%)` : ''}
+          ${it.name}
         </label>`)}
       </div>
       ${editable

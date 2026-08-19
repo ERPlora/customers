@@ -16,7 +16,9 @@
   email shape), sends batches of 50 and shows a report (created / skipped with reason / failed batch
   with reason). An interrupted import is re-run from the file; rows already created are duplicated
   unless you remove them from the file first.
-- **A group's discount is not an automatic price rule.** It is segmentation data.
+- **A group has no discount.** It used to show one, and nothing applied it: `sales` does not depend
+  on `customers`, and `pricing` has no consumer. The screen was withdrawn (customers#17); the stored
+  column was kept untouched. Until `pricing` grows an engine, a discount is entered on the check.
 
 ## Validation you will run into
 
@@ -27,7 +29,6 @@
 | Custom field type | `text`, `number`, `date`, `boolean`, `select`, `textarea` |
 | Email | a valid address, or empty |
 | Marketing consent, active flag | true/false (or 0/1) |
-| Group discount | 0–100 |
 | Customers per bulk call | 1–50 |
 
 A bulk call accepts `customer` as a lifecycle stage and stores it as `active`.

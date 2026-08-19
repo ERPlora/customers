@@ -14,8 +14,10 @@ leaving the sale screen.
 
 - **It does not store sales, lines or amounts.** It keeps opaque order ids and the customer's own
   totals; the money belongs to `sales`.
-- **It does not apply the group discount at the till.** A group carries a discount percentage as
-  segmentation data. <!-- TODO: verify whether the POS applies it automatically -->
+- **It does not discount anything.** A group is identity segmentation, not price. The
+  `discount_percent` column is still on the table so nothing a hub configured is lost, but no
+  command writes it, no query returns it and no screen shows it (customers#17): pricing rules
+  belong to `pricing`, which has no engine yet.
 - **It does not do marketing campaigns, mailings or loyalty points.** It records consent and a
   preferred channel; sending anything is not its job.
 - **It does not own the customer data printed on an invoice.** That is a frozen snapshot living on
@@ -69,4 +71,5 @@ working.
 
 - **`total_spent` and every amount are integer cents** (ADR-0123).
 - **`total_purchases`** is a count of completed sales attributed to that customer.
-- **`discount_percent`** on a group is a percentage between 0 and 100.
+- **A group carries no number you can spend.** `discount_percent` is a dormant column, not an
+  amount the till reads.

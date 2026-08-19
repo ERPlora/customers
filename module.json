@@ -197,7 +197,6 @@
           "id",
           "name",
           "description",
-          "discount_percent",
           "color",
           "sort_order",
           "is_active",
@@ -211,9 +210,6 @@
           },
           "description": {
             "op": "like"
-          },
-          "discount_percent": {
-            "op": "range"
           },
           "color": {
             "op": "eq"

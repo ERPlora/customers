@@ -22,8 +22,10 @@ interface ErploraClientLike extends ListClient {
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
 }
 
+/** Un grupo es SEGMENTACIÓN de identidad, no precio: no lleva descuento (customers#17). El
+ *  cálculo monetario es de `pricing`, y hoy `pricing` no tiene un solo consumidor. */
 interface Group {
-  id: string; name: string; description: string; discount_percent: number;
+  id: string; name: string; description: string;
   color: string; sort_order: number; is_active: number; customer_count: number;
 }
 
@@ -37,7 +39,7 @@ function can(permission: string): boolean {
   return erplora().hasPermission?.(permission) ?? true;
 }
 
-/** CRUD de grupos de clientes (groups.list/create/update/delete) con descuento por grupo. */
+/** CRUD de grupos de clientes (groups.list/create/update/delete). */
 export class ErpCustomersGroups extends LitElement {
   static styles = css`
     :host { display:flex; flex-direction:column; height:100%; min-height:0; font-family: system-ui, sans-serif; color: var(--ion-text-color,#1c1b18); }
@@ -68,8 +70,6 @@ export class ErpCustomersGroups extends LitElement {
 
   @state() fDescription = '';
 
-  @state() fDiscount = '0';
-
   @state() fColor = 'primary';
 
   @state() fSortOrder = '0';
@@ -83,7 +83,6 @@ export class ErpCustomersGroups extends LitElement {
     return [
       { key: 'name', header: t('ui.colName'), sortable: true, filterable: true, filterType: 'text' },
       { key: 'description', header: t('ui.colDescription'), sortable: true },
-      { key: 'discount_percent', header: t('ui.colDiscount'), align: 'right', sortable: true, filterable: true, filterType: 'range', format: (r) => `${Number(r.discount_percent || 0)}%` },
       { key: 'customer_count', header: t('ui.colCustomers'), align: 'right', sortable: true },
       { key: 'sort_order', header: t('ui.colOrder'), align: 'right', sortable: true },
     ];
@@ -128,7 +127,7 @@ export class ErpCustomersGroups extends LitElement {
 
   private resetForm() {
     this.editing = null;
-    this.fName = ''; this.fDescription = ''; this.fDiscount = '0';
+    this.fName = ''; this.fDescription = '';
     this.fColor = 'primary'; this.fSortOrder = '0'; this.fActive = true;
     this.formError = '';
   }
@@ -137,7 +136,7 @@ export class ErpCustomersGroups extends LitElement {
     if (!can('customers.change_customergroup')) return;
     this.editing = g;
     this.fName = g.name; this.fDescription = g.description ?? '';
-    this.fDiscount = String(g.discount_percent ?? 0); this.fColor = g.color || 'primary';
+    this.fColor = g.color || 'primary';
     this.fSortOrder = String(g.sort_order ?? 0); this.fActive = Boolean(g.is_active);
     this.formError = '';
     this.formMsg = '';
@@ -157,7 +156,6 @@ export class ErpCustomersGroups extends LitElement {
     if (!this.fName.trim()) return;
     const editing = this.editing;
     if (!can(editing ? 'customers.change_customergroup' : 'customers.add_customergroup')) return;
-    const discount = Math.min(100, Math.max(0, Number(this.fDiscount) || 0));
     this.saving = true;
     this.formError = '';
     try {
@@ -165,14 +163,14 @@ export class ErpCustomersGroups extends LitElement {
         await erplora().command('customers.groups.update', {
           group_id: editing.id,
           name: this.fName.trim(), description: this.fDescription.trim(),
-          discount_percent: discount, color: this.fColor.trim() || 'primary',
+          color: this.fColor.trim() || 'primary',
           sort_order: Number(this.fSortOrder) || 0, is_active: this.fActive ? 1 : 0,
         });
         this.formMsg = erplora().t(CATALOG, 'ui.groupUpdated');
       } else {
         await erplora().command('customers.groups.create', {
           name: this.fName.trim(), description: this.fDescription.trim(),
-          discount_percent: discount, color: this.fColor.trim() || 'primary',
+          color: this.fColor.trim() || 'primary',
           sort_order: Number(this.fSortOrder) || 0,
         });
         this.formMsg = erplora().t(CATALOG, 'ui.groupCreated');
@@ -212,7 +210,6 @@ export class ErpCustomersGroups extends LitElement {
       ${editing ? html`<h3>${t('ui.editGroupTitle', { name: editing.name })}</h3>` : nothing}
       <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
       <ion-input fill="outline" label=${t('ui.fieldDescription')} label-placement="floating" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
-      <ion-input type="number" fill="outline" label=${t('ui.fieldDiscount')} label-placement="floating" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e: any) => (this.fDiscount = e.target.value)}></ion-input>
       <ion-input fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
       <ion-input type="number" fill="outline" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
       ${editing ? html`<ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActive')}</ion-checkbox>` : nothing}

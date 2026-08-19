@@ -10,8 +10,10 @@
 // la tabla abriría un panel vacío— y a que el guardado distinga alta de edición.
 import { beforeEach, describe, expect, it } from 'vitest';
 
+// Sin `discount_percent`: el grupo dejó de prometer un descuento que no aplica nadie
+// (customers#17 — el contrato retirado lo fija `discount-retired.test.ts`).
 const GRUPO = {
-  id: 'g1', name: 'VIP', description: 'Clientes VIP', discount_percent: 10,
+  id: 'g1', name: 'VIP', description: 'Clientes VIP',
   color: 'primary', sort_order: 1, is_active: 1, customer_count: 3,
 };
 
@@ -92,16 +94,14 @@ describe('permisos efectivos del usuario', () => {
 describe('alta y edición comparten el panel de la tabla', () => {
   it('el alta manda customers.groups.create', async () => {
     const el = await montar();
-    const wc = el as unknown as { fName: string; fDiscount: string };
+    const wc = el as unknown as { fName: string };
     wc.fName = 'VIP';
-    wc.fDiscount = '10';
     formulario(el)!.dispatchEvent(new Event('submit', { cancelable: true }));
     await new Promise((r) => setTimeout(r, 0));
 
     const alta = comandos.find((c) => c.name === 'customers.groups.create');
     expect(alta, 'no se mandó el alta del grupo').toBeTruthy();
     expect(alta!.payload.name).toBe('VIP');
-    expect(alta!.payload.discount_percent).toBe(10);
   });
 
   it('«Editar» abre el panel `create` de la tabla con la fila cargada y guarda con groups.update', async () => {
