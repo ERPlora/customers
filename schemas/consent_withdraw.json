@@ -1,0 +1,14 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.consent.withdraw payload", "type": "object", "additionalProperties": true,
+  "description": "Saying NO, as a fact of its own. It never erases the grant it revokes: the period during which writing to that person was lawful is exactly the period an inspection asks about. `reason` is optional and stays optional — a form that demands an explanation to unsubscribe is the dark pattern GDPR art. 7.3 exists against.",
+  "required": ["customer_id", "channel"],
+  "properties": {
+    "customer_id": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string", "minLength": 1, "default": "marketing" },
+    "channel": { "type": "string", "enum": ["email", "sms", "whatsapp", "phone", "postal", "any"],
+      "description": "`any` IS accepted here and not on the grant, for ONE case: closing the unattributable legacy row the backfill left. It is a channel like the others — it does not retroactively withdraw `email` or `sms`, which are withdrawn one by one, exactly as easy as they were granted one by one (art. 7.3)." },
+    "contact_point": { "type": "string" },
+    "source": { "type": "string", "enum": ["counter", "web_form", "phone", "email", "import", "receipt"], "default": "counter" },
+    "reason": { "type": "string", "maxLength": 500 },
+    "evidence": { "type": "string", "maxLength": 500 },
+    "occurred_at": { "type": ["string", "null"] } } }

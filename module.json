@@ -97,7 +97,8 @@
     "postgres": [
       "migrations/postgres/001_init.sql",
       "migrations/postgres/002_customer_order.sql",
-      "migrations/postgres/003_purchase_ledger.sql"
+      "migrations/postgres/003_purchase_ledger.sql",
+      "migrations/postgres/004_consent_ledger.sql"
     ]
   },
   "queries": {
@@ -384,6 +385,23 @@
       "ai": {
         "description": "Reconciliation audit (customers#8): customers whose total_purchases/total_spent disagree with their purchase ledger. Empty = healthy."
       }
+    },
+    "customers.consent.state": {
+      "permission": "customers.view_customer",
+      "expose_api": true,
+      "sql": "queries/consent_state.sql",
+      "schema": "schemas/consent_state.json",
+      "ai": {
+        "description": "The EFFECTIVE marketing consent of a customer, one row per purpose and channel (customers#10): `granted`, `withdrawn` or `legacy_unverified` (a box ticked before the ledger existed — NEVER consent, EDPB 05/2020 §168). The last fact wins, so a withdrawal is in force on the next read. This is the door a marketing or messaging module asks before writing to anybody."
+      }
+    },
+    "customers.consent.history": {
+      "permission": "customers.view_customer",
+      "sql": "queries/consent_history.sql",
+      "schema": "schemas/consent_history.json",
+      "ai": {
+        "description": "Every consent fact of a customer, newest first (customers#10): what was decided, for what purpose and channel, at which address, from where, after which words and which version of them, backed by what, and who wrote it down. Append-only — a withdrawal is a row, never a deletion."
+      }
     }
   },
   "commands": {
@@ -439,6 +457,50 @@
         "description": "Updates a customer's sheet AND its custom-field values in one validated, atomic write (customers#13): required fields must end up filled, number/date/boolean/select values must match their type; any rejection reverts everything."
       }
     },
+    "customers.consent.grant": {
+      "permission": "customers.change_customer",
+      "transaction": true,
+      "sql": [
+        "commands/consent_grant.sql",
+        "commands/consent_sync_flag.sql",
+        "commands/consent_activity.sql"
+      ],
+      "schema": "schemas/consent_grant.json",
+      "emit": [
+        "customer.consent_granted"
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 3,
+        "error": "customers.customer_unavailable",
+        "message": "That customer is not available: it does not exist in this business or it has been deleted."
+      },
+      "ai": {
+        "description": "Records that a customer GAVE consent, as an append-only fact with its evidence (customers#10): purpose, channel, the address it was given for, the source, the exact wording shown and its version, an optional external reference, when the person said it, and the hub user who wrote it down (taken from the session, never from the payload). Re-consenting after a withdrawal is a new fact, not an edit. The sheet's `marketing_consent`/`consent_date` are recomputed from the ledger, never set by hand."
+      }
+    },
+    "customers.consent.withdraw": {
+      "permission": "customers.change_customer",
+      "transaction": true,
+      "sql": [
+        "commands/consent_withdraw.sql",
+        "commands/consent_sync_flag.sql",
+        "commands/consent_activity.sql"
+      ],
+      "schema": "schemas/consent_withdraw.json",
+      "emit": [
+        "customer.consent_withdrawn"
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 3,
+        "error": "customers.customer_unavailable",
+        "message": "That customer is not available: it does not exist in this business or it has been deleted."
+      },
+      "ai": {
+        "description": "Records that a customer WITHDREW consent for a purpose and channel (customers#10). A new fact: the grant it revokes stays, because the period during which writing to that person was lawful is what an inspection asks about. In force immediately — the next read of `customers.consent.state` already says no. The reason is optional: nobody has to justify saying no."
+      }
+    },
     "customers.delete": {
       "permission": "customers.delete_customer",
       "transaction": true,
@@ -462,7 +524,8 @@
         "commands/anonymize_field_values.sql",
         "commands/anonymize_groups.sql",
         "commands/anonymize_tags.sql",
-        "commands/anonymize_audit.sql"
+        "commands/anonymize_audit.sql",
+        "commands/anonymize_consent.sql"
       ],
       "schema": "schemas/anonymize.json",
       "emit": [
@@ -734,6 +797,8 @@
     },
     "emits": [
       "customer.anonymized",
+      "customer.consent_granted",
+      "customer.consent_withdrawn",
       "customer.created",
       "customer.deleted",
       "customer.updated"

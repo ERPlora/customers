@@ -19,7 +19,10 @@ leaving the sale screen.
   command writes it, no query returns it and no screen shows it (customers#17): pricing rules
   belong to `pricing`, which has no engine yet.
 - **It does not do marketing campaigns, mailings or loyalty points.** It records consent and a
-  preferred channel; sending anything is not its job.
+  preferred channel; sending anything is not its job. What it does own is the **evidence**: consent
+  is an append-only ledger per purpose and channel, and any module that wants to write to somebody
+  asks `customers.consent.state` first — that query is the contract, and it answers `granted`,
+  `withdrawn` or `legacy_unverified`, never a bare yes.
 - **It does not own the customer data printed on an invoice.** That is a frozen snapshot living on
   the sale — see [concepts.md](concepts.md).
 - **CSV import lives in the list.** The table's import button sends the file in batches of 50 and

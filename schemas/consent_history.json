@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.consent.history params",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "customer_id"
+  ],
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
