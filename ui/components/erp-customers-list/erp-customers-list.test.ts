@@ -332,3 +332,64 @@ describe('la ficha es HOST del slot customers.detail (ADR-0043)', () => {
     delete sdk.loadSlot;
   });
 });
+
+// IMPORTACIÓN CSV (customers#15). `onCsvImport` recorría las filas en el navegador llamando a
+// `customers.create` UNA POR UNA con `catch {}`: las filas inválidas desaparecían sin decir nada y
+// una de 500 filas eran 500 commands. El command `customers.bulk_create` (WASM, cap 50, transacción
+// por lote) existía y no tenía llamante. Aquí se fija: filas validadas ANTES (nombre obligatorio,
+// email con forma), lotes de 50 a `bulk_create`, e INFORME al final (creados / omitidas con motivo /
+// lotes fallidos con motivo). Lo «resumible / 10k filas» está aplazado a propósito.
+describe('la importación CSV va por customers.bulk_create con informe (customers#15)', () => {
+  const filas = (n: number, extra: Record<string, string>[] = []) => [
+    ...Array.from({ length: n }, (_, i) => ({ name: `Cliente ${i}`, email: `c${i}@example.com`, phone: '' })),
+    ...extra,
+  ];
+
+  it('agrupa en lotes de 50 y no llama a customers.create fila a fila', async () => {
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void>; importReport: { created: number; skipped: unknown[]; failed: unknown[] } | null };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: filas(120) } }));
+    const bulk = comandos.filter((c) => c.name === 'customers.bulk_create');
+    expect(comandos.some((c) => c.name === 'customers.create'), 'nada de create fila a fila').toBe(false);
+    expect(bulk.map((c) => (c.payload.items as unknown[]).length)).toEqual([50, 50, 20]);
+    expect((bulk[0].payload.items as Record<string, unknown>[])[0]).toMatchObject({ name: 'Cliente 0', email: 'c0@example.com', source: 'import' });
+    expect(wc.importReport?.created).toBe(120);
+  });
+
+  it('las filas inválidas se OMITEN con motivo y salen en el informe (no se silencian)', async () => {
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void>; importReport: { created: number; skipped: { row: number; reason: string }[]; failed: unknown[] } | null };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: filas(2, [{ name: '', email: 'x@y.z' }, { name: 'Mal email', email: 'no-es-email' }]) } }));
+    expect(wc.importReport?.created).toBe(2);
+    expect(wc.importReport?.skipped.map((s) => s.row)).toEqual([3, 4]);
+    expect(wc.importReport?.skipped[0].reason).toBe('ui.importReasonName');
+    expect(wc.importReport?.skipped[1].reason).toBe('ui.importReasonEmail');
+    // El informe se PINTA: la persona ve qué se omitió y por qué.
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(el.shadowRoot.querySelector('.import-report'), 'informe visible').toBeTruthy();
+  });
+
+  it('un lote que falla se informa con su motivo y los demás siguen', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    let n = 0;
+    sdk.command = async (name: string, payload: Record<string, unknown>) => {
+      comandos.push({ name, payload });
+      if (name === 'customers.bulk_create' && ++n === 2) throw new Error('duplicate tax id');
+      return {};
+    };
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void>; importReport: { created: number; skipped: unknown[]; failed: { rows: string; reason: string }[] } | null };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: filas(120) } }));
+    expect(comandos.filter((c) => c.name === 'customers.bulk_create').length, 'los 3 lotes se intentan').toBe(3);
+    expect(wc.importReport?.created).toBe(70);
+    expect(wc.importReport?.failed).toEqual([{ rows: '51-100', reason: 'duplicate tax id' }]);
+  });
+
+  it('acepta cabeceras en español (Nombre/Email/Teléfono)', async () => {
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void> };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: [{ Nombre: 'Ana', Email: 'ana@example.com', 'Teléfono': '600' }] } }));
+    const bulk = comandos.find((c) => c.name === 'customers.bulk_create');
+    expect((bulk!.payload.items as Record<string, unknown>[])[0]).toMatchObject({ name: 'Ana', email: 'ana@example.com', phone: '600' });
+  });
+});

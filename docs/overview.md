@@ -20,7 +20,8 @@ leaving the sale screen.
   preferred channel; sending anything is not its job.
 - **It does not own the customer data printed on an invoice.** That is a frozen snapshot living on
   the sale — see [concepts.md](concepts.md).
-- **It has no import screen.** Bulk creation exists as a command but has no UI.
+- **CSV import lives in the list.** The table's import button sends the file in batches of 50 and
+  reports what was created, what was skipped and why, and what failed.
 - **Custom-field values live in the customer sheet.** Editing the sheet saves the base data and the
   values in one validated write: a required field cannot stay empty, and number/date/yes-no/select
   values must match their type — otherwise nothing is saved and the form tells you which field.

@@ -173,7 +173,14 @@
     "quickName": "Nombre",
     "quickPhone": "Teléfono",
     "quickNameRequired": "El nombre es obligatorio.",
-    "quickCreate": "Crear y asignar"
+    "quickCreate": "Crear y asignar",
+    "importing": "Importando…",
+    "importSummary": "Importación: {total} filas — {created} creadas, {skipped} omitidas, {failed} fallidas.",
+    "importRow": "Fila {row}",
+    "importRows": "Filas {rows}",
+    "importReasonName": "falta el nombre",
+    "importReasonEmail": "el email no es válido",
+    "close": "Cerrar"
   },
   "errors": {
     "customers": {
