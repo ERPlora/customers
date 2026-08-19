@@ -3495,7 +3495,6 @@ var es_default = {
     fieldSource: "Origen",
     fieldPreferredChannel: "Canal preferido",
     fieldInternalNotes: "Notas internas",
-    marketingConsent: "Consentimiento de marketing",
     fieldActive: "Activo",
     save: "Guardar",
     back: "\u2190 Volver",
@@ -3505,7 +3504,6 @@ var es_default = {
     noTagsDefined: "No hay etiquetas definidos.",
     saveGroups: "Guardar grupos",
     saveTags: "Guardar etiquetas",
-    detailMarketingConsent: "Consent. marketing",
     detailPurchases: "Compras",
     detailLastPurchase: "\xDAltima compra",
     yes: "S\xED",
@@ -3603,7 +3601,25 @@ var es_default = {
     eraseDataConfirm: "Sustituye los datos personales de {name} por marcadores, vac\xEDa sus notas, historial y campos personalizados, y no se puede deshacer. Las ventas y facturas conservan su referencia. Queda una entrada de auditor\xEDa con qui\xE9n, cu\xE1ndo y por qu\xE9.",
     eraseReason: "Motivo (queda en la auditor\xEDa)",
     customerErased: "Datos personales borrados.",
-    errErase: "No se pudieron borrar los datos personales"
+    errErase: "No se pudieron borrar los datos personales",
+    consentHeading: "Consentimiento de marketing",
+    consentIntro: "Una decisi\xF3n por canal, con la fecha, de d\xF3nde vino y la frase que se le ense\xF1\xF3 al cliente. Aqu\xED no se rellena nada editando la ficha.",
+    consentNotice: "Quiero recibir ofertas y novedades de este negocio por este canal. Puedo darme de baja cuando quiera.",
+    consentAskHint: "L\xE9elo en voz alta y pulsa solo si dice que s\xED. Esta frase exacta es la que queda guardada como prueba, junto a tu nombre y la hora.",
+    consentRecord: "Registrar consentimiento",
+    consentConfirm: "Ha dicho que s\xED",
+    consentWithdraw: "Retirar",
+    consentClose: "Cerrarlo",
+    consentGranted: "Dado",
+    consentWithdrawn: "Retirado",
+    consentLegacy: "Marcado antes de que hubiera registro \u2014 no sirve como prueba. Vuelve a preguntar.",
+    consentNeverAsked: "Nunca se le ha preguntado",
+    consentAnyChannel: "Canal sin especificar",
+    consentHistoryHeading: "Todo lo que se decidi\xF3",
+    consentNoHistory: "Todav\xEDa no se ha registrado nada.",
+    consentRecorded: "Consentimiento registrado.",
+    consentWithdrawnMsg: "Consentimiento retirado. Est\xE1 en vigor desde ya.",
+    errConsent: "No se ha podido registrar el consentimiento."
   },
   errors: {
     customers: {
@@ -3696,7 +3712,6 @@ var en_default = {
     fieldSource: "Source",
     fieldPreferredChannel: "Preferred channel",
     fieldInternalNotes: "Internal notes",
-    marketingConsent: "Marketing consent",
     fieldActive: "Active",
     save: "Save",
     back: "\u2190 Back",
@@ -3706,7 +3721,6 @@ var en_default = {
     noTagsDefined: "No tags defined.",
     saveGroups: "Save groups",
     saveTags: "Save tags",
-    detailMarketingConsent: "Marketing consent",
     detailPurchases: "Purchases",
     detailLastPurchase: "Last purchase",
     yes: "Yes",
@@ -3804,7 +3818,25 @@ var en_default = {
     eraseDataConfirm: "This replaces {name}'s personal data by markers, blanks their notes, timeline and custom fields, and cannot be undone. Sales and invoices keep their reference. An audit entry records who, when and why.",
     eraseReason: "Reason (kept in the audit)",
     customerErased: "Personal data erased.",
-    errErase: "Could not erase the personal data"
+    errErase: "Could not erase the personal data",
+    consentHeading: "Marketing consent",
+    consentIntro: "One decision per channel, with the date, where it came from and the words the customer was shown. Nothing here is filled in by editing the sheet.",
+    consentNotice: "I want to receive offers and news from this business through this channel. I can unsubscribe whenever I want.",
+    consentAskHint: "Read it out loud and only press if they say yes. This exact sentence is what gets stored as the record, together with your name and the time.",
+    consentRecord: "Record consent",
+    consentConfirm: "They said yes",
+    consentWithdraw: "Withdraw",
+    consentClose: "Close it",
+    consentGranted: "Given",
+    consentWithdrawn: "Withdrawn",
+    consentLegacy: "Ticked before there was any record \u2014 cannot be relied on. Ask again.",
+    consentNeverAsked: "Never asked",
+    consentAnyChannel: "Unspecified channel",
+    consentHistoryHeading: "Everything that was decided",
+    consentNoHistory: "Nothing has been recorded yet.",
+    consentRecorded: "Consent recorded.",
+    consentWithdrawnMsg: "Consent withdrawn. It is in force from now on.",
+    errConsent: "The consent could not be recorded."
   },
   errors: {
     customers: {
@@ -4514,6 +4546,13 @@ var CHANNEL_KEY = {
 };
 var stageLabel = (value) => STAGE_KEY[value] ? erplora3().t(CATALOG3, STAGE_KEY[value]) : value;
 var channelLabel = (value) => CHANNEL_KEY[value] ? erplora3().t(CATALOG3, CHANNEL_KEY[value]) : value;
+var CONSENT_CHANNELS = ["email", "whatsapp", "sms"];
+var CONSENT_NOTICE_VERSION = "counter-v1";
+var CONSENT_STATE_KEY = {
+  granted: "ui.consentGranted",
+  withdrawn: "ui.consentWithdrawn",
+  legacy_unverified: "ui.consentLegacy"
+};
 var EMPTY_FORM = {
   name: "",
   email: "",
@@ -4530,7 +4569,7 @@ var EMPTY_FORM = {
   birthday: "",
   anniversary: "",
   preferred_channel: "none",
-  marketing_consent: false,
+  // No consent here: it is not a field of the sheet any more (customers#10).
   is_active: true
 };
 var _ErpCustomersList = class _ErpCustomersList extends i3 {
@@ -4553,6 +4592,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.groupIds = [];
     this.tagIds = [];
     this.newNote = "";
+    this.consentState = [];
+    this.consentHistory = [];
+    this.consentAsking = "";
     this.pendingErase = false;
     this.eraseReason = "";
     this.importing = false;
@@ -4807,9 +4849,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         company_name: "",
         birthday: null,
         anniversary: null,
-        preferred_channel: "none",
-        marketing_consent: 0,
-        consent_date: null
+        preferred_channel: "none"
       });
       this.newName = "";
       this.newEmail = "";
@@ -4835,7 +4875,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         return;
       }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.resolveDetailSlot()]);
+      this.consentAsking = "";
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
     } catch (e6) {
       this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
@@ -4845,6 +4886,79 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.fieldValues = await erplora3().query("customers.fields.values", { customer_id: id }) ?? [];
     } catch {
       this.fieldValues = [];
+    }
+  }
+  /** The consent panel reads the LEDGER, never `d.marketing_consent`: that column is a derived
+   *  mirror kept for older readers, and the sheet is the one place where the difference between
+   *  «they said yes on 3 August, by email, after reading this» and «1» has to be visible. */
+  async loadConsent(id) {
+    const client = erplora3();
+    try {
+      const [state, history] = await Promise.all([
+        client.query("customers.consent.state", { customer_id: id }),
+        client.query("customers.consent.history", { customer_id: id })
+      ]);
+      this.consentState = state ?? [];
+      this.consentHistory = history ?? [];
+    } catch {
+      this.consentState = [];
+      this.consentHistory = [];
+    }
+  }
+  /** The address the consent is being given FOR, as it stands right now. Empty when the sheet has
+   *  none — a phone consent on a sheet with no phone is still a fact worth keeping. */
+  contactPoint(channel) {
+    const d3 = this.detail;
+    if (!d3) return "";
+    return channel === "email" ? d3.email ?? "" : d3.phone ?? "";
+  }
+  async recordConsent(channel) {
+    if (!can3("customers.change_customer") || !this.detail || this.saving) return;
+    this.saving = true;
+    this.formError = "";
+    try {
+      await erplora3().command("customers.consent.grant", {
+        customer_id: this.detail.id,
+        purpose: "marketing",
+        channel,
+        contact_point: this.contactPoint(channel),
+        source: "counter",
+        // The wording travels VERBATIM, not as a key: catalogues change, and «the sentence that was
+        // on screen in January» cannot be recovered from today's file (EDPB 05/2020 §108).
+        notice_text: erplora3().t(CATALOG3, "ui.consentNotice"),
+        notice_version: CONSENT_NOTICE_VERSION
+      });
+      this.consentAsking = "";
+      this.formMsg = erplora3().t(CATALOG3, "ui.consentRecorded");
+      await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
+    } catch (e6) {
+      this.formError = domainErrorText(e6, "ui.errConsent");
+    } finally {
+      this.saving = false;
+    }
+  }
+  /** Withdrawing is ONE tap, with no dialog and no compulsory reason: it must be at least as easy
+   *  as giving (art. 7.3), and a form that demands a justification to unsubscribe is the dark
+   *  pattern that article exists against. */
+  async withdrawConsent(channel) {
+    if (!can3("customers.change_customer") || !this.detail || this.saving) return;
+    this.saving = true;
+    this.formError = "";
+    try {
+      await erplora3().command("customers.consent.withdraw", {
+        customer_id: this.detail.id,
+        purpose: "marketing",
+        channel,
+        contact_point: this.contactPoint(channel),
+        source: "counter",
+        reason: ""
+      });
+      this.formMsg = erplora3().t(CATALOG3, "ui.consentWithdrawnMsg");
+      await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
+    } catch (e6) {
+      this.formError = domainErrorText(e6, "ui.errConsent");
+    } finally {
+      this.saving = false;
     }
   }
   /** Edita en memoria el valor de un campo; se persiste al guardar la ficha. */
@@ -4939,7 +5053,6 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       birthday: d3.birthday ?? "",
       anniversary: d3.anniversary ?? "",
       preferred_channel: d3.preferred_channel || "none",
-      marketing_consent: Boolean(d3.marketing_consent),
       is_active: Boolean(d3.is_active)
     };
     this.editing = true;
@@ -4970,7 +5083,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         birthday: this.form.birthday || null,
         anniversary: this.form.anniversary || null,
         preferred_channel: this.form.preferred_channel,
-        marketing_consent: this.form.marketing_consent ? 1 : 0,
+        // No `marketing_consent`: the sheet does not decide consent any more (customers#10). The
+        // command ignores the bind and the schema marks it deprecated; sending it would only put
+        // back the pretence that editing a sheet is how somebody says yes.
         is_active: this.form.is_active ? 1 : 0,
         // Every field travels, the empty ones too: clearing a field ("no longer uses that dye") is a
         // real change, not a no-op.
@@ -5182,8 +5297,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           @ionInput=${(e6) => this.form = { ...this.form, notes: e6.target.value }}></ion-textarea>
       </div>
       ${this.renderCustomFields()}
-      <label class="check"><ion-checkbox .checked=${f3.marketing_consent}
-        @ionChange=${(e6) => this.form = { ...this.form, marketing_consent: e6.target.checked }}></ion-checkbox> ${t5("ui.marketingConsent")}</label>
+      <!-- There is NO consent checkbox here any more (customers#10). A tick on an edit form is a
+           consent with no purpose, no channel, no record of what the person was shown and no author
+           — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
+           decision lives in its own panel below, as an action with its evidence. -->
       <label class="check"><ion-checkbox .checked=${f3.is_active}
         @ionChange=${(e6) => this.form = { ...this.form, is_active: e6.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
       <footer class="actions">
@@ -5214,6 +5331,76 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       </div>
       ${editable ? b2`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
     </div>`;
+  }
+  /**
+   * **The consent panel** (customers#10) — the sheet's answer to «may we write to this person, and
+   * can we prove it».
+   *
+   * One row per channel with its effective state and ONE action, because that is what the market
+   * converged on for a counter (Klaviyo, Mailchimp, Shopify, Fresha all key consent by channel) and
+   * because a single yes/no forced «yes to the newsletter» and «yes to WhatsApp» into one answer.
+   * Granting asks for confirmation and SHOWS the exact sentence that will be stored as the proof;
+   * withdrawing is one tap. That asymmetry is deliberate and it is the law's: giving consent has to
+   * be an informed, affirmative act, and taking it back has to be at least as easy (art. 7.3).
+   */
+  renderConsent() {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    const editable = can3("customers.change_customer");
+    const byChannel = new Map(this.consentState.map((row) => [row.channel, row]));
+    const channels = [...CONSENT_CHANNELS, ...this.consentState.map((r6) => r6.channel)].filter(
+      (c5, i7, all) => all.indexOf(c5) === i7
+    );
+    return b2`<section class="panel">
+      <h3>${t5("ui.consentHeading")}</h3>
+      <p class="muted">${t5("ui.consentIntro")}</p>
+      ${channels.map((channel) => {
+      const row = byChannel.get(channel);
+      const state = row?.state ?? "never_asked";
+      const asking = this.consentAsking === channel;
+      return b2`<div class="consent-row" data-consent=${channel}>
+          <div class="consent-what">
+            <strong>${channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(channel)}</strong>
+            <span class="muted">${t5(CONSENT_STATE_KEY[state] ?? "ui.consentNeverAsked")}</span>
+            ${row?.occurred_at ? b2`<span class="muted">${row.occurred_at}${row.contact_point ? ` \xB7 ${row.contact_point}` : ""}</span>` : A}
+          </div>
+          ${!editable ? A : state === "granted" ? b2`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                  ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
+                  >${t5("ui.consentWithdraw")}</ion-button>` : channel === "any" ? b2`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                    ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
+                    >${t5("ui.consentClose")}</ion-button>` : asking ? A : b2`<ion-button size="small" data-act="grant" ?disabled=${this.saving}
+                      @click=${() => {
+        this.consentAsking = channel;
+        this.formError = "";
+      }}
+                      >${t5("ui.consentRecord")}</ion-button>`}
+          ${asking ? b2`<div class="consent-ask">
+                <!-- Shown, then stored word for word: this is the evidence, so the operator reads
+                     to the customer exactly what will end up in the record. -->
+                <p>${t5("ui.consentNotice")}</p>
+                <p class="muted">${t5("ui.consentAskHint")}</p>
+                <ion-button size="small" data-act="grant-confirm" ?disabled=${this.saving}
+                  @click=${() => this.recordConsent(channel)}>${t5("ui.consentConfirm")}</ion-button>
+                <ion-button size="small" fill="outline" data-act="grant-cancel"
+                  @click=${() => {
+        this.consentAsking = "";
+      }}>${t5("ui.cancel")}</ion-button>
+              </div>` : A}
+        </div>`;
+    })}
+      <h4>${t5("ui.consentHistoryHeading")}</h4>
+      ${this.consentHistory.length ? b2`<ul class="timeline">
+            ${this.consentHistory.map((f3) => b2`<li data-consent-fact=${f3.id}>
+              <div class="t">
+                ${t5(CONSENT_STATE_KEY[f3.state] ?? "ui.consentNeverAsked")} —
+                ${f3.channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(f3.channel)}
+                <small>(${f3.source || "\u2014"})</small>
+              </div>
+              ${f3.notice_text ? b2`<div class="d">${f3.notice_text}</div>` : A}
+              ${f3.reason ? b2`<div class="d">${f3.reason}</div>` : A}
+              <div class="when">${f3.occurred_at}${f3.recorded_by ? ` \xB7 ${f3.recorded_by}` : ""}</div>
+            </li>`)}
+          </ul>` : b2`<p class="muted">${t5("ui.consentNoHistory")}</p>`}
+    </section>`;
   }
   renderDetail() {
     const d3 = this.detail;
@@ -5246,7 +5433,6 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           <div><dt>${t5("ui.colStage")}</dt><dd>${stageLabel(d3.lifecycle_stage)}</dd></div>
           <div><dt>${t5("ui.fieldSource")}</dt><dd>${d3.source || "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldPreferredChannel")}</dt><dd>${channelLabel(d3.preferred_channel)}</dd></div>
-          <div><dt>${t5("ui.detailMarketingConsent")}</dt><dd>${d3.marketing_consent ? t5("ui.yes") : t5("ui.no")}</dd></div>
           <div><dt>${t5("ui.detailPurchases")}</dt><dd>${d3.total_purchases ?? 0}</dd></div>
           <div><dt>${t5("ui.colSpent")}</dt><dd>${this.fmt(d3.total_spent)}</dd></div>
           <div><dt>${t5("ui.detailLastPurchase")}</dt><dd>${d3.last_purchase_date || "\u2014"}</dd></div>
@@ -5257,6 +5443,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
             ${can3("customers.view_customergroup") ? b2`<h3>${t5("ui.groupsHeading")}</h3>${this.renderMembership("groups")}` : A}
             ${can3("customers.view_customertag") ? b2`<h3 style="margin-top:.75rem">${t5("ui.tagsHeading")}</h3>${this.renderMembership("tags")}` : A}
           </section>` : A}
+      ${this.renderConsent()}
       ${can3("customers.add_note") || can3("customers.view_activity") ? b2`<section class="panel">
             ${can3("customers.add_note") ? b2`<h3>${t5("ui.addNote")}</h3>
                   <form class="form" @submit=${(e6) => this.addNote(e6)}>
@@ -5354,6 +5541,15 @@ __decorateClass([
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "newNote", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "consentState", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "consentHistory", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "consentAsking", 2);
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "pendingErase", 2);

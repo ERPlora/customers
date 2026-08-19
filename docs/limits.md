@@ -28,7 +28,10 @@
 | Preferred channel | `email`, `sms`, `whatsapp`, `phone`, `none` |
 | Custom field type | `text`, `number`, `date`, `boolean`, `select`, `textarea` |
 | Email | a valid address, or empty |
-| Marketing consent, active flag | true/false (or 0/1) |
+| Active flag | true/false (or 0/1) |
+| Consent channel | `email`, `sms`, `whatsapp`, `phone`, `postal` |
+| Consent purpose | free text, `marketing` by default |
+| Wording stored with a consent | up to 2000 characters, required |
 | Customers per bulk call | 1–50 |
 
 A bulk call accepts `customer` as a lifecycle stage and stores it as `active`.
@@ -36,7 +39,11 @@ A bulk call accepts `customer` as a lifecycle stage and stores it as `active`.
 Creating a customer needs **only a name** (a phone or an email is welcome, not required): the
 walk-in of the counter is "name, and charge". Everything else — address, birthday, company,
 channel — is enrichment you add later from the sheet. Marketing consent is never demanded at
-creation: it is recorded when the customer actually gives it.
+creation, and since customers#10 it cannot even be SET there: `customers.create` and the CSV import
+ignore `marketing_consent`/`consent_date`, and so does `customers.update`. Consent is recorded as
+its own fact, per channel, with the wording that was shown — otherwise there is nothing to show if
+anybody asks. The old yes/no still exists on the record and still reads the same, but it is now
+**derived** from those facts.
 
 ## Caps and sizes
 

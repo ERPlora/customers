@@ -128,11 +128,43 @@ const CHANNEL_KEY: Record<string, string> = {
 const stageLabel = (value: string): string => (STAGE_KEY[value] ? erplora().t(CATALOG, STAGE_KEY[value]) : value);
 const channelLabel = (value: string): string => (CHANNEL_KEY[value] ? erplora().t(CATALOG, CHANNEL_KEY[value]) : value);
 
+/**
+ * **Consent, per channel** (customers#10).
+ *
+ * These three are always on screen even with no row behind them, because «nobody has ever asked
+ * this person» is a STATE and hiding it is how somebody ends up writing to a customer who never
+ * said anything. Any other channel that does have a fact (`postal`, `phone`, and the `any` of the
+ * legacy backfill) is drawn underneath, so nothing recorded is ever invisible.
+ */
+const CONSENT_CHANNELS = ['email', 'whatsapp', 'sms'];
+
+/** The version stamped on what this screen shows. Bump it when `ui.consentNotice` changes: EDPB
+ *  05/2020 §110 — if the processing changes considerably the original consent is no longer valid,
+ *  and without a version there is no way to tell WHO consented to WHICH wording. */
+const CONSENT_NOTICE_VERSION = 'counter-v1';
+
+/** One line of `customers.consent.state`: the effective decision for a purpose and a channel. */
+interface ConsentState {
+  purpose: string; channel: string; state: string; contact_point: string;
+  source: string; notice_version: string; occurred_at: string; recorded_by: string; evidence: string;
+}
+
+/** One line of `customers.consent.history`: a fact, with everything it has to be able to prove. */
+interface ConsentFact extends ConsentState {
+  id: string; notice_text: string; reason: string; created_at: string;
+}
+
+const CONSENT_STATE_KEY: Record<string, string> = {
+  granted: 'ui.consentGranted', withdrawn: 'ui.consentWithdrawn',
+  legacy_unverified: 'ui.consentLegacy',
+};
+
 /** Campos editables de la ficha (el schema update.json exige el set completo de binds). */
 const EMPTY_FORM = {
   name: '', email: '', phone: '', tax_id: '', address: '', city: '', postal_code: '',
   country: '', notes: '', lifecycle_stage: 'lead', source: 'walk_in', company_name: '',
-  birthday: '', anniversary: '', preferred_channel: 'none', marketing_consent: false,
+  birthday: '', anniversary: '', preferred_channel: 'none',
+  // No consent here: it is not a field of the sheet any more (customers#10).
   is_active: true,
 };
 
@@ -209,6 +241,15 @@ export class ErpCustomersList extends LitElement {
   @state() tagIds: string[] = [];
 
   @state() newNote = '';
+
+  /** Effective consent of the open customer, one row per purpose and channel (customers#10). */
+  @state() consentState: ConsentState[] = [];
+
+  /** Every consent fact of the open customer — the audit trail, newest first. */
+  @state() consentHistory: ConsentFact[] = [];
+
+  /** The channel whose grant has been asked for and not yet confirmed. */
+  @state() consentAsking = '';
 
   private ctrl!: ListController<Customer>;
 
@@ -403,7 +444,7 @@ export class ErpCustomersList extends LitElement {
         address: '', city: '', postal_code: '', country: '', avatar: '', notes: '',
         lifecycle_stage: 'lead', source: 'walk_in', company_name: '',
         birthday: null, anniversary: null, preferred_channel: 'none',
-        marketing_consent: 0, consent_date: null,
+
       });
       this.newName = ''; this.newEmail = '';
       this.dataTable()?.close(); // el panel se cierra al crear: el alta ya está en la tabla
@@ -426,7 +467,8 @@ export class ErpCustomersList extends LitElement {
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.resolveDetailSlot()]);
+      this.consentAsking = '';
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
@@ -436,6 +478,85 @@ export class ErpCustomersList extends LitElement {
     try {
       this.fieldValues = (await erplora().query<FieldValue[]>('customers.fields.values', { customer_id: id })) ?? [];
     } catch { this.fieldValues = []; }
+  }
+
+  /** The consent panel reads the LEDGER, never `d.marketing_consent`: that column is a derived
+   *  mirror kept for older readers, and the sheet is the one place where the difference between
+   *  «they said yes on 3 August, by email, after reading this» and «1» has to be visible. */
+  private async loadConsent(id: string) {
+    const client = erplora();
+    try {
+      const [state, history] = await Promise.all([
+        client.query<ConsentState[]>('customers.consent.state', { customer_id: id }),
+        client.query<ConsentFact[]>('customers.consent.history', { customer_id: id }),
+      ]);
+      this.consentState = state ?? [];
+      this.consentHistory = history ?? [];
+    } catch {
+      // A hub whose `customers` is older than this ledger has no such query. Emptying is right:
+      // the panel then says nothing has been recorded, which is exactly true of that hub.
+      this.consentState = [];
+      this.consentHistory = [];
+    }
+  }
+
+  /** The address the consent is being given FOR, as it stands right now. Empty when the sheet has
+   *  none — a phone consent on a sheet with no phone is still a fact worth keeping. */
+  private contactPoint(channel: string): string {
+    const d = this.detail;
+    if (!d) return '';
+    return channel === 'email' ? (d.email ?? '') : (d.phone ?? '');
+  }
+
+  private async recordConsent(channel: string) {
+    if (!can('customers.change_customer') || !this.detail || this.saving) return;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.consent.grant', {
+        customer_id: this.detail.id,
+        purpose: 'marketing',
+        channel,
+        contact_point: this.contactPoint(channel),
+        source: 'counter',
+        // The wording travels VERBATIM, not as a key: catalogues change, and «the sentence that was
+        // on screen in January» cannot be recovered from today's file (EDPB 05/2020 §108).
+        notice_text: erplora().t(CATALOG, 'ui.consentNotice'),
+        notice_version: CONSENT_NOTICE_VERSION,
+      });
+      this.consentAsking = '';
+      this.formMsg = erplora().t(CATALOG, 'ui.consentRecorded');
+      await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
+    } catch (e) {
+      this.formError = domainErrorText(e, 'ui.errConsent');
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  /** Withdrawing is ONE tap, with no dialog and no compulsory reason: it must be at least as easy
+   *  as giving (art. 7.3), and a form that demands a justification to unsubscribe is the dark
+   *  pattern that article exists against. */
+  private async withdrawConsent(channel: string) {
+    if (!can('customers.change_customer') || !this.detail || this.saving) return;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.consent.withdraw', {
+        customer_id: this.detail.id,
+        purpose: 'marketing',
+        channel,
+        contact_point: this.contactPoint(channel),
+        source: 'counter',
+        reason: '',
+      });
+      this.formMsg = erplora().t(CATALOG, 'ui.consentWithdrawnMsg');
+      await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
+    } catch (e) {
+      this.formError = domainErrorText(e, 'ui.errConsent');
+    } finally {
+      this.saving = false;
+    }
   }
 
   /** Edita en memoria el valor de un campo; se persiste al guardar la ficha. */
@@ -526,7 +647,7 @@ export class ErpCustomersList extends LitElement {
       source: d.source || 'walk_in', company_name: d.company_name ?? '',
       birthday: d.birthday ?? '', anniversary: d.anniversary ?? '',
       preferred_channel: d.preferred_channel || 'none',
-      marketing_consent: Boolean(d.marketing_consent), is_active: Boolean(d.is_active),
+      is_active: Boolean(d.is_active),
     };
     this.editing = true;
     this.formError = '';
@@ -553,7 +674,9 @@ export class ErpCustomersList extends LitElement {
         company_name: this.form.company_name.trim(),
         birthday: this.form.birthday || null, anniversary: this.form.anniversary || null,
         preferred_channel: this.form.preferred_channel,
-        marketing_consent: this.form.marketing_consent ? 1 : 0,
+        // No `marketing_consent`: the sheet does not decide consent any more (customers#10). The
+        // command ignores the bind and the schema marks it deprecated; sending it would only put
+        // back the pretence that editing a sheet is how somebody says yes.
         is_active: this.form.is_active ? 1 : 0,
         // Every field travels, the empty ones too: clearing a field ("no longer uses that dye") is a
         // real change, not a no-op.
@@ -771,8 +894,10 @@ export class ErpCustomersList extends LitElement {
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
       ${this.renderCustomFields()}
-      <label class="check"><ion-checkbox .checked=${f.marketing_consent}
-        @ionChange=${(e: any) => (this.form = { ...this.form, marketing_consent: e.target.checked })}></ion-checkbox> ${t('ui.marketingConsent')}</label>
+      <!-- There is NO consent checkbox here any more (customers#10). A tick on an edit form is a
+           consent with no purpose, no channel, no record of what the person was shown and no author
+           — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
+           decision lives in its own panel below, as an action with its evidence. -->
       <label class="check"><ion-checkbox .checked=${f.is_active}
         @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> ${t('ui.fieldActive')}</label>
       <footer class="actions">
@@ -808,6 +933,89 @@ export class ErpCustomersList extends LitElement {
     </div>`;
   }
 
+  /**
+   * **The consent panel** (customers#10) — the sheet's answer to «may we write to this person, and
+   * can we prove it».
+   *
+   * One row per channel with its effective state and ONE action, because that is what the market
+   * converged on for a counter (Klaviyo, Mailchimp, Shopify, Fresha all key consent by channel) and
+   * because a single yes/no forced «yes to the newsletter» and «yes to WhatsApp» into one answer.
+   * Granting asks for confirmation and SHOWS the exact sentence that will be stored as the proof;
+   * withdrawing is one tap. That asymmetry is deliberate and it is the law's: giving consent has to
+   * be an informed, affirmative act, and taking it back has to be at least as easy (art. 7.3).
+   */
+  private renderConsent() {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    const editable = can('customers.change_customer');
+    const byChannel = new Map(this.consentState.map((row) => [row.channel, row]));
+    // The three the hub can reach somebody through, plus anything that has a fact of its own — the
+    // legacy `any` row above all: a recorded decision that no screen shows is a decision nobody can
+    // act on.
+    const channels = [...CONSENT_CHANNELS, ...this.consentState.map((r) => r.channel)].filter(
+      (c, i, all) => all.indexOf(c) === i,
+    );
+    return html`<section class="panel">
+      <h3>${t('ui.consentHeading')}</h3>
+      <p class="muted">${t('ui.consentIntro')}</p>
+      ${channels.map((channel) => {
+        const row = byChannel.get(channel);
+        const state = row?.state ?? 'never_asked';
+        const asking = this.consentAsking === channel;
+        return html`<div class="consent-row" data-consent=${channel}>
+          <div class="consent-what">
+            <strong>${channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(channel)}</strong>
+            <span class="muted">${t(CONSENT_STATE_KEY[state] ?? 'ui.consentNeverAsked')}</span>
+            ${row?.occurred_at
+              ? html`<span class="muted">${row.occurred_at}${row.contact_point ? ` · ${row.contact_point}` : ''}</span>`
+              : nothing}
+          </div>
+          ${!editable
+            ? nothing
+            : state === 'granted'
+              ? html`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                  ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
+                  >${t('ui.consentWithdraw')}</ion-button>`
+              : channel === 'any'
+                ? html`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                    ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
+                    >${t('ui.consentClose')}</ion-button>`
+                : asking
+                  ? nothing
+                  : html`<ion-button size="small" data-act="grant" ?disabled=${this.saving}
+                      @click=${() => { this.consentAsking = channel; this.formError = ''; }}
+                      >${t('ui.consentRecord')}</ion-button>`}
+          ${asking
+            ? html`<div class="consent-ask">
+                <!-- Shown, then stored word for word: this is the evidence, so the operator reads
+                     to the customer exactly what will end up in the record. -->
+                <p>${t('ui.consentNotice')}</p>
+                <p class="muted">${t('ui.consentAskHint')}</p>
+                <ion-button size="small" data-act="grant-confirm" ?disabled=${this.saving}
+                  @click=${() => this.recordConsent(channel)}>${t('ui.consentConfirm')}</ion-button>
+                <ion-button size="small" fill="outline" data-act="grant-cancel"
+                  @click=${() => { this.consentAsking = ''; }}>${t('ui.cancel')}</ion-button>
+              </div>`
+            : nothing}
+        </div>`;
+      })}
+      <h4>${t('ui.consentHistoryHeading')}</h4>
+      ${this.consentHistory.length
+        ? html`<ul class="timeline">
+            ${this.consentHistory.map((f) => html`<li data-consent-fact=${f.id}>
+              <div class="t">
+                ${t(CONSENT_STATE_KEY[f.state] ?? 'ui.consentNeverAsked')} —
+                ${f.channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(f.channel)}
+                <small>(${f.source || '—'})</small>
+              </div>
+              ${f.notice_text ? html`<div class="d">${f.notice_text}</div>` : nothing}
+              ${f.reason ? html`<div class="d">${f.reason}</div>` : nothing}
+              <div class="when">${f.occurred_at}${f.recorded_by ? ` · ${f.recorded_by}` : ''}</div>
+            </li>`)}
+          </ul>`
+        : html`<p class="muted">${t('ui.consentNoHistory')}</p>`}
+    </section>`;
+  }
+
   private renderDetail() {
     const d = this.detail!;
     const t = (k: string): string => erplora().t(CATALOG, k);
@@ -841,7 +1049,6 @@ export class ErpCustomersList extends LitElement {
           <div><dt>${t('ui.colStage')}</dt><dd>${stageLabel(d.lifecycle_stage)}</dd></div>
           <div><dt>${t('ui.fieldSource')}</dt><dd>${d.source || '—'}</dd></div>
           <div><dt>${t('ui.fieldPreferredChannel')}</dt><dd>${channelLabel(d.preferred_channel)}</dd></div>
-          <div><dt>${t('ui.detailMarketingConsent')}</dt><dd>${d.marketing_consent ? t('ui.yes') : t('ui.no')}</dd></div>
           <div><dt>${t('ui.detailPurchases')}</dt><dd>${d.total_purchases ?? 0}</dd></div>
           <div><dt>${t('ui.colSpent')}</dt><dd>${this.fmt(d.total_spent)}</dd></div>
           <div><dt>${t('ui.detailLastPurchase')}</dt><dd>${d.last_purchase_date || '—'}</dd></div>
@@ -858,6 +1065,7 @@ export class ErpCustomersList extends LitElement {
               : nothing}
           </section>`
         : nothing}
+      ${this.renderConsent()}
       ${can('customers.add_note') || can('customers.view_activity')
         ? html`<section class="panel">
             ${can('customers.add_note')

@@ -196,9 +196,16 @@ def main() -> int:
         if ok:
             row = json.loads(q(f"SELECT row_to_json(c) FROM customers_customer c WHERE id = '{cid}'"))
             check("lifecycle kept", "vip", row["lifecycle_stage"])
-            check("consent kept", 1, row["marketing_consent"])
-            check("consent_date kept", NOW, row["consent_date"])
             check("company kept", "ACME", row["company_name"])
+            # …but NOT the consent, and that is the point (customers#10). This used to assert
+            # «consent kept»: a full sheet could arrive with `marketing_consent: 1` and the row was
+            # written with it. Creating a customer — at the counter, from a CSV, from the assistant
+            # — is not somebody saying yes, and a flag an import can switch on is the flag an
+            # operator turns from «unknown» into «subscribed» with a search-and-replace. Consent is
+            # now an append-only fact with its evidence (`customers.consent.grant`), and this
+            # command ignores both binds.
+            check("consent is NOT taken from the payload", 0, row["marketing_consent"])
+            check("nor is its date", None, row["consent_date"])
     finally:
         subprocess.run(["docker", "exec", CONTAINER, "dropdb", "-U", "postgres", "--force", DB])
 

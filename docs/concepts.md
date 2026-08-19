@@ -76,6 +76,32 @@ is a known gap, not a bug in your setup.
 Field types are `text`, `number`, `date`, `boolean`, `select` and `textarea`; a `select` carries its
 options as a list.
 
+## Marketing consent is a fact you can prove, not a field you can tick
+
+A record used to carry `marketing_consent` (yes/no) and a date. That pair answers none of the
+questions that matter the day somebody asks: **who** said yes, **when**, **for what**, **through
+which channel**, **after being shown which words**, and **who wrote it down**. Since customers#10
+consent is an append-only ledger, one row per fact.
+
+- **Per purpose and per channel.** "Yes to the newsletter" is not "yes to WhatsApp", and one
+  checkbox forced them into one answer.
+- **A withdrawal is a new row, never a deletion.** The period during which writing to that person
+  was lawful is precisely the period an inspection asks about; erasing the grant would destroy the
+  proof of it. Withdrawing takes effect on the very next read — there is no batch in between.
+- **The wording travels verbatim.** Not a reference to a text: catalogues change, and "the sentence
+  that was on screen in January" cannot be recovered from today's file.
+- **The address it was given for is on the row.** A counter creates duplicate records, merges them
+  and fixes mistyped emails every week; consent that follows the record instead of the address
+  silently transfers to somebody who was never asked.
+- **The record's yes/no still exists and still reads the same** — it is recomputed from the ledger,
+  so everything that already reads it keeps working. Nothing writes it by hand: not `customers.
+  create`, not `customers.update`, not the CSV import.
+- **A tick that predates the ledger reads `legacy_unverified`, never `granted`.** There is no
+  evidence behind it, and inventing some is the one thing this whole design exists to prevent.
+
+Another module that wants to write to somebody asks `customers.consent.state` — a declared,
+`expose_api` query, never a peek at the table.
+
 ## Notes and activities are both timeline entries, and they are appended
 
 A note is content you write; an activity is an entry in the history, which may reference another

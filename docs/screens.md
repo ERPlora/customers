@@ -36,13 +36,32 @@ The record shows contact and tax details, the purchase metrics, and the timeline
 
 Assigning groups or tags **replaces** the whole selection — see [concepts.md](concepts.md).
 
+### Marketing consent
+
+Its own panel on the record, and **not a field of the edit form** (customers#10). One line per
+channel — email, WhatsApp, SMS, plus any other that has something recorded — each showing what was
+decided, when, and for which address.
+
+| What you do | What gets stored |
+|---|---|
+| **Record consent** | Shows the exact sentence to read out. Pressing it stores that sentence word for word, with the channel, the address, where it came from, the moment, and **your name**. |
+| **Withdraw** | One tap. No dialog, no compulsory reason — withdrawing has to be at least as easy as giving. |
+
+Nothing is ever overwritten: granting, withdrawing and granting again leave three entries, and all
+of them stay in **Everything that was decided** underneath. That list is the proof; the record's
+yes/no is only a summary of it.
+
+A customer imported before this existed shows **"Ticked before there was any record"**. That is not
+a yes: nobody knows what they were told, so it has to be asked again.
+
+Requires `customers.change_customer` to record or withdraw; `customers.view_customer` to read.
+
 ### The CRM fields on a record
 
 | Field | Values |
 |---|---|
 | Lifecycle stage | `lead`, `prospect`, `first_purchase`, `active`, `at_risk`, `dormant`, `churned`, `vip` |
 | Preferred channel | `email`, `sms`, `whatsapp`, `phone`, `none` |
-| Marketing consent | yes/no, with the date it was given |
 | Source | free text — where this customer came from |
 | Birthday, anniversary | dates |
 
