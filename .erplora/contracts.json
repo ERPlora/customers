@@ -16,6 +16,7 @@
     ],
     "optional_queries": [],
     "commands": [
+      "customers.anonymize",
       "customers.bulk_create",
       "customers.create",
       "customers.delete",

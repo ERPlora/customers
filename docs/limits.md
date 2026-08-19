@@ -2,6 +2,13 @@
 
 ## Known gaps you should know about
 
+- **Erasing personal data is irreversible and keeps the row.** «Erase personal data» (admin only,
+  permission `customers.erase_customer`) replaces name, contact, tax id, address, birthdays and
+  consent by markers, blanks notes, timeline and custom-field values, drops groups/tags and writes one
+  `erased` audit entry (who, when, why). The customer id stays so sales, invoices and the purchase
+  ledger keep their reference — those are fiscal/commercial records with their own retention and are
+  NOT erased here. Access/portability requests are not automated yet.
+
 - **Required custom fields are enforced on the full sheet only.** The walk-in quick add, the bulk
   command and the CSV import may leave a required field pending; the sheet refuses to save until it
   is filled.

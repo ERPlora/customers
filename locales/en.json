@@ -179,7 +179,13 @@
     "importRows": "Rows {rows}",
     "importReasonName": "name is required",
     "importReasonEmail": "email is not valid",
-    "close": "Close"
+    "close": "Close",
+    "eraseData": "Erase personal data",
+    "eraseDataTitle": "Erase personal data (GDPR)",
+    "eraseDataConfirm": "This replaces {name}'s personal data by markers, blanks their notes, timeline and custom fields, and cannot be undone. Sales and invoices keep their reference. An audit entry records who, when and why.",
+    "eraseReason": "Reason (kept in the audit)",
+    "customerErased": "Personal data erased.",
+    "errErase": "Could not erase the personal data"
   },
   "errors": {
     "customers": {
@@ -188,7 +194,8 @@
       "field_invalid_date": "Invalid date (use YYYY-MM-DD): {message}",
       "field_invalid_boolean": "Invalid yes/no value: {message}",
       "field_invalid_option": "Value not among the field's options: {message}",
-      "field_unavailable": "That field is not available in this business (it may have been deleted)."
+      "field_unavailable": "That field is not available in this business (it may have been deleted).",
+      "customer_unavailable": "That customer is not available in this business."
     }
   }
 }

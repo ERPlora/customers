@@ -22,6 +22,7 @@
     "customers.add_customer",
     "customers.change_customer",
     "customers.delete_customer",
+    "customers.erase_customer",
     "customers.export_customer",
     "customers.view_customergroup",
     "customers.add_customergroup",
@@ -455,6 +456,32 @@
         "description": "Deletes a customer (destructive)"
       }
     },
+    "customers.anonymize": {
+      "permission": "customers.erase_customer",
+      "transaction": true,
+      "sql": [
+        "commands/anonymize.sql",
+        "commands/anonymize_notes.sql",
+        "commands/anonymize_activities.sql",
+        "commands/anonymize_field_values.sql",
+        "commands/anonymize_groups.sql",
+        "commands/anonymize_tags.sql",
+        "commands/anonymize_audit.sql"
+      ],
+      "schema": "schemas/anonymize.json",
+      "emit": [
+        "customer.anonymized"
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.customer_unavailable",
+        "message": "That customer is not available: it does not exist in this business."
+      },
+      "ai": {
+        "description": "GDPR erasure (customers#11): replaces the customer's personal data by markers keeping the row id (sales/invoices keep their reference), blanks and soft-deletes notes, activities and custom-field values, drops group/tag membership and writes ONE `erased` audit entry (actor, reason, scope). Irreversible. The purchase ledger is retained. Idempotent and hub-scoped."
+      }
+    },
     "customers.record_purchase": {
       "permission": "customers.change_customer",
       "transaction": true,
@@ -710,6 +737,7 @@
       }
     },
     "emits": [
+      "customer.anonymized",
       "customer.created",
       "customer.deleted",
       "customer.updated"
