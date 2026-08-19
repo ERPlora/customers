@@ -4,7 +4,7 @@
 -- a redelivered `sale.completed` (the outbox is at-least-once) counted twice, and a voided sale
 -- kept inflating totals and the lifecycle stage forever because nothing remembered which sale had
 -- moved them. This table is that memory. One row per commercial link, keyed by
--- `(hub_id, source_type, source_id)`; the aggregates on `customers_customer` are DERIVED from it
+-- `(hub_id, source_type, source_id)`. The aggregates on `customers_customer` are DERIVED from it
 -- (moved only when a row is new, reverted when a row is voided) and can be reconciled against it.
 --
 -- `source_id` is an OPAQUE reference (`sales_sale.id` for `source_type='sale'`): no FK and no
