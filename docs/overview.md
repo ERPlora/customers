@@ -53,7 +53,13 @@ lists customers whose totals disagree with their ledger (empty = healthy).
 check; this module fills it with a customer search. Pick a customer and the check carries them, along
 with their fiscal details. When the check materialises, this module writes the link between the
 customer and that order — **`sales` never calls `customers`**. After charging, the till clears the
-customer context.
+customer context. The search never hides a failure: "no matches", "Customers is unavailable — retry"
+and "no permission" are three different screens, a customer is only assigned once their fiscal data
+was read, and «+ New customer» creates a walk-in (name and phone) from the search itself.
+
+**It offers a slot on the customer sheet.** `customers.detail` is a named slot other modules can
+fill (for example a visit history from appointments); the sheet tells the filler which customer is
+open. Nothing shows there until a module fills it.
 
 Turning Customers off removes only that selector. Tables, Kitchen and the checks themselves keep
 working.

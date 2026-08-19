@@ -38,6 +38,8 @@
       "customer.deleted",
       "customer.updated"
     ],
-    "slots": []
+    "slots": [
+      "customers.detail"
+    ]
   }
 }

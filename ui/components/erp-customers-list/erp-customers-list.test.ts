@@ -295,3 +295,40 @@ describe('añadir una nota es UN solo command (customers#14)', () => {
     expect(comandos[0].payload.content).toBe('Prefiere mesa junto a la ventana');
   });
 });
+
+// HOST DE SLOT `customers.detail` (ADR-0043 §3bis; preparación de appointments#46). La ficha de
+// cliente expone un punto de extensión para que OTROS módulos cuelguen ahí su bloque (el historial
+// de citas de `appointments`) sin que `customers` los conozca: el host resuelve los fillers por
+// `erplora.loadSlot('customers.detail')`, los monta y les cuenta QUÉ cliente está abierto por un
+// `CustomEvent` (`erp:customer-detail`), nunca por props ni funciones. Aquí solo el host: el
+// contenido lo pone quien rellene el slot.
+describe('la ficha es HOST del slot customers.detail (ADR-0043)', () => {
+  it('resuelve los fillers, los monta en la ficha y les comunica el cliente abierto', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    const slots: string[] = [];
+    sdk.loadSlot = async (slot: string) => { slots.push(slot); return [{ component: 'x-appointments-history' }]; };
+    sdk.query = async (name: string) => (name === 'customers.get' ? [CLIENTE] : []);
+    const recibidos: Record<string, unknown>[] = [];
+    document.addEventListener('erp:customer-detail', (e) => recibidos.push((e as CustomEvent).detail));
+
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    expect(slots, 'el host resuelve el slot por su nombre literal').toContain('customers.detail');
+    const host = el.shadowRoot.querySelector('.detail-slot');
+    expect(host, 'la ficha tiene el contenedor del slot').toBeTruthy();
+    const filler = host!.querySelector('x-appointments-history');
+    expect(filler, 'el filler se monta dentro del contenedor').toBeTruthy();
+    // El filler recibe el cliente por evento en el propio elemento (no burbujea al documento).
+    expect(recibidos, 'no burbujea: es un mensaje host→filler').toEqual([]);
+    const directos: Record<string, unknown>[] = [];
+    filler!.addEventListener('erp:customer-detail', (e) => directos.push((e as CustomEvent).detail));
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(directos.at(-1)).toMatchObject({ customer_id: CLIENTE.id, customer_name: CLIENTE.name });
+    delete sdk.loadSlot;
+  });
+});

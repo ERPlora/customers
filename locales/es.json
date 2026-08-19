@@ -165,7 +165,15 @@
     "noCustomers": "No hay clientes.",
     "removeCustomer": "Quitar cliente",
     "errLoadCustomers": "No se pudieron cargar los clientes",
-    "customFields": "Campos personalizados"
+    "customFields": "Campos personalizados",
+    "posNoPermission": "No tienes permiso para consultar clientes.",
+    "errCustomerSnapshot": "No se pudieron cargar los datos fiscales de {name}. Vuelve a pulsar para reintentar.",
+    "retry": "Reintentar",
+    "quickAddCustomer": "+ Nuevo cliente «{term}»",
+    "quickName": "Nombre",
+    "quickPhone": "Teléfono",
+    "quickNameRequired": "El nombre es obligatorio.",
+    "quickCreate": "Crear y asignar"
   },
   "errors": {
     "customers": {
