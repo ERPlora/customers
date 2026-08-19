@@ -212,6 +212,8 @@ export class ErpCustomersList extends LitElement {
   private ctrl!: ListController<Customer>;
 
   private unsub?: () => void;
+  @state() private pendingErase = false;
+  @state() private eraseReason = '';
   @state() private importing = false;
   @state() private importReport: ImportReport | null = null;
 
@@ -495,6 +497,7 @@ export class ErpCustomersList extends LitElement {
 
   private closeDetail() {
     this.detail = null;
+    this.pendingErase = false;
     this.editing = false;
     this.pendingDelete = null;
     this.formError = '';
@@ -646,6 +649,42 @@ export class ErpCustomersList extends LitElement {
     </div>`;
   }
 
+  // — GDPR erasure (customers#11) → ONE transactional command `customers.anonymize`. Two steps with a
+  // reason: irreversible, and the reason lands on the audit entry. Only `customers.erase_customer`
+  // (admin by default); the soft-delete keeps every piece of PII and is a different button. —
+  private async confirmErase() {
+    if (!can('customers.erase_customer') || !this.detail) return;
+    const target = this.detail;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.anonymize', { customer_id: target.id, reason: this.eraseReason.trim() });
+      this.pendingErase = false;
+      this.closeDetail();
+      this.formMsg = erplora().t(CATALOG, 'ui.customerErased');
+      await Promise.all([this.ctrl.load(), this.loadStats()]);
+    } catch (e) {
+      this.formError = domainErrorText(e, 'ui.errErase');
+    } finally {
+      this.saving = false;
+    }
+  }
+
+  private renderEraseConfirm() {
+    if (!this.pendingErase || !this.detail || !can('customers.erase_customer')) return nothing;
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
+    return html`<section class="panel">
+      <h3>${t('ui.eraseDataTitle')}</h3>
+      <p>${t('ui.eraseDataConfirm', { name: this.detail.name })}</p>
+      <ion-input fill="outline" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
+        @ionInput=${(e: Event) => (this.eraseReason = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+      <footer class="actions">
+        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => (this.pendingErase = false)}>${t('ui.cancel')}</ion-button>
+      </footer>
+    </section>`;
+  }
+
   private renderDeleteConfirm() {
     if (!this.pendingDelete || !can('customers.delete_customer')) return nothing;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
@@ -783,10 +822,14 @@ export class ErpCustomersList extends LitElement {
         ${can('customers.delete_customer')
           ? html`<ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
           : nothing}
+        ${can('customers.erase_customer')
+          ? html`<ion-button class="erase" size="small" color="danger" fill="clear" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
+          : nothing}
       </header>
       ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
+      ${this.renderEraseConfirm()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : html`<dl class="meta">
           <div><dt>${t('ui.colEmail')}</dt><dd>${d.email || '—'}</dd></div>

@@ -3599,7 +3599,13 @@ var es_default = {
     importRows: "Filas {rows}",
     importReasonName: "falta el nombre",
     importReasonEmail: "el email no es v\xE1lido",
-    close: "Cerrar"
+    close: "Cerrar",
+    eraseData: "Borrar datos personales",
+    eraseDataTitle: "Borrar datos personales (RGPD)",
+    eraseDataConfirm: "Sustituye los datos personales de {name} por marcadores, vac\xEDa sus notas, historial y campos personalizados, y no se puede deshacer. Las ventas y facturas conservan su referencia. Queda una entrada de auditor\xEDa con qui\xE9n, cu\xE1ndo y por qu\xE9.",
+    eraseReason: "Motivo (queda en la auditor\xEDa)",
+    customerErased: "Datos personales borrados.",
+    errErase: "No se pudieron borrar los datos personales"
   },
   errors: {
     customers: {
@@ -3608,7 +3614,8 @@ var es_default = {
       field_invalid_date: "Fecha no v\xE1lida (usa AAAA-MM-DD): {message}",
       field_invalid_boolean: "Valor s\xED/no no v\xE1lido: {message}",
       field_invalid_option: "El valor no est\xE1 entre las opciones del campo: {message}",
-      field_unavailable: "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado)."
+      field_unavailable: "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
+      customer_unavailable: "Ese cliente no est\xE1 disponible en este negocio."
     }
   }
 };
@@ -3795,7 +3802,13 @@ var en_default = {
     importRows: "Rows {rows}",
     importReasonName: "name is required",
     importReasonEmail: "email is not valid",
-    close: "Close"
+    close: "Close",
+    eraseData: "Erase personal data",
+    eraseDataTitle: "Erase personal data (GDPR)",
+    eraseDataConfirm: "This replaces {name}'s personal data by markers, blanks their notes, timeline and custom fields, and cannot be undone. Sales and invoices keep their reference. An audit entry records who, when and why.",
+    eraseReason: "Reason (kept in the audit)",
+    customerErased: "Personal data erased.",
+    errErase: "Could not erase the personal data"
   },
   errors: {
     customers: {
@@ -3804,7 +3817,8 @@ var en_default = {
       field_invalid_date: "Invalid date (use YYYY-MM-DD): {message}",
       field_invalid_boolean: "Invalid yes/no value: {message}",
       field_invalid_option: "Value not among the field's options: {message}",
-      field_unavailable: "That field is not available in this business (it may have been deleted)."
+      field_unavailable: "That field is not available in this business (it may have been deleted).",
+      customer_unavailable: "That customer is not available in this business."
     }
   }
 };
@@ -4554,6 +4568,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.groupIds = [];
     this.tagIds = [];
     this.newNote = "";
+    this.pendingErase = false;
+    this.eraseReason = "";
     this.importing = false;
     this.importReport = null;
     /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
@@ -4903,6 +4919,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   }
   closeDetail() {
     this.detail = null;
+    this.pendingErase = false;
     this.editing = false;
     this.pendingDelete = null;
     this.formError = "";
@@ -5060,6 +5077,40 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <ok-kpi label=${t5("ui.revenue")} value=${this.fmt(s5.total_revenue)}></ok-kpi>
     </div>`;
   }
+  // — GDPR erasure (customers#11) → ONE transactional command `customers.anonymize`. Two steps with a
+  // reason: irreversible, and the reason lands on the audit entry. Only `customers.erase_customer`
+  // (admin by default); the soft-delete keeps every piece of PII and is a different button. —
+  async confirmErase() {
+    if (!can3("customers.erase_customer") || !this.detail) return;
+    const target = this.detail;
+    this.saving = true;
+    this.formError = "";
+    try {
+      await erplora3().command("customers.anonymize", { customer_id: target.id, reason: this.eraseReason.trim() });
+      this.pendingErase = false;
+      this.closeDetail();
+      this.formMsg = erplora3().t(CATALOG3, "ui.customerErased");
+      await Promise.all([this.ctrl.load(), this.loadStats()]);
+    } catch (e6) {
+      this.formError = domainErrorText(e6, "ui.errErase");
+    } finally {
+      this.saving = false;
+    }
+  }
+  renderEraseConfirm() {
+    if (!this.pendingErase || !this.detail || !can3("customers.erase_customer")) return A;
+    const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
+    return b2`<section class="panel">
+      <h3>${t5("ui.eraseDataTitle")}</h3>
+      <p>${t5("ui.eraseDataConfirm", { name: this.detail.name })}</p>
+      <ion-input fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
+        @ionInput=${(e6) => this.eraseReason = String(e6.target.value ?? "")}></ion-input>
+      <footer class="actions">
+        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
+        <ion-button size="small" fill="outline" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
+      </footer>
+    </section>`;
+  }
   renderDeleteConfirm() {
     if (!this.pendingDelete || !can3("customers.delete_customer")) return A;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
@@ -5190,10 +5241,16 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${can3("customers.delete_customer") ? b2`<ion-button size="small" color="danger" fill="outline" @click=${() => {
       this.pendingDelete = d3;
     }}>${t5("ui.delete")}</ion-button>` : A}
+        ${can3("customers.erase_customer") ? b2`<ion-button class="erase" size="small" color="danger" fill="clear" @click=${() => {
+      this.pendingErase = true;
+      this.eraseReason = "";
+      this.formError = "";
+    }}>${t5("ui.eraseData")}</ion-button>` : A}
       </header>
       ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
+      ${this.renderEraseConfirm()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : b2`<dl class="meta">
           <div><dt>${t5("ui.colEmail")}</dt><dd>${d3.email || "\u2014"}</dd></div>
@@ -5312,6 +5369,12 @@ __decorateClass([
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "newNote", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "pendingErase", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "eraseReason", 2);
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "importing", 2);

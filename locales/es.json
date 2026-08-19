@@ -180,7 +180,13 @@
     "importRows": "Filas {rows}",
     "importReasonName": "falta el nombre",
     "importReasonEmail": "el email no es válido",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "eraseData": "Borrar datos personales",
+    "eraseDataTitle": "Borrar datos personales (RGPD)",
+    "eraseDataConfirm": "Sustituye los datos personales de {name} por marcadores, vacía sus notas, historial y campos personalizados, y no se puede deshacer. Las ventas y facturas conservan su referencia. Queda una entrada de auditoría con quién, cuándo y por qué.",
+    "eraseReason": "Motivo (queda en la auditoría)",
+    "customerErased": "Datos personales borrados.",
+    "errErase": "No se pudieron borrar los datos personales"
   },
   "errors": {
     "customers": {
@@ -189,7 +195,8 @@
       "field_invalid_date": "Fecha no válida (usa AAAA-MM-DD): {message}",
       "field_invalid_boolean": "Valor sí/no no válido: {message}",
       "field_invalid_option": "El valor no está entre las opciones del campo: {message}",
-      "field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado)."
+      "field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
+      "customer_unavailable": "Ese cliente no está disponible en este negocio."
     }
   }
 }

@@ -393,3 +393,38 @@ describe('la importación CSV va por customers.bulk_create con informe (customer
     expect((bulk!.payload.items as Record<string, unknown>[])[0]).toMatchObject({ name: 'Ana', email: 'ana@example.com', phone: '600' });
   });
 });
+
+// RGPD (customers#11): borrar el cliente lo deja marcado pero conserva toda su PII. La ficha ofrece,
+// SOLO a quien tenga `customers.erase_customer`, «Borrar datos personales» en dos pasos (con motivo)
+// que llama a UN command transaccional `customers.anonymize`; nunca al soft-delete.
+describe('borrado de datos personales desde la ficha (customers#11)', () => {
+  it('con permiso: dos pasos, motivo, y UN command customers.anonymize', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.query = async (name: string) => (name === 'customers.get' ? [CLIENTE] : []);
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const wc = el as unknown as { pendingErase: boolean; eraseReason: string; confirmErase(): Promise<void>; updateComplete: Promise<unknown>; detail: unknown };
+    const btn = el.shadowRoot.querySelector<HTMLElement>('.erase');
+    expect(btn, 'botón de borrado RGPD en la ficha').toBeTruthy();
+    btn!.click();
+    await wc.updateComplete;
+    expect(wc.pendingErase, 'primer paso: pide confirmación').toBe(true);
+    expect(comandos.map((c) => c.name), 'nada se ejecuta al primer toque').toEqual([]);
+    wc.eraseReason = 'Solicitud por email';
+    await wc.confirmErase();
+    expect(comandos.map((c) => c.name)).toEqual(['customers.anonymize']);
+    expect(comandos[0].payload).toEqual({ customer_id: CLIENTE.id, reason: 'Solicitud por email' });
+    expect(wc.detail, 'la ficha se cierra: ya no hay datos que ver').toBeNull();
+  });
+
+  it('sin permiso erase_customer no existe el botón', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.query = async (name: string) => (name === 'customers.get' ? [CLIENTE] : []);
+    sdk.hasPermission = (p: string) => p !== 'customers.erase_customer';
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(el.shadowRoot.querySelector('.erase')).toBeNull();
+  });
+});

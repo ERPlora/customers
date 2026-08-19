@@ -33,6 +33,7 @@ versión instalada y cita la de TU versión, no la de la última publicada. En i
 | command | `customers.create` / `.bulk_create` (WASM, cap 50) | `add_customer` |
 | command | `customers.update` / `.set_groups` (WASM) / `.set_tags` (WASM) / `.orders.link` / `.record_purchase` | `change_customer` |
 | command | `customers.delete` | `delete_customer` (solo admin) |
+| command | `customers.anonymize` (RGPD: PII → marcadores, hijas vaciadas, auditoría `erased`; ledger y ventas se conservan) | `erase_customer` (solo admin) |
 | command | `customers.groups.*` / `customers.tags.*` / `customers.fields.*` | los `*_customergroup` / `*_customertag` / `manage_custom_fields` |
 | command | `customers.notes.add` (nota + entrada del timeline en una transacción) · `customers.activity.add` | `add_note` · `add_activity` (admin/manager; el rol de lectura no muta el timeline) |
 | escucha | `sale.completed` → `customers.record_purchase` (ledger idempotente por venta; anónima = no-op) · `sale.voided` → `customers._reverse_purchase` (revierte y conserva historial) | — |
