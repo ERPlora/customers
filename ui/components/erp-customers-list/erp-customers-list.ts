@@ -74,6 +74,14 @@ interface FieldValue {
   value: string;
 }
 
+/** Result of a CSV import (customers#15): what got in, what was skipped and why, what failed. */
+interface ImportReport {
+  total: number;
+  created: number;
+  skipped: { row: number; reason: string }[];
+  failed: { rows: string; reason: string }[];
+}
+
 interface Activity {
   id: string; activity_type: string; title: string; description: string; created_at: string;
 }
@@ -138,6 +146,7 @@ export class ErpCustomersList extends LitElement {
     .page > ok-data-table { flex:1 1 auto; min-height:0; }
     .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
     .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
+    .import-list { margin:.25rem 0 0; padding-left:1.1rem; font-size:.85rem; max-height:9rem; overflow:auto; }
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
@@ -203,6 +212,8 @@ export class ErpCustomersList extends LitElement {
   private ctrl!: ListController<Customer>;
 
   private unsub?: () => void;
+  @state() private importing = false;
+  @state() private importReport: ImportReport | null = null;
 
   /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
    *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
@@ -285,31 +296,89 @@ export class ErpCustomersList extends LitElement {
     } catch { /* tarjetas opcionales */ }
   }
 
-  // — Importación CSV (bulk) — mismas columnas que exporta la tabla: name,email,phone… —
-  // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
-  // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
+  // — CSV import (customers#15) → `customers.bulk_create` (WASM, cap 50, one transaction per batch),
+  // never `customers.create` row by row. Rows are validated HERE first (name required, email shape)
+  // and the invalid ones are SKIPPED WITH A REASON — never silenced. A batch that the server rejects
+  // is reported with its reason (row range) and the next batches still run. The report stays on
+  // screen until the next import. "Resumable / 10k rows / dry-run" is deferred on purpose.
+  private static readonly IMPORT_BATCH = 50;
+  private static readonly EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  /** Header aliases (export headers + Spanish ones a spreadsheet produces). */
+  private static readonly CSV_ALIASES: Record<string, string[]> = {
+    name: ['name', 'Nombre', 'nombre'],
+    email: ['email', 'Email', 'correo', 'Correo'],
+    phone: ['phone', 'Teléfono', 'telefono', 'Telefono', 'tel'],
+    tax_id: ['tax_id', 'NIF', 'nif', 'CIF', 'cif'],
+    company_name: ['company_name', 'Empresa', 'empresa'],
+    address: ['address', 'Dirección', 'direccion'],
+    city: ['city', 'Ciudad', 'ciudad'],
+    postal_code: ['postal_code', 'CP', 'cp', 'Código postal'],
+    country: ['country', 'País', 'pais'],
+    lifecycle_stage: ['lifecycle_stage'],
+    notes: ['notes', 'Notas', 'notas'],
+  };
+
+  private static csvValue(row: Record<string, string>, key: string): string {
+    for (const alias of ErpCustomersList.CSV_ALIASES[key] ?? [key]) {
+      const v = row[alias];
+      if (v != null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
+  }
+
   private async onCsvImport(ev: CustomEvent<{ rows: Record<string, string>[] }>): Promise<void> {
     if (!can('customers.add_customer')) return;
     const rows = ev.detail?.rows ?? [];
-    for (const r of rows) {
-      const name = (r.name ?? r.Nombre ?? '').trim();
-      if (!name) continue;
-      try {
-        await erplora().command('customers.create', {
-          name,
-          email: (r.email ?? r.Email ?? '').trim(),
-          phone: (r.phone ?? r['Teléfono'] ?? r.telefono ?? '').trim(),
-          tax_id: '', address: '', city: '', postal_code: '', country: '', avatar: '', notes: '',
-          lifecycle_stage: (r.lifecycle_stage ?? 'lead').trim() || 'lead',
-          source: 'walk_in', company_name: (r.company_name ?? '').trim(),
-          birthday: null, anniversary: null, preferred_channel: 'none',
-          marketing_consent: 0, consent_date: null,
-        });
-      } catch {
-        /* ignora filas inválidas (mismo criterio que inventory) */
+    const report: ImportReport = { total: rows.length, created: 0, skipped: [], failed: [] };
+    const valid: Array<{ row: number; item: Record<string, unknown> }> = [];
+    rows.forEach((r, i) => {
+      const row = i + 1;
+      const name = ErpCustomersList.csvValue(r, 'name');
+      const email = ErpCustomersList.csvValue(r, 'email');
+      if (!name) { report.skipped.push({ row, reason: 'ui.importReasonName' }); return; }
+      if (email && !ErpCustomersList.EMAIL_SHAPE.test(email)) { report.skipped.push({ row, reason: 'ui.importReasonEmail' }); return; }
+      const stage = ErpCustomersList.csvValue(r, 'lifecycle_stage') || 'lead';
+      valid.push({ row, item: {
+        name, email, phone: ErpCustomersList.csvValue(r, 'phone'), tax_id: ErpCustomersList.csvValue(r, 'tax_id'),
+        company_name: ErpCustomersList.csvValue(r, 'company_name'), address: ErpCustomersList.csvValue(r, 'address'),
+        city: ErpCustomersList.csvValue(r, 'city'), postal_code: ErpCustomersList.csvValue(r, 'postal_code'),
+        country: ErpCustomersList.csvValue(r, 'country'), notes: ErpCustomersList.csvValue(r, 'notes'),
+        lifecycle_stage: STAGE_KEY[stage] ? stage : 'lead', source: 'import',
+      } });
+    });
+    this.importing = true;
+    this.importReport = null;
+    try {
+      for (let i = 0; i < valid.length; i += ErpCustomersList.IMPORT_BATCH) {
+        const batch = valid.slice(i, i + ErpCustomersList.IMPORT_BATCH);
+        const range = `${batch[0].row}-${batch[batch.length - 1].row}`;
+        try {
+          await erplora().command('customers.bulk_create', { items: batch.map((b) => b.item) });
+          report.created += batch.length;
+        } catch (e) {
+          report.failed.push({ rows: range, reason: e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate') });
+        }
       }
+    } finally {
+      this.importing = false;
+      this.importReport = report;
     }
     await Promise.all([this.ctrl.load(), this.loadStats()]);
+  }
+
+  private renderImportReport() {
+    const r = this.importReport;
+    if (!r) return nothing;
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
+    const tone = r.failed.length ? 'danger' : r.skipped.length ? 'warning' : 'success';
+    return html`<ok-inline-feedback class="import-report" tone=${tone} icon=${r.failed.length ? 'alert-circle-outline' : 'checkmark-outline'}>
+      <strong>${t('ui.importSummary', { total: r.total, created: r.created, skipped: r.skipped.length, failed: r.failed.reduce((n, f) => n + (Number(f.rows.split('-')[1] ?? f.rows) - Number(f.rows.split('-')[0]) + 1), 0) })}</strong>
+      ${r.skipped.length ? html`<ul class="import-list">${r.skipped.slice(0, 20).map((s) => html`<li>${t('ui.importRow', { row: s.row })}: ${t(s.reason)}</li>`)}
+        ${r.skipped.length > 20 ? html`<li>…</li>` : nothing}</ul>` : nothing}
+      ${r.failed.length ? html`<ul class="import-list">${r.failed.map((f) => html`<li>${t('ui.importRows', { rows: f.rows })}: ${f.reason}</li>`)}</ul>` : nothing}
+      <ion-button size="small" fill="clear" @click=${() => (this.importReport = null)}>${t('ui.close')}</ion-button>
+    </ok-inline-feedback>`;
   }
 
   /** Referencia al ok-data-table para cerrar su panel lateral tras el alta. */
@@ -790,6 +859,8 @@ export class ErpCustomersList extends LitElement {
         ${this.renderStats()}
         ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
         ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+        ${this.importing ? html`<p class="ok">${t('ui.importing')}</p>` : nothing}
+        ${this.renderImportReport()}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
         <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${can('customers.add_customer')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .importable=${can('customers.add_customer')} .exportable=${can('customers.export_customer')} .csvName=${'customers.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>

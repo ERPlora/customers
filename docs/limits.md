@@ -5,7 +5,10 @@
 - **Required custom fields are enforced on the full sheet only.** The walk-in quick add, the bulk
   command and the CSV import may leave a required field pending; the sheet refuses to save until it
   is filled.
-- **No import screen.** Bulk creation is API-only.
+- **CSV import is not resumable.** The list's import button validates every row (name required,
+  email shape), sends batches of 50 and shows a report (created / skipped with reason / failed batch
+  with reason). An interrupted import is re-run from the file; rows already created are duplicated
+  unless you remove them from the file first.
 - **A group's discount is not an automatic price rule.** It is segmentation data.
 
 ## Validation you will run into

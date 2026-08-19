@@ -172,7 +172,14 @@
     "quickName": "Name",
     "quickPhone": "Phone",
     "quickNameRequired": "A name is required.",
-    "quickCreate": "Create and assign"
+    "quickCreate": "Create and assign",
+    "importing": "Importing…",
+    "importSummary": "Import: {total} rows — {created} created, {skipped} skipped, {failed} failed.",
+    "importRow": "Row {row}",
+    "importRows": "Rows {rows}",
+    "importReasonName": "name is required",
+    "importReasonEmail": "email is not valid",
+    "close": "Close"
   },
   "errors": {
     "customers": {

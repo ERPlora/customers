@@ -3592,7 +3592,14 @@ var es_default = {
     quickName: "Nombre",
     quickPhone: "Tel\xE9fono",
     quickNameRequired: "El nombre es obligatorio.",
-    quickCreate: "Crear y asignar"
+    quickCreate: "Crear y asignar",
+    importing: "Importando\u2026",
+    importSummary: "Importaci\xF3n: {total} filas \u2014 {created} creadas, {skipped} omitidas, {failed} fallidas.",
+    importRow: "Fila {row}",
+    importRows: "Filas {rows}",
+    importReasonName: "falta el nombre",
+    importReasonEmail: "el email no es v\xE1lido",
+    close: "Cerrar"
   },
   errors: {
     customers: {
@@ -3781,7 +3788,14 @@ var en_default = {
     quickName: "Name",
     quickPhone: "Phone",
     quickNameRequired: "A name is required.",
-    quickCreate: "Create and assign"
+    quickCreate: "Create and assign",
+    importing: "Importing\u2026",
+    importSummary: "Import: {total} rows \u2014 {created} created, {skipped} skipped, {failed} failed.",
+    importRow: "Row {row}",
+    importRows: "Rows {rows}",
+    importReasonName: "name is required",
+    importReasonEmail: "email is not valid",
+    close: "Close"
   },
   errors: {
     customers: {
@@ -4520,7 +4534,7 @@ var EMPTY_FORM = {
   marketing_consent: false,
   is_active: true
 };
-var ErpCustomersList = class extends i3 {
+var _ErpCustomersList = class _ErpCustomersList extends i3 {
   constructor() {
     super(...arguments);
     this.newName = "";
@@ -4540,6 +4554,8 @@ var ErpCustomersList = class extends i3 {
     this.groupIds = [];
     this.tagIds = [];
     this.newNote = "";
+    this.importing = false;
+    this.importReport = null;
     /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
      *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
      *  fillers are resolved by literal slot name through the SDK, mounted in `.detail-slot`, and told
@@ -4557,6 +4573,7 @@ var ErpCustomersList = class extends i3 {
     .page > ok-data-table { flex:1 1 auto; min-height:0; }
     .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
     .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
+    .import-list { margin:.25rem 0 0; padding-left:1.1rem; font-size:.85rem; max-height:9rem; overflow:auto; }
     header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
@@ -4663,40 +4680,104 @@ var ErpCustomersList = class extends i3 {
     } catch {
     }
   }
-  // — Importación CSV (bulk) — mismas columnas que exporta la tabla: name,email,phone… —
-  // ok-data-table parsea el CSV y emite @csvImport con {rows}; aquí mapeamos cada fila a
-  // customers.create (defaults como el alta rápida). Filas inválidas se ignoran.
+  static {
+    // — CSV import (customers#15) → `customers.bulk_create` (WASM, cap 50, one transaction per batch),
+    // never `customers.create` row by row. Rows are validated HERE first (name required, email shape)
+    // and the invalid ones are SKIPPED WITH A REASON — never silenced. A batch that the server rejects
+    // is reported with its reason (row range) and the next batches still run. The report stays on
+    // screen until the next import. "Resumable / 10k rows / dry-run" is deferred on purpose.
+    this.IMPORT_BATCH = 50;
+  }
+  static {
+    this.EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  }
+  static {
+    /** Header aliases (export headers + Spanish ones a spreadsheet produces). */
+    this.CSV_ALIASES = {
+      name: ["name", "Nombre", "nombre"],
+      email: ["email", "Email", "correo", "Correo"],
+      phone: ["phone", "Tel\xE9fono", "telefono", "Telefono", "tel"],
+      tax_id: ["tax_id", "NIF", "nif", "CIF", "cif"],
+      company_name: ["company_name", "Empresa", "empresa"],
+      address: ["address", "Direcci\xF3n", "direccion"],
+      city: ["city", "Ciudad", "ciudad"],
+      postal_code: ["postal_code", "CP", "cp", "C\xF3digo postal"],
+      country: ["country", "Pa\xEDs", "pais"],
+      lifecycle_stage: ["lifecycle_stage"],
+      notes: ["notes", "Notas", "notas"]
+    };
+  }
+  static csvValue(row, key) {
+    for (const alias of _ErpCustomersList.CSV_ALIASES[key] ?? [key]) {
+      const v3 = row[alias];
+      if (v3 != null && String(v3).trim() !== "") return String(v3).trim();
+    }
+    return "";
+  }
   async onCsvImport(ev) {
     if (!can3("customers.add_customer")) return;
     const rows2 = ev.detail?.rows ?? [];
-    for (const r6 of rows2) {
-      const name = (r6.name ?? r6.Nombre ?? "").trim();
-      if (!name) continue;
-      try {
-        await erplora3().command("customers.create", {
-          name,
-          email: (r6.email ?? r6.Email ?? "").trim(),
-          phone: (r6.phone ?? r6["Tel\xE9fono"] ?? r6.telefono ?? "").trim(),
-          tax_id: "",
-          address: "",
-          city: "",
-          postal_code: "",
-          country: "",
-          avatar: "",
-          notes: "",
-          lifecycle_stage: (r6.lifecycle_stage ?? "lead").trim() || "lead",
-          source: "walk_in",
-          company_name: (r6.company_name ?? "").trim(),
-          birthday: null,
-          anniversary: null,
-          preferred_channel: "none",
-          marketing_consent: 0,
-          consent_date: null
-        });
-      } catch {
+    const report = { total: rows2.length, created: 0, skipped: [], failed: [] };
+    const valid = [];
+    rows2.forEach((r6, i7) => {
+      const row = i7 + 1;
+      const name = _ErpCustomersList.csvValue(r6, "name");
+      const email = _ErpCustomersList.csvValue(r6, "email");
+      if (!name) {
+        report.skipped.push({ row, reason: "ui.importReasonName" });
+        return;
       }
+      if (email && !_ErpCustomersList.EMAIL_SHAPE.test(email)) {
+        report.skipped.push({ row, reason: "ui.importReasonEmail" });
+        return;
+      }
+      const stage = _ErpCustomersList.csvValue(r6, "lifecycle_stage") || "lead";
+      valid.push({ row, item: {
+        name,
+        email,
+        phone: _ErpCustomersList.csvValue(r6, "phone"),
+        tax_id: _ErpCustomersList.csvValue(r6, "tax_id"),
+        company_name: _ErpCustomersList.csvValue(r6, "company_name"),
+        address: _ErpCustomersList.csvValue(r6, "address"),
+        city: _ErpCustomersList.csvValue(r6, "city"),
+        postal_code: _ErpCustomersList.csvValue(r6, "postal_code"),
+        country: _ErpCustomersList.csvValue(r6, "country"),
+        notes: _ErpCustomersList.csvValue(r6, "notes"),
+        lifecycle_stage: STAGE_KEY[stage] ? stage : "lead",
+        source: "import"
+      } });
+    });
+    this.importing = true;
+    this.importReport = null;
+    try {
+      for (let i7 = 0; i7 < valid.length; i7 += _ErpCustomersList.IMPORT_BATCH) {
+        const batch = valid.slice(i7, i7 + _ErpCustomersList.IMPORT_BATCH);
+        const range = `${batch[0].row}-${batch[batch.length - 1].row}`;
+        try {
+          await erplora3().command("customers.bulk_create", { items: batch.map((b3) => b3.item) });
+          report.created += batch.length;
+        } catch (e6) {
+          report.failed.push({ rows: range, reason: e6 instanceof Error && e6.message ? e6.message : erplora3().t(CATALOG3, "ui.errCreate") });
+        }
+      }
+    } finally {
+      this.importing = false;
+      this.importReport = report;
     }
     await Promise.all([this.ctrl.load(), this.loadStats()]);
+  }
+  renderImportReport() {
+    const r6 = this.importReport;
+    if (!r6) return A;
+    const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
+    const tone = r6.failed.length ? "danger" : r6.skipped.length ? "warning" : "success";
+    return b2`<ok-inline-feedback class="import-report" tone=${tone} icon=${r6.failed.length ? "alert-circle-outline" : "checkmark-outline"}>
+      <strong>${t5("ui.importSummary", { total: r6.total, created: r6.created, skipped: r6.skipped.length, failed: r6.failed.reduce((n6, f3) => n6 + (Number(f3.rows.split("-")[1] ?? f3.rows) - Number(f3.rows.split("-")[0]) + 1), 0) })}</strong>
+      ${r6.skipped.length ? b2`<ul class="import-list">${r6.skipped.slice(0, 20).map((s5) => b2`<li>${t5("ui.importRow", { row: s5.row })}: ${t5(s5.reason)}</li>`)}
+        ${r6.skipped.length > 20 ? b2`<li>…</li>` : A}</ul>` : A}
+      ${r6.failed.length ? b2`<ul class="import-list">${r6.failed.map((f3) => b2`<li>${t5("ui.importRows", { rows: f3.rows })}: ${f3.reason}</li>`)}</ul>` : A}
+      <ion-button size="small" fill="clear" @click=${() => this.importReport = null}>${t5("ui.close")}</ion-button>
+    </ok-inline-feedback>`;
   }
   /** Referencia al ok-data-table para cerrar su panel lateral tras el alta. */
   dataTable() {
@@ -5170,6 +5251,8 @@ var ErpCustomersList = class extends i3 {
         ${this.renderStats()}
         ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
         ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
+        ${this.importing ? b2`<p class="ok">${t5("ui.importing")}</p>` : A}
+        ${this.renderImportReport()}
         ${this.renderDeleteConfirm()}
         ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e6) => this.onRowAction(e6)} @csvImport=${(e6) => this.onCsvImport(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
@@ -5180,55 +5263,62 @@ var ErpCustomersList = class extends i3 {
 };
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "newName", 2);
+], _ErpCustomersList.prototype, "newName", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "newEmail", 2);
+], _ErpCustomersList.prototype, "newEmail", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "saving", 2);
+], _ErpCustomersList.prototype, "saving", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "formError", 2);
+], _ErpCustomersList.prototype, "formError", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "formMsg", 2);
+], _ErpCustomersList.prototype, "formMsg", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "stats", 2);
+], _ErpCustomersList.prototype, "stats", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "pendingDelete", 2);
+], _ErpCustomersList.prototype, "pendingDelete", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "detail", 2);
+], _ErpCustomersList.prototype, "detail", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "editing", 2);
+], _ErpCustomersList.prototype, "editing", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "form", 2);
+], _ErpCustomersList.prototype, "form", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "activities", 2);
+], _ErpCustomersList.prototype, "activities", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "fieldValues", 2);
+], _ErpCustomersList.prototype, "fieldValues", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "groups", 2);
+], _ErpCustomersList.prototype, "groups", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "tags", 2);
+], _ErpCustomersList.prototype, "tags", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "groupIds", 2);
+], _ErpCustomersList.prototype, "groupIds", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "tagIds", 2);
+], _ErpCustomersList.prototype, "tagIds", 2);
 __decorateClass([
   r5()
-], ErpCustomersList.prototype, "newNote", 2);
+], _ErpCustomersList.prototype, "newNote", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "importing", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "importReport", 2);
+var ErpCustomersList = _ErpCustomersList;
 define("erp-customers-list", ErpCustomersList);
 
 // ../outfitkit/dist/ok-spotlight-search.js

@@ -16,6 +16,7 @@
     ],
     "optional_queries": [],
     "commands": [
+      "customers.bulk_create",
       "customers.create",
       "customers.delete",
       "customers.fields.create",
