@@ -54,11 +54,18 @@ and replace what was there: the old links are cleared and the new ones written.
 
 Send the full set you want, not the delta. Sending an empty list removes every group or tag.
 
-## A group's discount is data, not an automatic price rule
+## A group is identity, not price
 
-A group carries a discount percentage between 0 and 100. It is stored on the group as segmentation
-data. Do not assume a discount is applied to a sale merely because the customer belongs to a group;
-discounts on a check are decided by the till.
+A group answers "who is this customer" — VIP, wholesale, staff. It does not answer "what do they
+pay". Discounts on a check are decided at the till, and price rules belong to `pricing`.
+
+The table still has a `discount_percent` column, and it is deliberately dormant: the screens that
+showed and edited it were withdrawn (customers#17) because nothing ever applied it — `sales` does
+not depend on `customers`, and `pricing` has no consumer in the project. The column was kept, with
+its values, so a hub that had configured a percentage does not lose it; no command writes it and no
+query returns it. Belonging to several groups is why a stored percentage could never be applied on
+its own anyway: 5 % and 10 % at once has no answer without priority, stacking and caps rules, and
+those are `pricing`'s to define.
 
 ## Custom fields: you can define them, you cannot fill them from a screen
 

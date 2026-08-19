@@ -1,6 +1,6 @@
 # Módulo `customers` — CRM del POS
 
-Ficha de cliente con datos de contacto y fiscales, segmentación por **grupos** (con descuento) y
+Ficha de cliente con datos de contacto y fiscales, segmentación por **grupos** y
 **etiquetas**, **campos personalizados** por tenant, **timeline** de actividad y notas, y métricas de
 compra (nº de compras, gasto, última compra, etapa de ciclo de vida). Recibe automáticamente las
 ventas completadas para actualizar el historial del cliente.

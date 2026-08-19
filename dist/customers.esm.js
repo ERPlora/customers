@@ -3520,7 +3520,6 @@ var es_default = {
     groupsTitle: "Grupos de clientes",
     newGroup: "Nuevo grupo",
     colDescription: "Descripci\xF3n",
-    colDiscount: "Descuento %",
     colCustomers: "Clientes",
     colOrder: "Orden",
     searchGroup: "Buscar grupo\u2026",
@@ -3528,7 +3527,6 @@ var es_default = {
     newGroupTitle: "Nuevo grupo",
     editGroupTitle: "Editar \xB7 {name}",
     fieldDescription: "Descripci\xF3n",
-    fieldDiscount: "Descuento %",
     fieldColor: "Color",
     fieldOrder: "Orden",
     deleteGroupTitle: "Eliminar grupo",
@@ -3723,7 +3721,6 @@ var en_default = {
     groupsTitle: "Customer groups",
     newGroup: "New group",
     colDescription: "Description",
-    colDiscount: "Discount %",
     colCustomers: "Customers",
     colOrder: "Order",
     searchGroup: "Search group\u2026",
@@ -3731,7 +3728,6 @@ var en_default = {
     newGroupTitle: "New group",
     editGroupTitle: "Edit \xB7 {name}",
     fieldDescription: "Description",
-    fieldDiscount: "Discount %",
     fieldColor: "Color",
     fieldOrder: "Order",
     deleteGroupTitle: "Delete group",
@@ -4125,7 +4121,6 @@ var ErpCustomersGroups = class extends i3 {
     this.pendingDelete = null;
     this.fName = "";
     this.fDescription = "";
-    this.fDiscount = "0";
     this.fColor = "primary";
     this.fSortOrder = "0";
     this.fActive = true;
@@ -4151,7 +4146,6 @@ var ErpCustomersGroups = class extends i3 {
     return [
       { key: "name", header: t5("ui.colName"), sortable: true, filterable: true, filterType: "text" },
       { key: "description", header: t5("ui.colDescription"), sortable: true },
-      { key: "discount_percent", header: t5("ui.colDiscount"), align: "right", sortable: true, filterable: true, filterType: "range", format: (r6) => `${Number(r6.discount_percent || 0)}%` },
       { key: "customer_count", header: t5("ui.colCustomers"), align: "right", sortable: true },
       { key: "sort_order", header: t5("ui.colOrder"), align: "right", sortable: true }
     ];
@@ -4189,7 +4183,6 @@ var ErpCustomersGroups = class extends i3 {
     this.editing = null;
     this.fName = "";
     this.fDescription = "";
-    this.fDiscount = "0";
     this.fColor = "primary";
     this.fSortOrder = "0";
     this.fActive = true;
@@ -4200,7 +4193,6 @@ var ErpCustomersGroups = class extends i3 {
     this.editing = g3;
     this.fName = g3.name;
     this.fDescription = g3.description ?? "";
-    this.fDiscount = String(g3.discount_percent ?? 0);
     this.fColor = g3.color || "primary";
     this.fSortOrder = String(g3.sort_order ?? 0);
     this.fActive = Boolean(g3.is_active);
@@ -4222,7 +4214,6 @@ var ErpCustomersGroups = class extends i3 {
     if (!this.fName.trim()) return;
     const editing = this.editing;
     if (!can2(editing ? "customers.change_customergroup" : "customers.add_customergroup")) return;
-    const discount = Math.min(100, Math.max(0, Number(this.fDiscount) || 0));
     this.saving = true;
     this.formError = "";
     try {
@@ -4231,7 +4222,6 @@ var ErpCustomersGroups = class extends i3 {
           group_id: editing.id,
           name: this.fName.trim(),
           description: this.fDescription.trim(),
-          discount_percent: discount,
           color: this.fColor.trim() || "primary",
           sort_order: Number(this.fSortOrder) || 0,
           is_active: this.fActive ? 1 : 0
@@ -4241,7 +4231,6 @@ var ErpCustomersGroups = class extends i3 {
         await erplora2().command("customers.groups.create", {
           name: this.fName.trim(),
           description: this.fDescription.trim(),
-          discount_percent: discount,
           color: this.fColor.trim() || "primary",
           sort_order: Number(this.fSortOrder) || 0
         });
@@ -4280,7 +4269,6 @@ var ErpCustomersGroups = class extends i3 {
       ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
       <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
       <ion-input fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e6) => this.fDescription = e6.target.value}></ion-input>
-      <ion-input type="number" fill="outline" label=${t5("ui.fieldDiscount")} label-placement="floating" min="0" max="100" step="0.5" .value=${this.fDiscount} @ionInput=${(e6) => this.fDiscount = e6.target.value}></ion-input>
       <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
       <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
@@ -4332,9 +4320,6 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "fDescription", 2);
-__decorateClass([
-  r5()
-], ErpCustomersGroups.prototype, "fDiscount", 2);
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "fColor", 2);
@@ -5224,7 +5209,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
       else this.tagIds = this.toggleId(this.tagIds, String(it.id));
     }}></ion-checkbox>
-          ${it.name}${isGroups && Number(it.discount_percent) > 0 ? ` (\u2212${Number(it.discount_percent)}%)` : ""}
+          ${it.name}
         </label>`)}
       </div>
       ${editable ? b2`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
