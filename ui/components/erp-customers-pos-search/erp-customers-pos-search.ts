@@ -29,6 +29,12 @@ const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 // El snapshot FISCAL (ADR-0132) es lo que convierte esto en una factura válida: `customers.list` no
 // devuelve la dirección, así que al elegir se pide la ficha completa (`customers.get`). Viaja una
 // COPIA, no una referencia: editar la ficha del cliente no puede reescribir una factura ya emitida.
+//
+// customers#18 — NUNCA degrada en silencio. Estados explícitos del buscador: `idle` | `searching` |
+// `empty` | `error` (recuperable, con reintento que conserva el término) | `forbidden` (sin permiso,
+// sin reintento). Una respuesta vieja nunca pisa a la nueva (secuencia). Si la ficha no se puede leer,
+// NO se emite selección: mejor un error visible que una factura sin NIF. Y el alta rápida vive aquí
+// (Square/Toast/Lightspeed/Shopify POS/Fresha: «+ nuevo cliente» con nombre y teléfono, 2 toques).
 
 interface Customer { id: string; name: string; phone?: string; email?: string; }
 
@@ -38,6 +44,8 @@ interface CustomerFicha extends Customer {
 
 interface ErploraLike {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
+  command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
+  hasPermission?(permission: string): boolean;
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
@@ -70,6 +78,16 @@ interface Snapshot {
 
 const VACIO: Snapshot = { customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '' };
 
+type SearchState = 'idle' | 'searching' | 'empty' | 'error' | 'forbidden';
+
+function can(permission: string): boolean {
+  const c = erplora();
+  return typeof c.hasPermission === 'function' ? c.hasPermission(permission) : true;
+}
+
+const isForbidden = (e: unknown): boolean => (e as { code?: unknown } | null)?.code === 'permission_denied';
+const looksLikePhone = (v: string): boolean => /^[+\d][\d\s().-]{5,}$/.test(v.trim());
+
 export class ErpCustomersPosSearch extends LitElement {
   // El CHROME del buscador (overlay Spotlight + input + ✕ + trigger) lo pone `ok-spotlight-search`
   // (OutfitKit). Aquí solo estilamos los RESULTADOS que proyectamos en su slot.
@@ -81,6 +99,11 @@ export class ErpCustomersPosSearch extends LitElement {
     .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; padding:.6rem 1rem; }
+    .quick { display:flex; flex-direction:column; gap:.5rem; padding:.5rem .75rem; }
+    .quick .row { display:flex; gap:.5rem; align-items:flex-end; }
+    .quick ion-input { flex:1; }
+    .quick-add { --padding-start:.75rem; min-height:44px; }
+    .retry { min-height:44px; }
   `;
 
   @state() private open = false;
@@ -90,8 +113,18 @@ export class ErpCustomersPosSearch extends LitElement {
   @state() private selectedName = '';
   @state() private loading = false;
   @state() private error = '';
+  /** Explicit state of the search (customers#18): the cashier must tell "no matches" from "down". */
+  @state() private state: SearchState = 'idle';
+  /** Quick add (customers#18): inline «+ new customer» with name/phone only. */
+  @state() private quickOpen = false;
+  @state() private quickName = '';
+  @state() private quickPhone = '';
+  @state() private quickError = '';
+  @state() private creating = false;
 
   private searchTimer?: ReturnType<typeof setTimeout>;
+  /** Sequence of the last search issued: an older answer arriving later is dropped. */
+  private searchSeq = 0;
   private readonly onReset = () => {
     this.selectedId = undefined;
     this.selectedName = '';
@@ -131,19 +164,32 @@ export class ErpCustomersPosSearch extends LitElement {
   }
 
   private async search(q: string) {
+    const seq = ++this.searchSeq;
     this.loading = true;
     this.error = '';
+    this.state = 'searching';
     try {
-      const r = await erplora()
-        .query('customers.list', { search: q, limit: 20, sort: 'name', dir: 'asc' })
-        .catch(() => []);
+      const r = await erplora().query('customers.list', { search: q, limit: 20, sort: 'name', dir: 'asc' });
+      if (seq !== this.searchSeq) return; // stale: a newer search is in flight or already answered
       this.results = rows<Customer>(r);
+      this.state = this.results.length ? 'idle' : 'empty';
     } catch (e) {
-      this.error = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomers');
+      if (seq !== this.searchSeq) return;
+      this.results = [];
+      if (isForbidden(e)) {
+        this.state = 'forbidden';
+        this.error = erplora().t(CATALOG, 'ui.posNoPermission');
+      } else {
+        this.state = 'error';
+        this.error = e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomers');
+      }
     } finally {
-      this.loading = false;
+      if (seq === this.searchSeq) this.loading = false;
     }
   }
+
+  /** Retry keeps the term the cashier typed (customers#18). */
+  private retry() { void this.search(this.q); }
 
   private onInput(v: string) {
     this.q = v;
@@ -162,23 +208,69 @@ export class ErpCustomersPosSearch extends LitElement {
   }
 
   private async pick(c: Customer) {
+    // The full sheet carries the tax id and the address; `customers.list` does not. If the sheet
+    // cannot be read the customer is NOT selected and nothing is emitted (customers#18): a visible
+    // error beats a sale that goes on "with a customer" but without fiscal data. Retry = tap again.
+    this.error = '';
+    let ficha: CustomerFicha | undefined;
+    try {
+      ficha = rows<CustomerFicha>(await erplora().query('customers.get', { customer_id: c.id }))[0];
+    } catch (e) {
+      this.state = isForbidden(e) ? 'forbidden' : 'error';
+      this.error = isForbidden(e)
+        ? erplora().t(CATALOG, 'ui.posNoPermission')
+        : erplora().t(CATALOG, 'ui.errCustomerSnapshot', { name: c.name });
+      return;
+    }
+    if (!ficha) {
+      this.state = 'error';
+      this.error = erplora().t(CATALOG, 'ui.errCustomerNotFound');
+      return;
+    }
     this.selectedId = c.id;
-    this.selectedName = c.name;
+    this.selectedName = ficha.name || c.name;
     this.closeOverlay();
-
-    // La ficha completa trae el NIF y la dirección; `customers.list` no. Si la ficha no se puede
-    // leer, se asocia el cliente igual (la venta no se bloquea) pero SIN datos fiscales: mejor una
-    // factura sin NIF que una con el NIF de otro.
-    const ficha = rows<CustomerFicha>(
-      await erplora().query('customers.get', { customer_id: c.id }).catch(() => []),
-    )[0];
-
     this.emit({
       customer_id: c.id,
-      customer_name: c.name,
-      customer_tax_id: ficha?.tax_id ?? '',
-      customer_address: ficha ? direccionFiscal(ficha) : '',
+      customer_name: ficha.name || c.name,
+      customer_tax_id: ficha.tax_id ?? '',
+      customer_address: direccionFiscal(ficha),
     });
+  }
+
+  // — Quick add (customers#18). Market: Square, Toast, Lightspeed, Shopify POS, Fresha all offer
+  // «+ new customer» from the search itself with name/phone only. If the term looks like a phone it
+  // pre-fills the phone; otherwise the name. Duplicate guard: an exact phone match among the current
+  // results is picked instead of created (no double customer for one WhatsApp number). —
+  private openQuickAdd() {
+    if (!can('customers.add_customer')) return;
+    const term = this.q.trim();
+    this.quickName = looksLikePhone(term) ? '' : term;
+    this.quickPhone = looksLikePhone(term) ? term : '';
+    this.quickError = '';
+    this.quickOpen = true;
+  }
+
+  private async quickCreate() {
+    if (!can('customers.add_customer') || this.creating) return;
+    const name = this.quickName.trim();
+    const phone = this.quickPhone.trim();
+    if (!name) { this.quickError = erplora().t(CATALOG, 'ui.quickNameRequired'); return; }
+    const dup = phone ? this.results.find((r) => (r.phone ?? '').replace(/\s+/g, '') === phone.replace(/\s+/g, '')) : undefined;
+    if (dup) { this.quickOpen = false; await this.pick(dup); return; }
+    this.creating = true;
+    this.quickError = '';
+    try {
+      const out = await erplora().command<{ new_ids?: string[] }>('customers.create', { name, phone, source: 'walk_in' });
+      const id = out?.new_ids?.[0];
+      if (!id) throw new Error(erplora().t(CATALOG, 'ui.errCreate'));
+      this.quickOpen = false;
+      await this.pick({ id, name, phone });
+    } catch (e) {
+      this.quickError = e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate');
+    } finally {
+      this.creating = false;
+    }
   }
 
   private clear() {
@@ -201,6 +293,7 @@ export class ErpCustomersPosSearch extends LitElement {
         @ok-open=${(e: CustomEvent) => this.onOkOpen(e.detail.open)}
         @ok-input=${(e: CustomEvent) => this.onInput(e.detail.value)}>
         ${this.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : nothing}
+        ${this.state === 'error' ? html`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t('ui.retry')}</ion-button>` : nothing}
         <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
             <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
@@ -210,9 +303,25 @@ export class ErpCustomersPosSearch extends LitElement {
               </ion-label>
               ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : nothing}
             </ion-item>`)}
-          ${!this.loading && !this.results.length ? html`<ok-empty-state icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
-          ${this.loading ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
+          ${this.state === 'empty' ? html`<ok-empty-state icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
+          ${this.state === 'searching' ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
         </ion-list>
+        ${this.q.trim() && can('customers.add_customer') && this.state !== 'forbidden' && this.state !== 'searching' && !this.quickOpen
+          ? html`<ion-button class="quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
+              <ion-icon slot="start" name="person-add-outline"></ion-icon>${erplora().t(CATALOG, 'ui.quickAddCustomer', { term: this.q.trim() })}
+            </ion-button>`
+          : nothing}
+        ${this.quickOpen ? html`<form class="quick" @submit=${(e: Event) => { e.preventDefault(); void this.quickCreate(); }}>
+            <div class="row">
+              <ion-input fill="outline" label=${t('ui.quickName')} label-placement="floating" .value=${this.quickName} @ionInput=${(e: Event) => (this.quickName = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+              <ion-input fill="outline" type="tel" inputmode="tel" label=${t('ui.quickPhone')} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e: Event) => (this.quickPhone = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+            </div>
+            ${this.quickError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : nothing}
+            <div class="row">
+              <ion-button type="submit" size="small" ?disabled=${this.creating}>${this.creating ? t('ui.saving') : t('ui.quickCreate')}</ion-button>
+              <ion-button size="small" fill="clear" @click=${() => (this.quickOpen = false)}>${t('ui.cancel')}</ion-button>
+            </div>
+          </form>` : nothing}
         ${this.selectedId
           ? html`<ion-button slot="footer" class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>`
           : nothing}

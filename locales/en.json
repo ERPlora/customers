@@ -164,7 +164,15 @@
     "noCustomers": "No customers.",
     "removeCustomer": "Remove customer",
     "errLoadCustomers": "Could not load the customers",
-    "customFields": "Custom fields"
+    "customFields": "Custom fields",
+    "posNoPermission": "You do not have permission to look up customers.",
+    "errCustomerSnapshot": "Could not load {name}'s fiscal data. Tap again to retry.",
+    "retry": "Retry",
+    "quickAddCustomer": "+ New customer “{term}”",
+    "quickName": "Name",
+    "quickPhone": "Phone",
+    "quickNameRequired": "A name is required.",
+    "quickCreate": "Create and assign"
   },
   "errors": {
     "customers": {

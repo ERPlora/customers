@@ -3584,7 +3584,15 @@ var es_default = {
     noCustomers: "No hay clientes.",
     removeCustomer: "Quitar cliente",
     errLoadCustomers: "No se pudieron cargar los clientes",
-    customFields: "Campos personalizados"
+    customFields: "Campos personalizados",
+    posNoPermission: "No tienes permiso para consultar clientes.",
+    errCustomerSnapshot: "No se pudieron cargar los datos fiscales de {name}. Vuelve a pulsar para reintentar.",
+    retry: "Reintentar",
+    quickAddCustomer: "+ Nuevo cliente \xAB{term}\xBB",
+    quickName: "Nombre",
+    quickPhone: "Tel\xE9fono",
+    quickNameRequired: "El nombre es obligatorio.",
+    quickCreate: "Crear y asignar"
   },
   errors: {
     customers: {
@@ -3765,7 +3773,15 @@ var en_default = {
     noCustomers: "No customers.",
     removeCustomer: "Remove customer",
     errLoadCustomers: "Could not load the customers",
-    customFields: "Custom fields"
+    customFields: "Custom fields",
+    posNoPermission: "You do not have permission to look up customers.",
+    errCustomerSnapshot: "Could not load {name}'s fiscal data. Tap again to retry.",
+    retry: "Retry",
+    quickAddCustomer: "+ New customer \u201C{term}\u201D",
+    quickName: "Name",
+    quickPhone: "Phone",
+    quickNameRequired: "A name is required.",
+    quickCreate: "Create and assign"
   },
   errors: {
     customers: {
@@ -4524,6 +4540,12 @@ var ErpCustomersList = class extends i3 {
     this.groupIds = [];
     this.tagIds = [];
     this.newNote = "";
+    /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
+     *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
+     *  fillers are resolved by literal slot name through the SDK, mounted in `.detail-slot`, and told
+     *  WHICH customer is open by a `CustomEvent` on the filler element — never by props or calls. */
+    this.detailFillers = [];
+    this.detailSlotResolved = false;
     this.onLocaleChange = () => this.requestUpdate();
   }
   static {
@@ -4731,7 +4753,7 @@ var ErpCustomersList = class extends i3 {
         return;
       }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id)]);
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.resolveDetailSlot()]);
     } catch (e6) {
       this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
@@ -4768,6 +4790,35 @@ var ErpCustomersList = class extends i3 {
       this.tagIds = (tids ?? []).map((r6) => String(r6.id));
     } catch {
     }
+  }
+  async resolveDetailSlot() {
+    if (this.detailSlotResolved) return;
+    this.detailSlotResolved = true;
+    const sdk = globalThis.erplora;
+    if (!sdk?.loadSlot) return;
+    let resolved = [];
+    try {
+      resolved = await sdk.loadSlot("customers.detail") ?? [];
+    } catch {
+      resolved = [];
+    }
+    this.detailFillers = resolved.map((f3) => ({ component: f3.component, el: document.createElement(f3.component) }));
+    this.requestUpdate();
+  }
+  /** (Re)mounts the fillers in the sheet and tells them the open customer; idempotent across re-renders. */
+  ensureDetailSlotMounted() {
+    const host = this.renderRoot.querySelector(".detail-slot");
+    if (!host || !this.detail) return;
+    for (const f3 of this.detailFillers) {
+      if (f3.el.parentElement !== host) host.appendChild(f3.el);
+      f3.el.dispatchEvent(new CustomEvent("erp:customer-detail", {
+        detail: { customer_id: this.detail.id, customer_name: this.detail.name },
+        bubbles: false
+      }));
+    }
+  }
+  updated() {
+    this.ensureDetailSlotMounted();
   }
   closeDetail() {
     this.detail = null;
@@ -5099,6 +5150,7 @@ var ErpCustomersList = class extends i3 {
                     </li>`)}
                   </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}` : A}
           </section>` : A}
+      ${this.detailFillers.length ? b2`<section class="panel detail-slot"></section>` : A}
     </div>`;
   }
   /** Alta rápida: SIEMPRE proyectada en el panel `create` de la tabla (si solo se pintara al pulsar
@@ -5502,6 +5554,12 @@ function direccionFiscal(c5) {
   return [c5.address, localidad, c5.country].filter((p4) => p4 && String(p4).trim()).join(", ");
 }
 var VACIO = { customer_id: null, customer_name: "", customer_tax_id: "", customer_address: "" };
+function can4(permission) {
+  const c5 = erplora4();
+  return typeof c5.hasPermission === "function" ? c5.hasPermission(permission) : true;
+}
+var isForbidden = (e6) => e6?.code === "permission_denied";
+var looksLikePhone = (v3) => /^[+\d][\d\s().-]{5,}$/.test(v3.trim());
 var ErpCustomersPosSearch = class extends i3 {
   constructor() {
     super(...arguments);
@@ -5511,6 +5569,14 @@ var ErpCustomersPosSearch = class extends i3 {
     this.selectedName = "";
     this.loading = false;
     this.error = "";
+    this.state = "idle";
+    this.quickOpen = false;
+    this.quickName = "";
+    this.quickPhone = "";
+    this.quickError = "";
+    this.creating = false;
+    /** Sequence of the last search issued: an older answer arriving later is dropped. */
+    this.searchSeq = 0;
     this.onReset = () => {
       this.selectedId = void 0;
       this.selectedName = "";
@@ -5539,6 +5605,11 @@ var ErpCustomersPosSearch = class extends i3 {
     .list .sel { --background: color-mix(in srgb, var(--ion-color-primary,#0091ce) 16%, transparent); }
     .empty { color:#8b897f; text-align:center; padding:1.5rem 0; }
     .err { color:#d9480f; padding:.6rem 1rem; }
+    .quick { display:flex; flex-direction:column; gap:.5rem; padding:.5rem .75rem; }
+    .quick .row { display:flex; gap:.5rem; align-items:flex-end; }
+    .quick ion-input { flex:1; }
+    .quick-add { --padding-start:.75rem; min-height:44px; }
+    .retry { min-height:44px; }
   `;
   }
   connectedCallback() {
@@ -5559,16 +5630,32 @@ var ErpCustomersPosSearch = class extends i3 {
     if (open && !this.results.length) void this.search("");
   }
   async search(q) {
+    const seq = ++this.searchSeq;
     this.loading = true;
     this.error = "";
+    this.state = "searching";
     try {
-      const r6 = await erplora4().query("customers.list", { search: q, limit: 20, sort: "name", dir: "asc" }).catch(() => []);
+      const r6 = await erplora4().query("customers.list", { search: q, limit: 20, sort: "name", dir: "asc" });
+      if (seq !== this.searchSeq) return;
       this.results = rows(r6);
+      this.state = this.results.length ? "idle" : "empty";
     } catch (e6) {
-      this.error = e6 instanceof Error ? e6.message : erplora4().t(CATALOG4, "ui.errLoadCustomers");
+      if (seq !== this.searchSeq) return;
+      this.results = [];
+      if (isForbidden(e6)) {
+        this.state = "forbidden";
+        this.error = erplora4().t(CATALOG4, "ui.posNoPermission");
+      } else {
+        this.state = "error";
+        this.error = e6 instanceof Error && e6.message ? e6.message : erplora4().t(CATALOG4, "ui.errLoadCustomers");
+      }
     } finally {
-      this.loading = false;
+      if (seq === this.searchSeq) this.loading = false;
     }
+  }
+  /** Retry keeps the term the cashier typed (customers#18). */
+  retry() {
+    void this.search(this.q);
   }
   onInput(v3) {
     this.q = v3;
@@ -5586,18 +5673,69 @@ var ErpCustomersPosSearch = class extends i3 {
     this.renderRoot.querySelector("ok-spotlight-search")?.close?.();
   }
   async pick(c5) {
+    this.error = "";
+    let ficha;
+    try {
+      ficha = rows(await erplora4().query("customers.get", { customer_id: c5.id }))[0];
+    } catch (e6) {
+      this.state = isForbidden(e6) ? "forbidden" : "error";
+      this.error = isForbidden(e6) ? erplora4().t(CATALOG4, "ui.posNoPermission") : erplora4().t(CATALOG4, "ui.errCustomerSnapshot", { name: c5.name });
+      return;
+    }
+    if (!ficha) {
+      this.state = "error";
+      this.error = erplora4().t(CATALOG4, "ui.errCustomerNotFound");
+      return;
+    }
     this.selectedId = c5.id;
-    this.selectedName = c5.name;
+    this.selectedName = ficha.name || c5.name;
     this.closeOverlay();
-    const ficha = rows(
-      await erplora4().query("customers.get", { customer_id: c5.id }).catch(() => [])
-    )[0];
     this.emit({
       customer_id: c5.id,
-      customer_name: c5.name,
-      customer_tax_id: ficha?.tax_id ?? "",
-      customer_address: ficha ? direccionFiscal(ficha) : ""
+      customer_name: ficha.name || c5.name,
+      customer_tax_id: ficha.tax_id ?? "",
+      customer_address: direccionFiscal(ficha)
     });
+  }
+  // — Quick add (customers#18). Market: Square, Toast, Lightspeed, Shopify POS, Fresha all offer
+  // «+ new customer» from the search itself with name/phone only. If the term looks like a phone it
+  // pre-fills the phone; otherwise the name. Duplicate guard: an exact phone match among the current
+  // results is picked instead of created (no double customer for one WhatsApp number). —
+  openQuickAdd() {
+    if (!can4("customers.add_customer")) return;
+    const term = this.q.trim();
+    this.quickName = looksLikePhone(term) ? "" : term;
+    this.quickPhone = looksLikePhone(term) ? term : "";
+    this.quickError = "";
+    this.quickOpen = true;
+  }
+  async quickCreate() {
+    if (!can4("customers.add_customer") || this.creating) return;
+    const name = this.quickName.trim();
+    const phone = this.quickPhone.trim();
+    if (!name) {
+      this.quickError = erplora4().t(CATALOG4, "ui.quickNameRequired");
+      return;
+    }
+    const dup = phone ? this.results.find((r6) => (r6.phone ?? "").replace(/\s+/g, "") === phone.replace(/\s+/g, "")) : void 0;
+    if (dup) {
+      this.quickOpen = false;
+      await this.pick(dup);
+      return;
+    }
+    this.creating = true;
+    this.quickError = "";
+    try {
+      const out = await erplora4().command("customers.create", { name, phone, source: "walk_in" });
+      const id = out?.new_ids?.[0];
+      if (!id) throw new Error(erplora4().t(CATALOG4, "ui.errCreate"));
+      this.quickOpen = false;
+      await this.pick({ id, name, phone });
+    } catch (e6) {
+      this.quickError = e6 instanceof Error && e6.message ? e6.message : erplora4().t(CATALOG4, "ui.errCreate");
+    } finally {
+      this.creating = false;
+    }
   }
   clear() {
     this.selectedId = void 0;
@@ -5616,6 +5754,7 @@ var ErpCustomersPosSearch = class extends i3 {
         @ok-open=${(e6) => this.onOkOpen(e6.detail.open)}
         @ok-input=${(e6) => this.onInput(e6.detail.value)}>
         ${this.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : A}
+        ${this.state === "error" ? b2`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t5("ui.retry")}</ion-button>` : A}
         <ion-list class="list" lines="none">
           ${this.results.map((c5) => b2`
             <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
@@ -5625,9 +5764,26 @@ var ErpCustomersPosSearch = class extends i3 {
               </ion-label>
               ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : A}
             </ion-item>`)}
-          ${!this.loading && !this.results.length ? b2`<ok-empty-state icon=${this.q ? "search-outline" : "people-outline"} message=${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}></ok-empty-state>` : A}
-          ${this.loading ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
+          ${this.state === "empty" ? b2`<ok-empty-state icon=${this.q ? "search-outline" : "people-outline"} message=${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}></ok-empty-state>` : A}
+          ${this.state === "searching" ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
         </ion-list>
+        ${this.q.trim() && can4("customers.add_customer") && this.state !== "forbidden" && this.state !== "searching" && !this.quickOpen ? b2`<ion-button class="quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
+              <ion-icon slot="start" name="person-add-outline"></ion-icon>${erplora4().t(CATALOG4, "ui.quickAddCustomer", { term: this.q.trim() })}
+            </ion-button>` : A}
+        ${this.quickOpen ? b2`<form class="quick" @submit=${(e6) => {
+      e6.preventDefault();
+      void this.quickCreate();
+    }}>
+            <div class="row">
+              <ion-input fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e6) => this.quickName = String(e6.target.value ?? "")}></ion-input>
+              <ion-input fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e6) => this.quickPhone = String(e6.target.value ?? "")}></ion-input>
+            </div>
+            ${this.quickError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : A}
+            <div class="row">
+              <ion-button type="submit" size="small" ?disabled=${this.creating}>${this.creating ? t5("ui.saving") : t5("ui.quickCreate")}</ion-button>
+              <ion-button size="small" fill="clear" @click=${() => this.quickOpen = false}>${t5("ui.cancel")}</ion-button>
+            </div>
+          </form>` : A}
         ${this.selectedId ? b2`<ion-button slot="footer" class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>` : A}
       </ok-spotlight-search>
     `;
@@ -5654,6 +5810,24 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersPosSearch.prototype, "error", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "state", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "quickOpen", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "quickName", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "quickPhone", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "quickError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersPosSearch.prototype, "creating", 2);
 define("erp-customers-pos-search", ErpCustomersPosSearch);
 
 // modules/customers/ui/components/erp-customers-tags/erp-customers-tags.ts
@@ -5663,7 +5837,7 @@ function erplora5() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-function can4(permission) {
+function can5(permission) {
   return erplora5().hasPermission?.(permission) ?? true;
 }
 var ErpCustomersTags = class extends i3 {
@@ -5704,10 +5878,10 @@ var ErpCustomersTags = class extends i3 {
   get rowActions() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
     const actions = [];
-    if (can4("customers.change_customertag")) {
+    if (can5("customers.change_customertag")) {
       actions.push({ id: "edit", label: t5("ui.actionEdit"), icon: "create-outline" });
     }
-    if (can4("customers.delete_customertag")) {
+    if (can5("customers.delete_customertag")) {
       actions.push({ id: "delete", label: t5("ui.actionDelete"), icon: "trash-outline", color: "danger" });
     }
     return actions;
@@ -5738,7 +5912,7 @@ var ErpCustomersTags = class extends i3 {
     this.formError = "";
   }
   startEdit(tag) {
-    if (!can4("customers.change_customertag")) return;
+    if (!can5("customers.change_customertag")) return;
     this.editing = tag;
     this.fName = tag.name;
     this.fColor = tag.color || "primary";
@@ -5749,8 +5923,8 @@ var ErpCustomersTags = class extends i3 {
   }
   onRowAction(ev) {
     const tag = ev.detail.row;
-    if (ev.detail.actionId === "edit" && can4("customers.change_customertag")) this.startEdit(tag);
-    if (ev.detail.actionId === "delete" && can4("customers.delete_customertag")) {
+    if (ev.detail.actionId === "edit" && can5("customers.change_customertag")) this.startEdit(tag);
+    if (ev.detail.actionId === "delete" && can5("customers.delete_customertag")) {
       this.pendingDelete = tag;
       this.formMsg = "";
       this.formError = "";
@@ -5760,7 +5934,7 @@ var ErpCustomersTags = class extends i3 {
     ev.preventDefault();
     if (!this.fName.trim()) return;
     const editing = this.editing;
-    if (!can4(editing ? "customers.change_customertag" : "customers.add_customertag")) return;
+    if (!can5(editing ? "customers.change_customertag" : "customers.add_customertag")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -5789,7 +5963,7 @@ var ErpCustomersTags = class extends i3 {
     }
   }
   async confirmDelete() {
-    if (!this.pendingDelete || !can4("customers.delete_customertag")) return;
+    if (!this.pendingDelete || !can5("customers.delete_customertag")) return;
     this.saving = true;
     this.formError = "";
     try {
@@ -5834,7 +6008,7 @@ var ErpCustomersTags = class extends i3 {
       ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can4("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e6) => this.onRowAction(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;

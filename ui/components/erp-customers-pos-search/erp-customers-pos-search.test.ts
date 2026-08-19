@@ -99,3 +99,114 @@ describe('erp-customers-pos-search', () => {
     });
   });
 });
+
+// customers#18 — the selector must never DEGRADE SILENTLY. Two `.catch(() => [])` turned "Customers
+// is down" and "no permission" into "no matches", and a failed `customers.get` let the sale go on
+// with a customer WITHOUT fiscal snapshot. Market (Square, Toast, Lightspeed, Shopify POS, Fresha):
+// visible error with retry, and «+ new customer» inline from the search itself (name/phone).
+describe('estados diferenciados y alta rápida (customers#18)', () => {
+  type WC = HTMLElement & { shadowRoot: ShadowRoot; updateComplete: Promise<unknown> } & Record<string, unknown>;
+  const flush = async (el: WC) => { await el.updateComplete; await new Promise((r) => setTimeout(r, 0)); await el.updateComplete; };
+  const sdk = () => (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+
+  it('un 500 en la búsqueda muestra ERROR con reintento (no «sin resultados»)', async () => {
+    sdk().query = async (name: string) => { if (name === 'customers.list') throw new Error('boom'); return []; };
+    const el = (await montar()) as WC;
+    await abrir(el);
+    expect(el.state, 'estado error, no empty').toBe('error');
+    expect(el.shadowRoot.querySelector('ok-empty-state'), 'no se pinta "sin resultados"').toBeNull();
+    expect(el.shadowRoot.querySelector('ok-inline-feedback[tone="danger"]'), 'error visible').toBeTruthy();
+    expect(el.shadowRoot.querySelector('.retry'), 'botón de reintento').toBeTruthy();
+  });
+
+  it('un permission_denied muestra FALTA DE PERMISO, sin reintento', async () => {
+    sdk().query = async (name: string) => {
+      if (name === 'customers.list') throw Object.assign(new Error('nope'), { code: 'permission_denied' });
+      return [];
+    };
+    const el = (await montar()) as WC;
+    await abrir(el);
+    expect(el.state).toBe('forbidden');
+    expect(el.shadowRoot.querySelector('.retry')).toBeNull();
+  });
+
+  it('reintentar conserva el término y una respuesta VIEJA no pisa a la nueva', async () => {
+    let calls = 0;
+    const gates: Array<() => void> = [];
+    sdk().query = async (name: string, params?: Record<string, unknown>) => {
+      if (name !== 'customers.list') return [];
+      calls += 1;
+      const term = String(params?.search ?? '');
+      await new Promise<void>((r) => gates.push(r));
+      return [{ id: `c-${term}`, name: `Result for ${term}` }];
+    };
+    const el = (await montar()) as WC;
+    await abrir(el); // 1st call, term ''
+    (el.onInput as (v: string) => void)('an');
+    await new Promise((r) => setTimeout(r, 350)); // debounce → 2nd call, term 'an'
+    expect(calls).toBe(2);
+    gates[1](); await flush(el); // newest resolves first
+    gates[0](); await flush(el); // stale resolves last
+    const items = [...el.shadowRoot.querySelectorAll('ion-item h3')].map((n) => n.textContent);
+    expect(items, 'the stale answer must not overwrite the newest').toEqual(['Result for an']);
+    expect(el.q).toBe('an');
+  });
+
+  it('si customers.get falla NO se emite selección: error visible, la venta no sigue sin snapshot', async () => {
+    sdk().query = async (name: string) => {
+      if (name === 'customers.get') throw new Error('down');
+      if (name === 'customers.list') return [ANA];
+      return [];
+    };
+    const el = (await montar()) as WC;
+    const emitidos: unknown[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+    await abrir(el);
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
+    await flush(el);
+    expect(emitidos, 'nothing emitted without the fiscal snapshot').toEqual([]);
+    expect(el.selectedId, 'no customer stays selected').toBeUndefined();
+    expect(el.shadowRoot.querySelector('ok-inline-feedback[tone="danger"]')).toBeTruthy();
+  });
+
+  it('alta rápida desde el buscador: nombre/teléfono → customers.create → selección con snapshot', async () => {
+    const comandos: { name: string; payload: Record<string, unknown> }[] = [];
+    sdk().hasPermission = () => true;
+    sdk().command = async (name: string, payload: Record<string, unknown>) => {
+      comandos.push({ name, payload });
+      return { ok: true, new_ids: ['cus-new'] };
+    };
+    sdk().query = async (name: string, params?: Record<string, unknown>) => {
+      if (name === 'customers.list') return [];
+      if (name === 'customers.get') return [{ id: params?.customer_id, name: 'Luis', phone: '600', tax_id: '', address: '', city: '', postal_code: '', country: '' }];
+      return [];
+    };
+    const el = (await montar()) as WC;
+    const emitidos: Record<string, unknown>[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+    await abrir(el);
+    (el.onInput as (v: string) => void)('Luis');
+    await new Promise((r) => setTimeout(r, 350));
+    await flush(el);
+    const add = el.shadowRoot.querySelector<HTMLElement>('.quick-add');
+    expect(add, '«+ new customer» inline when the search has a term').toBeTruthy();
+    add!.click();
+    await flush(el);
+    (el.quickPhone = '600');
+    await (el.quickCreate as () => Promise<void>)();
+    await flush(el);
+    expect(comandos.map((c) => c.name)).toEqual(['customers.create']);
+    expect(comandos[0].payload).toMatchObject({ name: 'Luis', phone: '600' });
+    expect(emitidos.at(-1)).toMatchObject({ customer_id: 'cus-new', customer_name: 'Luis' });
+  });
+
+  it('sin permiso de alta no hay alta rápida', async () => {
+    sdk().hasPermission = (p: string) => p !== 'customers.add_customer';
+    const el = (await montar()) as WC;
+    await abrir(el);
+    (el.onInput as (v: string) => void)('Luis');
+    await new Promise((r) => setTimeout(r, 350));
+    await flush(el);
+    expect(el.shadowRoot.querySelector('.quick-add')).toBeNull();
+  });
+});

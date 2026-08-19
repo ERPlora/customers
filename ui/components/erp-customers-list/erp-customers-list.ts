@@ -204,6 +204,13 @@ export class ErpCustomersList extends LitElement {
 
   private unsub?: () => void;
 
+  /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
+   *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
+   *  fillers are resolved by literal slot name through the SDK, mounted in `.detail-slot`, and told
+   *  WHICH customer is open by a `CustomEvent` on the filler element — never by props or calls. */
+  private detailFillers: Array<{ component: string; el: HTMLElement }> = [];
+  private detailSlotResolved = false;
+
   private get columns(): DataTableColumn[] {
     const t = (k: string): string => erplora().t(CATALOG, k);
     return [
@@ -347,7 +354,7 @@ export class ErpCustomersList extends LitElement {
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
-      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id)]);
+      await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.resolveDetailSlot()]);
     } catch (e) {
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
@@ -386,6 +393,35 @@ export class ErpCustomersList extends LitElement {
       this.groupIds = (gids ?? []).map((r) => String(r.id));
       this.tagIds = (tids ?? []).map((r) => String(r.id));
     } catch { /* asignación opcional si faltan permisos de grupos/tags */ }
+  }
+
+  private async resolveDetailSlot(): Promise<void> {
+    if (this.detailSlotResolved) return;
+    this.detailSlotResolved = true;
+    const sdk = (globalThis as {
+      erplora?: { loadSlot?: (s: string) => Promise<Array<Record<string, unknown> & { component: string }>> };
+    }).erplora;
+    if (!sdk?.loadSlot) return;
+    let resolved: Array<Record<string, unknown> & { component: string }> = [];
+    try { resolved = (await sdk.loadSlot('customers.detail')) ?? []; } catch { resolved = []; }
+    this.detailFillers = resolved.map((f) => ({ component: f.component, el: document.createElement(f.component) as HTMLElement }));
+    this.requestUpdate();
+  }
+
+  /** (Re)mounts the fillers in the sheet and tells them the open customer; idempotent across re-renders. */
+  private ensureDetailSlotMounted(): void {
+    const host = this.renderRoot.querySelector('.detail-slot') as HTMLElement | null;
+    if (!host || !this.detail) return;
+    for (const f of this.detailFillers) {
+      if (f.el.parentElement !== host) host.appendChild(f.el);
+      f.el.dispatchEvent(new CustomEvent('erp:customer-detail', {
+        detail: { customer_id: this.detail.id, customer_name: this.detail.name }, bubbles: false,
+      }));
+    }
+  }
+
+  protected updated(): void {
+    this.ensureDetailSlotMounted();
   }
 
   private closeDetail() {
@@ -731,6 +767,7 @@ export class ErpCustomersList extends LitElement {
               : nothing}
           </section>`
         : nothing}
+      ${this.detailFillers.length ? html`<section class="panel detail-slot"></section>` : nothing}
     </div>`;
   }
 
