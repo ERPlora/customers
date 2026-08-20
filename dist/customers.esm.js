@@ -4077,12 +4077,12 @@ var ErpCustomersFields = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
       ${editing ? b2`<h3>${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
-      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-select fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e6) => this.fType = e6.target.value}>
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
+      <ion-select mode="md" fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e6) => this.fType = e6.target.value}>
         ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
       </ion-select>
-      ${this.fType === "select" ? b2`<ion-input fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e6) => this.fOptions = e6.target.value}></ion-input>` : A}
-      <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
+      ${this.fType === "select" ? b2`<ion-input mode="md" fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e6) => this.fOptions = e6.target.value}></ion-input>` : A}
+      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
       <ion-checkbox .checked=${this.fRequired} @ionChange=${(e6) => this.fRequired = e6.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
       ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
@@ -4323,10 +4323,10 @@ var ErpCustomersGroups = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
       ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
-      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-input fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e6) => this.fDescription = e6.target.value}></ion-input>
-      <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
-      <ion-input type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e6) => this.fDescription = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
+      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
@@ -5227,7 +5227,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.eraseDataTitle")}</h3>
       <p>${t5("ui.eraseDataConfirm", { name: this.detail.name })}</p>
-      <ion-input fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
+      <ion-input mode="md" fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e6) => this.eraseReason = String(e6.target.value ?? "")}></ion-input>
       <footer class="actions">
         <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
@@ -5265,13 +5265,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         } catch {
           opts = [];
         }
-        return b2`<ion-select data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+        return b2`<ion-select mode="md" data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
               .value=${f3.value} @ionChange=${set(f3.id)}>
               ${opts.map((o7) => b2`<ion-select-option value=${o7}>${o7}</ion-select-option>`)}
             </ion-select>`;
       }
       if (f3.field_type === "textarea") {
-        return b2`<ion-textarea data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+        return b2`<ion-textarea mode="md" data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
               auto-grow .value=${f3.value} @ionInput=${set(f3.id)}></ion-textarea>`;
       }
       if (f3.field_type === "boolean") {
@@ -5281,17 +5281,27 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
             </ion-checkbox>`;
       }
       const type = f3.field_type === "number" ? "number" : f3.field_type === "date" ? "date" : "text";
-      return b2`<ion-input data-field=${f3.id} type=${type} fill="outline" label=${label}
+      return b2`<ion-input mode="md" data-field=${f3.id} type=${type} fill="outline" label=${label}
             label-placement="floating" .value=${f3.value} @ionInput=${set(f3.id)}></ion-input>`;
     })}
       </div>
     </section>`;
   }
+  // `mode="md"` on EVERY control that declares `fill` — here and everywhere else in this module
+  // (customers#48). Ionic implements `fill` for `md` only:
+  //
+  //     const hasOutlineFill = mode === 'md' && this.fill === 'outline';
+  //
+  // and the Hub pins Ionic to `ios` globally (ADR-0143, hub#760). Without the per-control mode the
+  // attribute is a SILENT no-op: no box, no border, no surface — a form that reads as static text.
+  // Nothing throws, so the guard that keeps it from creeping back is a test:
+  // `tests/ionic_fill_needs_md.test.py` (source, runs in the module gate) and `fill-needs-md.test.ts`
+  // (render).
   renderEditForm() {
     const f3 = this.form;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const input = (key, label, type = "text") => b2`
-      <ion-input type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f3[key] ?? "")}
+      <ion-input mode="md" type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f3[key] ?? "")}
         @ionInput=${(e6) => this.form = { ...this.form, [key]: e6.target.value }}></ion-input>`;
     return b2`<form @submit=${(e6) => this.saveEdit(e6)}>
       <div class="grid2">
@@ -5307,17 +5317,17 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${input("birthday", t5("ui.fieldBirthday"), "date")}
         ${input("anniversary", t5("ui.fieldAnniversary"), "date")}
         ${input("source", t5("ui.fieldSource"))}
-        <ion-select fill="outline" label=${t5("ui.colStage")} label-placement="floating" .value=${f3.lifecycle_stage}
+        <ion-select mode="md" fill="outline" label=${t5("ui.colStage")} label-placement="floating" .value=${f3.lifecycle_stage}
           @ionChange=${(e6) => this.form = { ...this.form, lifecycle_stage: e6.target.value }}>
           ${Object.keys(STAGE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${stageLabel(v3)}</ion-select-option>`)}
         </ion-select>
-        <ion-select fill="outline" label=${t5("ui.fieldPreferredChannel")} label-placement="floating" .value=${f3.preferred_channel}
+        <ion-select mode="md" fill="outline" label=${t5("ui.fieldPreferredChannel")} label-placement="floating" .value=${f3.preferred_channel}
           @ionChange=${(e6) => this.form = { ...this.form, preferred_channel: e6.target.value }}>
           ${Object.keys(CHANNEL_KEY).map((v3) => b2`<ion-select-option value=${v3}>${channelLabel(v3)}</ion-select-option>`)}
         </ion-select>
       </div>
       <div class="form">
-        <ion-textarea fill="outline" label=${t5("ui.fieldInternalNotes")} label-placement="floating" auto-grow .value=${f3.notes}
+        <ion-textarea mode="md" fill="outline" label=${t5("ui.fieldInternalNotes")} label-placement="floating" auto-grow .value=${f3.notes}
           @ionInput=${(e6) => this.form = { ...this.form, notes: e6.target.value }}></ion-textarea>
       </div>
       ${this.renderCustomFields()}
@@ -5471,7 +5481,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       ${can3("customers.add_note") || can3("customers.view_activity") ? b2`<section class="panel">
             ${can3("customers.add_note") ? b2`<h3>${t5("ui.addNote")}</h3>
                   <form class="form" @submit=${(e6) => this.addNote(e6)}>
-                    <ion-textarea fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
+                    <ion-textarea mode="md" fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
                       @ionInput=${(e6) => this.newNote = e6.target.value}></ion-textarea>
                     <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
                   </form>` : A}
@@ -5492,8 +5502,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   renderCreateForm() {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<form slot="create" class="create-form" @submit=${(e6) => this.create(e6)}>
-      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.newName} @ionInput=${(e6) => this.newName = e6.target.value}></ion-input>
-      <ion-input type="email" fill="outline" label=${t5("ui.colEmail")} label-placement="floating" .value=${this.newEmail} @ionInput=${(e6) => this.newEmail = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.newName} @ionInput=${(e6) => this.newName = e6.target.value}></ion-input>
+      <ion-input mode="md" type="email" fill="outline" label=${t5("ui.colEmail")} label-placement="floating" .value=${this.newEmail} @ionInput=${(e6) => this.newEmail = e6.target.value}></ion-input>
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
     </form>`;
   }
@@ -6133,8 +6143,8 @@ var ErpCustomersPosSearch = class extends i3 {
       void this.quickCreate();
     }}>
             <div class="row">
-              <ion-input fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e6) => this.quickName = String(e6.target.value ?? "")}></ion-input>
-              <ion-input fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e6) => this.quickPhone = String(e6.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e6) => this.quickName = String(e6.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e6) => this.quickPhone = String(e6.target.value ?? "")}></ion-input>
             </div>
             ${this.quickError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : A}
             <div class="row">
@@ -6352,8 +6362,8 @@ var ErpCustomersTags = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
       ${editing ? b2`<h3>${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
-      <ion-input fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-input fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}

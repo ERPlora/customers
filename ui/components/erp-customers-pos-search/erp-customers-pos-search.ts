@@ -313,8 +313,8 @@ export class ErpCustomersPosSearch extends LitElement {
           : nothing}
         ${this.quickOpen ? html`<form class="quick" @submit=${(e: Event) => { e.preventDefault(); void this.quickCreate(); }}>
             <div class="row">
-              <ion-input fill="outline" label=${t('ui.quickName')} label-placement="floating" .value=${this.quickName} @ionInput=${(e: Event) => (this.quickName = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
-              <ion-input fill="outline" type="tel" inputmode="tel" label=${t('ui.quickPhone')} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e: Event) => (this.quickPhone = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+              <ion-input mode="md" fill="outline" label=${t('ui.quickName')} label-placement="floating" .value=${this.quickName} @ionInput=${(e: Event) => (this.quickName = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t('ui.quickPhone')} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e: Event) => (this.quickPhone = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
             </div>
             ${this.quickError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : nothing}
             <div class="row">
