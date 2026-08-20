@@ -504,9 +504,16 @@
     "customers.delete": {
       "permission": "customers.delete_customer",
       "transaction": true,
+      "schema": "schemas/delete.json",
       "sql": [
         "commands/delete.sql"
       ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.customer_unavailable",
+        "message": "That customer is not available: it does not exist in this business."
+      },
       "emit": [
         "customer.deleted"
       ],
@@ -626,9 +633,16 @@
     "customers.groups.delete": {
       "permission": "customers.delete_customergroup",
       "transaction": true,
+      "schema": "schemas/group_delete.json",
       "sql": [
         "commands/group_delete.sql"
       ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.group_unavailable",
+        "message": "That group is not available: it does not exist in this business."
+      },
       "ai": {
         "description": "Deletes a customer group (destructive)"
       }
@@ -658,9 +672,16 @@
     "customers.tags.delete": {
       "permission": "customers.delete_customertag",
       "transaction": true,
+      "schema": "schemas/tag_delete.json",
       "sql": [
         "commands/tag_delete.sql"
       ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.tag_unavailable",
+        "message": "That tag is not available: it does not exist in this business."
+      },
       "ai": {
         "description": "Deletes a customer tag (destructive)"
       }
@@ -690,9 +711,16 @@
     "customers.fields.delete": {
       "permission": "customers.manage_custom_fields",
       "transaction": true,
+      "schema": "schemas/field_delete.json",
       "sql": [
         "commands/field_delete.sql"
       ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "error": "customers.field_unavailable",
+        "message": "That field is not available: it does not exist in this business."
+      },
       "ai": {
         "description": "Deletes a customer custom field (destructive)"
       }

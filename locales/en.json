@@ -209,7 +209,9 @@
       "field_invalid_boolean": "Invalid yes/no value: {message}",
       "field_invalid_option": "Value not among the field's options: {message}",
       "field_unavailable": "That field is not available in this business (it may have been deleted).",
-      "customer_unavailable": "That customer is not available in this business."
+      "customer_unavailable": "That customer is not available in this business.",
+      "group_unavailable": "That group is not available in this business (it may have been deleted).",
+      "tag_unavailable": "That tag is not available in this business (it may have been deleted)."
     }
   }
 }

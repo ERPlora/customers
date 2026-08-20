@@ -39,6 +39,20 @@ function can(permission: string): boolean {
   return erplora().hasPermission?.(permission) ?? true;
 }
 
+/** A business rejection (hub#139) carries a stable `code` (`customers.group_unavailable`…): translate it through
+ *  `errors.<code>` in the module catalog, with the handler's message as `{message}`; anything else
+ *  falls back to the error text or the generic key. */
+function domainErrorText(e: unknown, fallbackKey: string): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  const message = e instanceof Error ? e.message : '';
+  if (typeof code === 'string' && code.startsWith('customers.')) {
+    const key = `errors.${code}`;
+    const text = erplora().t(CATALOG, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora().t(CATALOG, fallbackKey);
+}
+
 /** CRUD de grupos de clientes (groups.list/create/update/delete). */
 export class ErpCustomersGroups extends LitElement {
   static styles = css`
@@ -195,7 +209,7 @@ export class ErpCustomersGroups extends LitElement {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDeleteGroup');
+      this.formError = domainErrorText(e, 'ui.errDeleteGroup');
     } finally {
       this.saving = false;
     }

@@ -1,0 +1,6 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.groups.delete payload", "type": "object", "additionalProperties": true,
+  "required": ["group_id"],
+  "properties": {
+    "group_id": { "type": "string", "minLength": 1,
+      "description": "Group to soft-delete. Required: a delete that matches no row must fail (customers#49)." } } }
