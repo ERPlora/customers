@@ -129,6 +129,76 @@ const stageLabel = (value: string): string => (STAGE_KEY[value] ? erplora().t(CA
 const channelLabel = (value: string): string => (CHANNEL_KEY[value] ? erplora().t(CATALOG, CHANNEL_KEY[value]) : value);
 
 /**
+ * **The timeline speaks the hub's language** (customers#50).
+ *
+ * A timeline entry carries a `title` and an `activity_type`, and both used to reach the screen raw:
+ * a Spanish hub read «Note added (note)». Since customers#50 this module's own producers store a
+ * KEY in `title` — text a person reads is never persisted (ADR-0055 / ADR-0199), because a row
+ * written today is read years later, possibly by a hub in another language.
+ *
+ * `LEGACY_TITLE` is what makes that a change and not a migration: the six sentences already written
+ * in the wild resolve to the same keys, so old rows read correctly too. Anything else — an entry
+ * another module wrote through `customers.activity.add` — is printed verbatim: that text is theirs.
+ */
+const ACTIVITY_TITLE_KEY: Record<string, string> = {
+  'activity.note_added': 'ui.activityNoteAdded',
+  'activity.purchase_recorded': 'ui.activityPurchaseRecorded',
+  'activity.purchase_voided': 'ui.activityPurchaseVoided',
+  'activity.consent_granted': 'ui.activityConsentGranted',
+  'activity.consent_withdrawn': 'ui.activityConsentWithdrawn',
+  'activity.customer_erased': 'ui.activityCustomerErased',
+};
+
+const LEGACY_TITLE: Record<string, string> = {
+  'Note added': 'ui.activityNoteAdded',
+  'Purchase recorded': 'ui.activityPurchaseRecorded',
+  'Purchase voided': 'ui.activityPurchaseVoided',
+  'Consent given': 'ui.activityConsentGranted',
+  'Consent withdrawn': 'ui.activityConsentWithdrawn',
+  'Customer data erased': 'ui.activityCustomerErased',
+};
+
+const ACTIVITY_TYPE_KEY: Record<string, string> = {
+  note: 'ui.activityTypeNote', purchase: 'ui.activityTypePurchase',
+  purchase_voided: 'ui.activityTypePurchaseVoided', consent_granted: 'ui.activityTypeConsentGranted',
+  consent_withdrawn: 'ui.activityTypeConsentWithdrawn', erased: 'ui.activityTypeErased',
+};
+
+const activityTitle = (title: string): string => {
+  const key = ACTIVITY_TITLE_KEY[title] ?? LEGACY_TITLE[title];
+  return key ? erplora().t(CATALOG, key) : title;
+};
+
+const activityTypeLabel = (value: string): string =>
+  (ACTIVITY_TYPE_KEY[value] ? erplora().t(CATALOG, ACTIVITY_TYPE_KEY[value]) : value);
+
+/**
+ * **A timestamp a person can read.**
+ *
+ * The server sends `2026-08-19T15:23:00.255043358+00:00` — NANOSECONDS and a UTC offset. Two things
+ * to know about that string:
+ *
+ *  - ECMAScript only defines up to three fractional digits. V8 is lenient, but WebKit is not, and
+ *    the Hub runs inside a WKWebView on the macOS and iOS builds of `erplora-app` (ADR-0160). A
+ *    `new Date()` straight on the raw value would render «Invalid Date» exactly on the counter
+ *    machines. Hence the truncation to milliseconds before parsing.
+ *  - The offset is the server's, so the browser converts to the hub's own zone on its own.
+ *
+ * An unparseable value falls back to the raw string: showing something odd beats showing nothing.
+ */
+function formatTimestamp(value: string | null | undefined): string {
+  if (!value) return '—';
+  const ms = String(value).replace(/(\.\d{3})\d+/, '$1');
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat(erplora().locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
+
+/**
  * **Consent, per channel** (customers#10).
  *
  * These three are always on screen even with no row behind them, because «nobody has ever asked
@@ -748,9 +818,11 @@ export class ErpCustomersList extends LitElement {
     this.saving = true;
     this.formError = '';
     try {
+      // No `title`: the command's SQL writes the key `activity.note_added` and the sheet
+      // translates it at render time (customers#50). Sending the translated label from here is how
+      // Spanish (or English) text ended up frozen in a column.
       await erplora().command('customers.notes.add', {
         customer_id: this.detail.id, content, author_name: '',
-        title: erplora().t(CATALOG, 'ui.noteAddedTitle'),
       });
       this.newNote = '';
       this.formMsg = erplora().t(CATALOG, 'ui.noteAdded');
@@ -978,7 +1050,7 @@ export class ErpCustomersList extends LitElement {
             <strong>${channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(channel)}</strong>
             <span class="muted">${t(CONSENT_STATE_KEY[state] ?? 'ui.consentNeverAsked')}</span>
             ${row?.occurred_at
-              ? html`<span class="muted">${row.occurred_at}${row.contact_point ? ` · ${row.contact_point}` : ''}</span>`
+              ? html`<span class="muted">${formatTimestamp(row.occurred_at)}${row.contact_point ? ` · ${row.contact_point}` : ''}</span>`
               : nothing}
           </div>
           ${!editable
@@ -1021,7 +1093,7 @@ export class ErpCustomersList extends LitElement {
               </div>
               ${f.notice_text ? html`<div class="d">${f.notice_text}</div>` : nothing}
               ${f.reason ? html`<div class="d">${f.reason}</div>` : nothing}
-              <div class="when">${f.occurred_at}${f.recorded_by ? ` · ${f.recorded_by}` : ''}</div>
+              <div class="when">${formatTimestamp(f.occurred_at)}${f.recorded_by ? ` · ${f.recorded_by}` : ''}</div>
             </li>`)}
           </ul>`
         : html`<p class="muted">${t('ui.consentNoHistory')}</p>`}
@@ -1092,9 +1164,9 @@ export class ErpCustomersList extends LitElement {
               ? html`<h3>${t('ui.activityHeading')}</h3>
                   ${this.activities.length ? html`<ul class="timeline">
                     ${this.activities.map((a) => html`<li>
-                      <div class="t">${a.title} <small>(${a.activity_type})</small></div>
+                      <div class="t">${activityTitle(a.title)} <small>· ${activityTypeLabel(a.activity_type)}</small></div>
                       ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
-                      <div class="when">${a.created_at}</div>
+                      <div class="when">${formatTimestamp(a.created_at)}</div>
                     </li>`)}
                   </ul>` : html`<p>${t('ui.noActivity')}</p>`}`
               : nothing}

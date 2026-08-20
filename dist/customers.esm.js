@@ -3483,7 +3483,6 @@ var es_default = {
     groupsAssigned: "Grupos asignados",
     tagsAssigned: "Etiquetas asignadas",
     noteAdded: "Nota a\xF1adida",
-    noteAddedTitle: "Nota a\xF1adida",
     fieldNif: "NIF/CIF",
     fieldCompany: "Empresa",
     fieldAddress: "Direcci\xF3n",
@@ -3515,6 +3514,18 @@ var es_default = {
     add: "A\xF1adir",
     activityHeading: "Actividad",
     noActivity: "Sin actividad registrada.",
+    activityNoteAdded: "Nota a\xF1adida",
+    activityPurchaseRecorded: "Compra registrada",
+    activityPurchaseVoided: "Compra anulada",
+    activityConsentGranted: "Consentimiento dado",
+    activityConsentWithdrawn: "Consentimiento retirado",
+    activityCustomerErased: "Datos personales borrados",
+    activityTypeNote: "Nota",
+    activityTypePurchase: "Compra",
+    activityTypePurchaseVoided: "Anulaci\xF3n",
+    activityTypeConsentGranted: "Consentimiento",
+    activityTypeConsentWithdrawn: "Consentimiento",
+    activityTypeErased: "Borrado",
     groupsTitle: "Grupos de clientes",
     newGroup: "Nuevo grupo",
     colDescription: "Descripci\xF3n",
@@ -3702,7 +3713,6 @@ var en_default = {
     groupsAssigned: "Groups assigned",
     tagsAssigned: "Tags assigned",
     noteAdded: "Note added",
-    noteAddedTitle: "Note added",
     fieldNif: "Tax ID",
     fieldCompany: "Company",
     fieldAddress: "Address",
@@ -3734,6 +3744,18 @@ var en_default = {
     add: "Add",
     activityHeading: "Activity",
     noActivity: "No activity recorded.",
+    activityNoteAdded: "Note added",
+    activityPurchaseRecorded: "Purchase recorded",
+    activityPurchaseVoided: "Purchase voided",
+    activityConsentGranted: "Consent given",
+    activityConsentWithdrawn: "Consent withdrawn",
+    activityCustomerErased: "Customer data erased",
+    activityTypeNote: "Note",
+    activityTypePurchase: "Purchase",
+    activityTypePurchaseVoided: "Void",
+    activityTypeConsentGranted: "Consent",
+    activityTypeConsentWithdrawn: "Consent",
+    activityTypeErased: "Erasure",
     groupsTitle: "Customer groups",
     newGroup: "New group",
     colDescription: "Description",
@@ -4570,6 +4592,46 @@ var CHANNEL_KEY = {
 };
 var stageLabel = (value) => STAGE_KEY[value] ? erplora3().t(CATALOG3, STAGE_KEY[value]) : value;
 var channelLabel = (value) => CHANNEL_KEY[value] ? erplora3().t(CATALOG3, CHANNEL_KEY[value]) : value;
+var ACTIVITY_TITLE_KEY = {
+  "activity.note_added": "ui.activityNoteAdded",
+  "activity.purchase_recorded": "ui.activityPurchaseRecorded",
+  "activity.purchase_voided": "ui.activityPurchaseVoided",
+  "activity.consent_granted": "ui.activityConsentGranted",
+  "activity.consent_withdrawn": "ui.activityConsentWithdrawn",
+  "activity.customer_erased": "ui.activityCustomerErased"
+};
+var LEGACY_TITLE = {
+  "Note added": "ui.activityNoteAdded",
+  "Purchase recorded": "ui.activityPurchaseRecorded",
+  "Purchase voided": "ui.activityPurchaseVoided",
+  "Consent given": "ui.activityConsentGranted",
+  "Consent withdrawn": "ui.activityConsentWithdrawn",
+  "Customer data erased": "ui.activityCustomerErased"
+};
+var ACTIVITY_TYPE_KEY = {
+  note: "ui.activityTypeNote",
+  purchase: "ui.activityTypePurchase",
+  purchase_voided: "ui.activityTypePurchaseVoided",
+  consent_granted: "ui.activityTypeConsentGranted",
+  consent_withdrawn: "ui.activityTypeConsentWithdrawn",
+  erased: "ui.activityTypeErased"
+};
+var activityTitle = (title) => {
+  const key = ACTIVITY_TITLE_KEY[title] ?? LEGACY_TITLE[title];
+  return key ? erplora3().t(CATALOG3, key) : title;
+};
+var activityTypeLabel = (value) => ACTIVITY_TYPE_KEY[value] ? erplora3().t(CATALOG3, ACTIVITY_TYPE_KEY[value]) : value;
+function formatTimestamp(value) {
+  if (!value) return "\u2014";
+  const ms = String(value).replace(/(\.\d{3})\d+/, "$1");
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat(erplora3().locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
 var CONSENT_CHANNELS = ["email", "whatsapp", "sms"];
 var CONSENT_NOTICE_VERSION = "counter-v1";
 var CONSENT_STATE_KEY = {
@@ -5177,8 +5239,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       await erplora3().command("customers.notes.add", {
         customer_id: this.detail.id,
         content,
-        author_name: "",
-        title: erplora3().t(CATALOG3, "ui.noteAddedTitle")
+        author_name: ""
       });
       this.newNote = "";
       this.formMsg = erplora3().t(CATALOG3, "ui.noteAdded");
@@ -5395,7 +5456,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           <div class="consent-what">
             <strong>${channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(channel)}</strong>
             <span class="muted">${t5(CONSENT_STATE_KEY[state] ?? "ui.consentNeverAsked")}</span>
-            ${row?.occurred_at ? b2`<span class="muted">${row.occurred_at}${row.contact_point ? ` \xB7 ${row.contact_point}` : ""}</span>` : A}
+            ${row?.occurred_at ? b2`<span class="muted">${formatTimestamp(row.occurred_at)}${row.contact_point ? ` \xB7 ${row.contact_point}` : ""}</span>` : A}
           </div>
           ${!editable ? A : state === "granted" ? b2`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
                   ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
@@ -5431,7 +5492,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
               </div>
               ${f3.notice_text ? b2`<div class="d">${f3.notice_text}</div>` : A}
               ${f3.reason ? b2`<div class="d">${f3.reason}</div>` : A}
-              <div class="when">${f3.occurred_at}${f3.recorded_by ? ` \xB7 ${f3.recorded_by}` : ""}</div>
+              <div class="when">${formatTimestamp(f3.occurred_at)}${f3.recorded_by ? ` \xB7 ${f3.recorded_by}` : ""}</div>
             </li>`)}
           </ul>` : b2`<p class="muted">${t5("ui.consentNoHistory")}</p>`}
     </section>`;
@@ -5488,9 +5549,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
             ${can3("customers.view_activity") ? b2`<h3>${t5("ui.activityHeading")}</h3>
                   ${this.activities.length ? b2`<ul class="timeline">
                     ${this.activities.map((a3) => b2`<li>
-                      <div class="t">${a3.title} <small>(${a3.activity_type})</small></div>
+                      <div class="t">${activityTitle(a3.title)} <small>· ${activityTypeLabel(a3.activity_type)}</small></div>
                       ${a3.description ? b2`<div class="d">${a3.description}</div>` : A}
-                      <div class="when">${a3.created_at}</div>
+                      <div class="when">${formatTimestamp(a3.created_at)}</div>
                     </li>`)}
                   </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}` : A}
           </section>` : A}
