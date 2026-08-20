@@ -802,7 +802,7 @@ export class ErpCustomersList extends LitElement {
     return html`<section class="panel">
       <h3>${t('ui.eraseDataTitle')}</h3>
       <p>${t('ui.eraseDataConfirm', { name: this.detail.name })}</p>
-      <ion-input fill="outline" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
+      <ion-input mode="md" fill="outline" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e: Event) => (this.eraseReason = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
       <footer class="actions">
         <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
@@ -839,13 +839,13 @@ export class ErpCustomersList extends LitElement {
           if (f.field_type === 'select') {
             let opts: string[] = [];
             try { opts = JSON.parse(f.options || '[]') as string[]; } catch { opts = []; }
-            return html`<ion-select data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+            return html`<ion-select mode="md" data-field=${f.id} fill="outline" label=${label} label-placement="floating"
               .value=${f.value} @ionChange=${set(f.id)}>
               ${opts.map((o) => html`<ion-select-option value=${o}>${o}</ion-select-option>`)}
             </ion-select>`;
           }
           if (f.field_type === 'textarea') {
-            return html`<ion-textarea data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+            return html`<ion-textarea mode="md" data-field=${f.id} fill="outline" label=${label} label-placement="floating"
               auto-grow .value=${f.value} @ionInput=${set(f.id)}></ion-textarea>`;
           }
           if (f.field_type === 'boolean') {
@@ -855,18 +855,28 @@ export class ErpCustomersList extends LitElement {
             </ion-checkbox>`;
           }
           const type = f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text';
-          return html`<ion-input data-field=${f.id} type=${type} fill="outline" label=${label}
+          return html`<ion-input mode="md" data-field=${f.id} type=${type} fill="outline" label=${label}
             label-placement="floating" .value=${f.value} @ionInput=${set(f.id)}></ion-input>`;
         })}
       </div>
     </section>`;
   }
 
+  // `mode="md"` on EVERY control that declares `fill` — here and everywhere else in this module
+  // (customers#48). Ionic implements `fill` for `md` only:
+  //
+  //     const hasOutlineFill = mode === 'md' && this.fill === 'outline';
+  //
+  // and the Hub pins Ionic to `ios` globally (ADR-0143, hub#760). Without the per-control mode the
+  // attribute is a SILENT no-op: no box, no border, no surface — a form that reads as static text.
+  // Nothing throws, so the guard that keeps it from creeping back is a test:
+  // `tests/ionic_fill_needs_md.test.py` (source, runs in the module gate) and `fill-needs-md.test.ts`
+  // (render).
   private renderEditForm() {
     const f = this.form;
     const t = (k: string): string => erplora().t(CATALOG, k);
     const input = (key: keyof EditForm, label: string, type = 'text') => html`
-      <ion-input type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f[key] ?? '')}
+      <ion-input mode="md" type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f[key] ?? '')}
         @ionInput=${(e: any) => (this.form = { ...this.form, [key]: e.target.value })}></ion-input>`;
     return html`<form @submit=${(e: Event) => this.saveEdit(e)}>
       <div class="grid2">
@@ -882,17 +892,17 @@ export class ErpCustomersList extends LitElement {
         ${input('birthday', t('ui.fieldBirthday'), 'date')}
         ${input('anniversary', t('ui.fieldAnniversary'), 'date')}
         ${input('source', t('ui.fieldSource'))}
-        <ion-select fill="outline" label=${t('ui.colStage')} label-placement="floating" .value=${f.lifecycle_stage}
+        <ion-select mode="md" fill="outline" label=${t('ui.colStage')} label-placement="floating" .value=${f.lifecycle_stage}
           @ionChange=${(e: any) => (this.form = { ...this.form, lifecycle_stage: e.target.value })}>
           ${Object.keys(STAGE_KEY).map((v) => html`<ion-select-option value=${v}>${stageLabel(v)}</ion-select-option>`)}
         </ion-select>
-        <ion-select fill="outline" label=${t('ui.fieldPreferredChannel')} label-placement="floating" .value=${f.preferred_channel}
+        <ion-select mode="md" fill="outline" label=${t('ui.fieldPreferredChannel')} label-placement="floating" .value=${f.preferred_channel}
           @ionChange=${(e: any) => (this.form = { ...this.form, preferred_channel: e.target.value })}>
           ${Object.keys(CHANNEL_KEY).map((v) => html`<ion-select-option value=${v}>${channelLabel(v)}</ion-select-option>`)}
         </ion-select>
       </div>
       <div class="form">
-        <ion-textarea fill="outline" label=${t('ui.fieldInternalNotes')} label-placement="floating" auto-grow .value=${f.notes}
+        <ion-textarea mode="md" fill="outline" label=${t('ui.fieldInternalNotes')} label-placement="floating" auto-grow .value=${f.notes}
           @ionInput=${(e: any) => (this.form = { ...this.form, notes: e.target.value })}></ion-textarea>
       </div>
       ${this.renderCustomFields()}
@@ -1073,7 +1083,7 @@ export class ErpCustomersList extends LitElement {
             ${can('customers.add_note')
               ? html`<h3>${t('ui.addNote')}</h3>
                   <form class="form" @submit=${(e: Event) => this.addNote(e)}>
-                    <ion-textarea fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
+                    <ion-textarea mode="md" fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
                       @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
                     <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
                   </form>`
@@ -1099,8 +1109,8 @@ export class ErpCustomersList extends LitElement {
   private renderCreateForm() {
     const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<form slot="create" class="create-form" @submit=${(e: Event) => this.create(e)}>
-      <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
-      <ion-input type="email" fill="outline" label=${t('ui.colEmail')} label-placement="floating" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.newName} @ionInput=${(e: any) => (this.newName = e.target.value)}></ion-input>
+      <ion-input mode="md" type="email" fill="outline" label=${t('ui.colEmail')} label-placement="floating" .value=${this.newEmail} @ionInput=${(e: any) => (this.newEmail = e.target.value)}></ion-input>
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
     </form>`;
   }

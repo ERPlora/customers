@@ -204,8 +204,8 @@ export class ErpCustomersTags extends LitElement {
     const editing = this.editing;
     return html`<form slot="create" class="form" @submit=${(e: Event) => this.save(e)}>
       ${editing ? html`<h3>${t('ui.editTagTitle', { name: editing.name })}</h3>` : nothing}
-      <ion-input fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-      <ion-input fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
       ${editing ? html`<ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActiveTag')}</ion-checkbox>` : nothing}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
       ${editing ? html`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
