@@ -170,7 +170,7 @@ def seed(hub: str, cid: str):
       INSERT INTO customers_customerfield (id, hub_id, name) VALUES ('f-{cid}', '{hub}', 'Usual dye');
       INSERT INTO customers_customerfieldvalue (id, hub_id, customer_id, field_id, value) VALUES ('v-{cid}', '{hub}', '{cid}', 'f-{cid}', '7.1');
       INSERT INTO customers_customernote (id, hub_id, customer_id, content, author_name) VALUES ('n-{cid}', '{hub}', '{cid}', 'Prefers window table', 'Luis');
-      INSERT INTO customers_customeractivity (id, hub_id, customer_id, activity_type, title, description) VALUES ('a-{cid}', '{hub}', '{cid}', 'note', 'Note added', 'Prefers window table');
+      INSERT INTO customers_customeractivity (id, hub_id, customer_id, activity_type, title, description) VALUES ('a-{cid}', '{hub}', '{cid}', 'note', 'activity.note_added', 'Prefers window table');
       INSERT INTO customers_purchase_ledger (id, hub_id, customer_id, source_type, source_id, amount, created_at, updated_at) VALUES ('l-{cid}', '{hub}', '{cid}', 'sale', 's-{cid}', 1550, '{NOW}', '{NOW}');
       INSERT INTO customers_customer_order (id, hub_id, customer_id, order_id, created_at, updated_at) VALUES ('o-{cid}', '{hub}', '{cid}', 'ord-{cid}', '{NOW}', '{NOW}');
     """,
@@ -310,7 +310,8 @@ def main() -> int:
         )
         check(
             "ONE live audit entry with actor and reason",
-            "Customer data erased|GDPR request by email|admin-a|0",
+            # The title is a KEY since customers#50: display text is never persisted.
+            "activity.customer_erased|GDPR request by email|admin-a|0",
             audit,
         )
         meta = json.loads(

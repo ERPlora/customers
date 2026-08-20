@@ -13,6 +13,9 @@
 -- there is one file instead of two that can drift. The metadata carries the axes; the description
 -- carries the words the person was shown (a grant) or the reason given (a withdrawal), which is
 -- what a human reading the timeline needs and what an inspection asks for.
+-- `title` is a KEY (`activity.consent_granted` / `activity.consent_withdrawn`), never a sentence:
+-- the words are the catalogue's (customers#50). The DESCRIPTION is different and stays verbatim —
+-- it is the notice the person was shown, and that is evidence, not UI text (EDPB 05/2020 §108).
 -- Runtime injects :new_id, :hub_id, :current_user_id, :now.
 INSERT INTO customers_customeractivity
   (id, hub_id, customer_id, activity_type, title, description, extra_metadata,
@@ -20,7 +23,7 @@ INSERT INTO customers_customeractivity
    is_deleted, created_by, updated_by, created_at, updated_at)
 SELECT :new_id, l.hub_id, l.customer_id,
        'consent_' || l.state,
-       CASE WHEN l.state = 'granted' THEN 'Consent given' ELSE 'Consent withdrawn' END,
+       CASE WHEN l.state = 'granted' THEN 'activity.consent_granted' ELSE 'activity.consent_withdrawn' END,
        CASE WHEN l.state = 'granted' THEN l.notice_text ELSE l.reason END,
        '{"purpose": "' || l.purpose || '", "channel": "' || l.channel || '", '
        || '"source": "' || l.source || '", "notice_version": "' || l.notice_version || '", '

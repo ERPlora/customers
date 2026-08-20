@@ -5,4 +5,5 @@
     "customer_id": { "type": "string", "minLength": 1 },
     "content": { "type": "string", "minLength": 1 },
     "author_name": { "type": "string" },
-    "title": { "type": "string", "description": "Timeline entry title (defaults to 'Note added')" } } }
+    "title": { "type": "string",
+      "description": "Timeline entry title. Leave it out and the entry gets the module's key, `activity.note_added`, which the sheet translates at render time — a sentence written here is stored verbatim and can never be translated afterwards (customers#50)." } } }
