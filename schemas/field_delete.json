@@ -1,0 +1,6 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.fields.delete payload", "type": "object", "additionalProperties": true,
+  "required": ["field_id"],
+  "properties": {
+    "field_id": { "type": "string", "minLength": 1,
+      "description": "Custom field to soft-delete. Required: a delete that matches no row must fail (customers#49)." } } }

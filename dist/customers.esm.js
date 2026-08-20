@@ -3629,7 +3629,9 @@ var es_default = {
       field_invalid_boolean: "Valor s\xED/no no v\xE1lido: {message}",
       field_invalid_option: "El valor no est\xE1 entre las opciones del campo: {message}",
       field_unavailable: "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
-      customer_unavailable: "Ese cliente no est\xE1 disponible en este negocio."
+      customer_unavailable: "Ese cliente no est\xE1 disponible en este negocio.",
+      group_unavailable: "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
+      tag_unavailable: "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
     }
   }
 };
@@ -3846,7 +3848,9 @@ var en_default = {
       field_invalid_boolean: "Invalid yes/no value: {message}",
       field_invalid_option: "Value not among the field's options: {message}",
       field_unavailable: "That field is not available in this business (it may have been deleted).",
-      customer_unavailable: "That customer is not available in this business."
+      customer_unavailable: "That customer is not available in this business.",
+      group_unavailable: "That group is not available in this business (it may have been deleted).",
+      tag_unavailable: "That tag is not available in this business (it may have been deleted)."
     }
   }
 };
@@ -3860,6 +3864,16 @@ function erplora() {
 }
 function can(permission) {
   return erplora().hasPermission?.(permission) ?? true;
+}
+function domainErrorText(e6, fallbackKey) {
+  const code = e6?.code;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (typeof code === "string" && code.startsWith("customers.")) {
+    const key = `errors.${code}`;
+    const text = erplora().t(CATALOG, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora().t(CATALOG, fallbackKey);
 }
 var TYPE_KEY = {
   text: "ui.typeText",
@@ -4051,7 +4065,7 @@ var ErpCustomersFields = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora().t(CATALOG, "ui.errDeleteField");
+      this.formError = domainErrorText(e6, "ui.errDeleteField");
     } finally {
       this.saving = false;
     }
@@ -4142,6 +4156,16 @@ function erplora2() {
 }
 function can2(permission) {
   return erplora2().hasPermission?.(permission) ?? true;
+}
+function domainErrorText2(e6, fallbackKey) {
+  const code = e6?.code;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (typeof code === "string" && code.startsWith("customers.")) {
+    const key = `errors.${code}`;
+    const text = erplora2().t(CATALOG2, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora2().t(CATALOG2, fallbackKey);
 }
 var ErpCustomersGroups = class extends i3 {
   constructor() {
@@ -4287,7 +4311,7 @@ var ErpCustomersGroups = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora2().t(CATALOG2, "ui.errDeleteGroup");
+      this.formError = domainErrorText2(e6, "ui.errDeleteGroup");
     } finally {
       this.saving = false;
     }
@@ -4513,7 +4537,7 @@ function erplora3() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-function domainErrorText(e6, fallbackKey) {
+function domainErrorText3(e6, fallbackKey) {
   const code = e6?.code;
   const message = e6 instanceof Error ? e6.message : "";
   if (typeof code === "string" && code.startsWith("customers.")) {
@@ -4932,7 +4956,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.consentRecorded");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText(e6, "ui.errConsent");
+      this.formError = domainErrorText3(e6, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -4956,7 +4980,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.consentWithdrawnMsg");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText(e6, "ui.errConsent");
+      this.formError = domainErrorText3(e6, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -5095,7 +5119,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText(e6, "ui.errUpdate");
+      this.formError = domainErrorText3(e6, "ui.errUpdate");
     } finally {
       this.saving = false;
     }
@@ -5113,7 +5137,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerDeleted", { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errDelete");
+      this.formError = domainErrorText3(e6, "ui.errDelete");
     } finally {
       this.saving = false;
     }
@@ -5192,7 +5216,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerErased");
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = domainErrorText(e6, "ui.errErase");
+      this.formError = domainErrorText3(e6, "ui.errErase");
     } finally {
       this.saving = false;
     }
@@ -6174,6 +6198,16 @@ function erplora5() {
 function can5(permission) {
   return erplora5().hasPermission?.(permission) ?? true;
 }
+function domainErrorText4(e6, fallbackKey) {
+  const code = e6?.code;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (typeof code === "string" && code.startsWith("customers.")) {
+    const key = `errors.${code}`;
+    const text = erplora5().t(CATALOG5, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora5().t(CATALOG5, fallbackKey);
+}
 var ErpCustomersTags = class extends i3 {
   constructor() {
     super(...arguments);
@@ -6306,7 +6340,7 @@ var ErpCustomersTags = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora5().t(CATALOG5, "ui.errDeleteTag");
+      this.formError = domainErrorText4(e6, "ui.errDeleteTag");
     } finally {
       this.saving = false;
     }

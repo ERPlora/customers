@@ -37,6 +37,20 @@ function can(permission: string): boolean {
   return erplora().hasPermission?.(permission) ?? true;
 }
 
+/** A business rejection (hub#139) carries a stable `code` (`customers.field_unavailable`…): translate it through
+ *  `errors.<code>` in the module catalog, with the handler's message as `{message}`; anything else
+ *  falls back to the error text or the generic key. */
+function domainErrorText(e: unknown, fallbackKey: string): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  const message = e instanceof Error ? e.message : '';
+  if (typeof code === 'string' && code.startsWith('customers.')) {
+    const key = `errors.${code}`;
+    const text = erplora().t(CATALOG, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora().t(CATALOG, fallbackKey);
+}
+
 /** value (enum, no traducir) → clave i18n `ui.*` para su etiqueta. */
 const TYPE_KEY: Record<string, string> = {
   text: 'ui.typeText', number: 'ui.typeNumber', date: 'ui.typeDate', boolean: 'ui.typeBoolean',
@@ -233,7 +247,7 @@ export class ErpCustomersFields extends LitElement {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDeleteField');
+      this.formError = domainErrorText(e, 'ui.errDeleteField');
     } finally {
       this.saving = false;
     }

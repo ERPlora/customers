@@ -210,7 +210,9 @@
       "field_invalid_boolean": "Valor sí/no no válido: {message}",
       "field_invalid_option": "El valor no está entre las opciones del campo: {message}",
       "field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
-      "customer_unavailable": "Ese cliente no está disponible en este negocio."
+      "customer_unavailable": "Ese cliente no está disponible en este negocio.",
+      "group_unavailable": "Ese grupo no está disponible en este negocio (puede haberse borrado).",
+      "tag_unavailable": "Esa etiqueta no está disponible en este negocio (puede haberse borrado)."
     }
   }
 }

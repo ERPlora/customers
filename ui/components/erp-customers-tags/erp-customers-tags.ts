@@ -34,6 +34,20 @@ function can(permission: string): boolean {
   return erplora().hasPermission?.(permission) ?? true;
 }
 
+/** A business rejection (hub#139) carries a stable `code` (`customers.tag_unavailable`…): translate it through
+ *  `errors.<code>` in the module catalog, with the handler's message as `{message}`; anything else
+ *  falls back to the error text or the generic key. */
+function domainErrorText(e: unknown, fallbackKey: string): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  const message = e instanceof Error ? e.message : '';
+  if (typeof code === 'string' && code.startsWith('customers.')) {
+    const key = `errors.${code}`;
+    const text = erplora().t(CATALOG, key, { message });
+    if (text && text !== key) return text;
+  }
+  return message || erplora().t(CATALOG, fallbackKey);
+}
+
 /** CRUD de etiquetas de clientes (tags.list/create/update/delete). */
 export class ErpCustomersTags extends LitElement {
   static styles = css`
@@ -177,7 +191,7 @@ export class ErpCustomersTags extends LitElement {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDeleteTag');
+      this.formError = domainErrorText(e, 'ui.errDeleteTag');
     } finally {
       this.saving = false;
     }

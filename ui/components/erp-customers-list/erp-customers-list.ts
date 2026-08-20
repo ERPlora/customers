@@ -706,7 +706,9 @@ export class ErpCustomersList extends LitElement {
       this.formMsg = erplora().t(CATALOG, 'ui.customerDeleted', { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errDelete');
+      // `customers.customer_unavailable` (customers#49): the row guard refused a delete that would
+      // have matched nothing. Translated by its code — the manifest's sentence is English.
+      this.formError = domainErrorText(e, 'ui.errDelete');
     } finally {
       this.saving = false;
     }
