@@ -123,11 +123,16 @@ describe('los filtros van en la tabla, y los de dominio cerrado son `select`', (
 describe('el alta sigue funcionando desde el panel', () => {
   it('crear un cliente manda customers.create con los datos del panel', async () => {
     const el = await montar();
-    const wc = el as unknown as { newName: string; newEmail: string };
-    wc.newName = 'Ada Lovelace';
-    wc.newEmail = 'ada@example.com';
-
+    // Se rellena por el DOM, como una persona: desde customers#51 el alta es la ficha entera y su
+    // estado vive en `newForm`, no en dos `@state` sueltos.
     const form = el.shadowRoot.querySelector('form[slot="create"]') as HTMLFormElement;
+    for (const [key, value] of [['name', 'Ada Lovelace'], ['email', 'ada@example.com']]) {
+      const input = form.querySelector(`[data-sheet-field="${key}"]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new CustomEvent('ionInput', { bubbles: true }));
+    }
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
     form.dispatchEvent(new Event('submit', { cancelable: true }));
     await new Promise((r) => setTimeout(r, 0));
 

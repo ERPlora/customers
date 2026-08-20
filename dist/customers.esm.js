@@ -3463,6 +3463,7 @@ var es_default = {
     placeholderName: "Nombre",
     placeholderEmail: "Email",
     addCustomer: "A\xF1adir",
+    moreDetails: "M\xE1s datos",
     saving: "Guardando\u2026",
     searchCustomers: "Buscar nombre o email\u2026",
     loading: "Cargando\u2026",
@@ -3693,6 +3694,7 @@ var en_default = {
     placeholderName: "Name",
     placeholderEmail: "Email",
     addCustomer: "Add",
+    moreDetails: "More details",
     saving: "Saving\u2026",
     searchCustomers: "Search name or email\u2026",
     loading: "Loading\u2026",
@@ -4658,11 +4660,41 @@ var EMPTY_FORM = {
   // No consent here: it is not a field of the sheet any more (customers#10).
   is_active: true
 };
+var SHEET_ESSENTIALS = ["name", "phone", "email", "tax_id", "company_name"];
+var SHEET_MORE = [
+  "address",
+  "city",
+  "postal_code",
+  "country",
+  "birthday",
+  "anniversary",
+  "source",
+  "lifecycle_stage",
+  "preferred_channel",
+  "notes"
+];
+var SHEET_FIELD_LABEL = {
+  name: "ui.colName",
+  email: "ui.colEmail",
+  phone: "ui.colPhone",
+  tax_id: "ui.fieldNif",
+  company_name: "ui.fieldCompany",
+  address: "ui.fieldAddress",
+  city: "ui.fieldCity",
+  postal_code: "ui.fieldPostalCode",
+  country: "ui.fieldCountry",
+  birthday: "ui.fieldBirthday",
+  anniversary: "ui.fieldAnniversary",
+  source: "ui.fieldSource",
+  lifecycle_stage: "ui.colStage",
+  preferred_channel: "ui.fieldPreferredChannel",
+  notes: "ui.fieldInternalNotes",
+  is_active: "ui.fieldActive"
+};
 var _ErpCustomersList = class _ErpCustomersList extends i3 {
   constructor() {
     super(...arguments);
-    this.newName = "";
-    this.newEmail = "";
+    this.newForm = { ...EMPTY_FORM };
     this.saving = false;
     this.formError = "";
     this.formMsg = "";
@@ -4709,6 +4741,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
     /* El panel de alta del data-table es una columna estrecha: los campos van apilados, no en fila. */
     .create-form { display:flex; flex-direction:column; gap:.7rem; }
+    /* «Más datos»: un <details> nativo. 44px de zona táctil en el resumen — el panel de alta se usa
+       de pie, con una mano y sin teclado. */
+    .create-form details.more > summary { cursor:pointer; padding:.6rem .25rem; min-height:44px; display:flex; align-items:center; font-weight:600; font-size:.9rem; }
+    .create-form details.more > div { margin-top:.7rem; }
     .form { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; margin:.5rem 0 1.25rem; }
     .form ion-input, .form ion-select, .form ion-textarea { flex:1 1 11rem; min-width:9rem; }
     .panel { border:1px solid var(--ion-border-color,#e7e2d6); border-radius: var(--ok-radius-sm, 10px); padding:.75rem 1rem; margin:0 0 1rem; background:var(--ok-surface-2, var(--ion-color-step-50, rgba(var(--ion-text-color-rgb, 24, 24, 27), 0.04))); }
@@ -4912,37 +4948,44 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   dataTable() {
     return this.renderRoot.querySelector("ok-data-table");
   }
-  // — Alta rápida (panel `create` de la tabla) —
+  // — Alta (panel `create` de la tabla) —
+  //
+  // UN solo command con la ficha entera (customers#51). Lo que se escriba en «Más datos» viaja en
+  // la misma llamada: el alta no se parte nunca en `create` + `update`, que es lo que obligaba a
+  // guardar a medias y reabrir. Y sigue bastando el NOMBRE (customers#32): el resto son opcionales
+  // y viajan vacíos, que es lo que el schema espera.
   async create(ev) {
     ev.preventDefault();
-    if (!can3("customers.add_customer") || !this.newName.trim()) return;
+    const f3 = this.newForm;
+    if (!can3("customers.add_customer") || !f3.name.trim()) return;
     this.saving = true;
     this.formError = "";
     try {
       await erplora3().command("customers.create", {
-        name: this.newName.trim(),
-        email: this.newEmail.trim(),
-        phone: "",
-        tax_id: "",
-        address: "",
-        city: "",
-        postal_code: "",
-        country: "",
+        name: f3.name.trim(),
+        email: f3.email.trim(),
+        phone: f3.phone.trim(),
+        tax_id: f3.tax_id.trim(),
+        address: f3.address.trim(),
+        city: f3.city.trim(),
+        postal_code: f3.postal_code.trim(),
+        country: f3.country.trim(),
         avatar: "",
-        notes: "",
-        lifecycle_stage: "lead",
-        source: "walk_in",
-        company_name: "",
-        birthday: null,
-        anniversary: null,
-        preferred_channel: "none"
+        notes: f3.notes,
+        lifecycle_stage: f3.lifecycle_stage,
+        source: f3.source.trim() || "walk_in",
+        company_name: f3.company_name.trim(),
+        birthday: f3.birthday || null,
+        anniversary: f3.anniversary || null,
+        preferred_channel: f3.preferred_channel
+        // No consent: creating a customer is not somebody saying yes (customers#10). The decision
+        // is its own action, with its evidence, on the sheet.
       });
-      this.newName = "";
-      this.newEmail = "";
+      this.newForm = { ...EMPTY_FORM };
       this.dataTable()?.close();
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errCreate");
+      this.formError = domainErrorText3(e6, "ui.errCreate");
     } finally {
       this.saving = false;
     }
@@ -5358,38 +5401,45 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   // Nothing throws, so the guard that keeps it from creeping back is a test:
   // `tests/ionic_fill_needs_md.test.py` (source, runs in the module gate) and `fill-needs-md.test.ts`
   // (render).
+  /**
+   * ONE field of the customer sheet, drawn the same way wherever it appears — the add panel and the
+   * edit form (customers#51). Before this, the add panel had a hand-written form of its own with two
+   * inputs in it, which is how the two screens drifted apart in the first place: adding a field to
+   * the sheet only ever reached one of them.
+   */
+  sheetField(key, form, patch) {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    const label = t5(SHEET_FIELD_LABEL[key]);
+    const value = String(form[key] ?? "");
+    if (key === "lifecycle_stage" || key === "preferred_channel") {
+      const options = key === "lifecycle_stage" ? STAGE_KEY : CHANNEL_KEY;
+      const label_ = key === "lifecycle_stage" ? stageLabel : channelLabel;
+      return b2`<ion-select mode="md" data-sheet-field=${key} fill="outline" label=${label}
+        label-placement="floating" .value=${value}
+        @ionChange=${(e6) => patch({ [key]: e6.target.value })}>
+        ${Object.keys(options).map((v3) => b2`<ion-select-option value=${v3}>${label_(v3)}</ion-select-option>`)}
+      </ion-select>`;
+    }
+    if (key === "notes") {
+      return b2`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
+        label-placement="floating" auto-grow .value=${value}
+        @ionInput=${(e6) => patch({ notes: e6.target.value })}></ion-textarea>`;
+    }
+    const type = key === "email" ? "email" : key === "birthday" || key === "anniversary" ? "date" : "text";
+    return b2`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
+      label-placement="floating" .value=${value}
+      @ionInput=${(e6) => patch({ [key]: e6.target.value })}></ion-input>`;
+  }
   renderEditForm() {
     const f3 = this.form;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    const input = (key, label, type = "text") => b2`
-      <ion-input mode="md" type=${type} fill="outline" label=${label} label-placement="floating" .value=${String(f3[key] ?? "")}
-        @ionInput=${(e6) => this.form = { ...this.form, [key]: e6.target.value }}></ion-input>`;
+    const field = (key) => this.sheetField(key, f3, (part) => this.form = { ...this.form, ...part });
     return b2`<form @submit=${(e6) => this.saveEdit(e6)}>
       <div class="grid2">
-        ${input("name", t5("ui.colName"))}
-        ${input("email", t5("ui.colEmail"), "email")}
-        ${input("phone", t5("ui.colPhone"))}
-        ${input("tax_id", t5("ui.fieldNif"))}
-        ${input("company_name", t5("ui.fieldCompany"))}
-        ${input("address", t5("ui.fieldAddress"))}
-        ${input("city", t5("ui.fieldCity"))}
-        ${input("postal_code", t5("ui.fieldPostalCode"))}
-        ${input("country", t5("ui.fieldCountry"))}
-        ${input("birthday", t5("ui.fieldBirthday"), "date")}
-        ${input("anniversary", t5("ui.fieldAnniversary"), "date")}
-        ${input("source", t5("ui.fieldSource"))}
-        <ion-select mode="md" fill="outline" label=${t5("ui.colStage")} label-placement="floating" .value=${f3.lifecycle_stage}
-          @ionChange=${(e6) => this.form = { ...this.form, lifecycle_stage: e6.target.value }}>
-          ${Object.keys(STAGE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${stageLabel(v3)}</ion-select-option>`)}
-        </ion-select>
-        <ion-select mode="md" fill="outline" label=${t5("ui.fieldPreferredChannel")} label-placement="floating" .value=${f3.preferred_channel}
-          @ionChange=${(e6) => this.form = { ...this.form, preferred_channel: e6.target.value }}>
-          ${Object.keys(CHANNEL_KEY).map((v3) => b2`<ion-select-option value=${v3}>${channelLabel(v3)}</ion-select-option>`)}
-        </ion-select>
+        ${[...SHEET_ESSENTIALS, ...SHEET_MORE].filter((k2) => k2 !== "notes").map(field)}
       </div>
       <div class="form">
-        <ion-textarea mode="md" fill="outline" label=${t5("ui.fieldInternalNotes")} label-placement="floating" auto-grow .value=${f3.notes}
-          @ionInput=${(e6) => this.form = { ...this.form, notes: e6.target.value }}></ion-textarea>
+        ${field("notes")}
       </div>
       ${this.renderCustomFields()}
       <!-- There is NO consent checkbox here any more (customers#10). A tick on an edit form is a
@@ -5558,14 +5608,28 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       ${this.detailFillers.length ? b2`<section class="panel detail-slot"></section>` : A}
     </div>`;
   }
-  /** Alta rápida: SIEMPRE proyectada en el panel `create` de la tabla (si solo se pintara al pulsar
-   *  el «+», el panel abriría vacío). La ficha completa se edita desde el detalle. */
+  /**
+   * **El alta, en un solo paso** (customers#51) — SIEMPRE proyectada en el panel `create` de la
+   * tabla (si sólo se pintara al pulsar el «+», el panel abriría vacío).
+   *
+   * Los mismos campos que la ficha, con el reparto del mercado: identidad y datos fiscales a la
+   * vista, el resto tras «Más datos». El desplegable es un `<details>` nativo —teclado y lector de
+   * pantalla gratis, sin componente nuevo, y ya hay precedente en `flows`— y arranca cerrado: el
+   * alta de mostrador tiene que seguir siendo escribir un nombre y pulsar.
+   *
+   * Sólo el NOMBRE bloquea el botón. Lo demás es opcional (customers#32): un ultramarinos vende sin
+   * NIF, un asesor no.
+   */
   renderCreateForm() {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    const field = (key) => this.sheetField(key, this.newForm, (part) => this.newForm = { ...this.newForm, ...part });
     return b2`<form slot="create" class="create-form" @submit=${(e6) => this.create(e6)}>
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.newName} @ionInput=${(e6) => this.newName = e6.target.value}></ion-input>
-      <ion-input mode="md" type="email" fill="outline" label=${t5("ui.colEmail")} label-placement="floating" .value=${this.newEmail} @ionInput=${(e6) => this.newEmail = e6.target.value}></ion-input>
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newName}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
+      ${SHEET_ESSENTIALS.map(field)}
+      <details class="more">
+        <summary>${t5("ui.moreDetails")}</summary>
+        <div class="create-form">${SHEET_MORE.map(field)}</div>
+      </details>
+      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
     </form>`;
   }
   render() {
@@ -5587,10 +5651,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
 };
 __decorateClass([
   r5()
-], _ErpCustomersList.prototype, "newName", 2);
-__decorateClass([
-  r5()
-], _ErpCustomersList.prototype, "newEmail", 2);
+], _ErpCustomersList.prototype, "newForm", 2);
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "saving", 2);
