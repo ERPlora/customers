@@ -46,7 +46,7 @@ async function montar() {
 }
 
 const tabla = (el: HTMLElement & { shadowRoot: ShadowRoot }) =>
-  el.shadowRoot.querySelector('ok-data-table') as (HTMLElement & { addable: boolean; fill: boolean; open: (p?: string) => void }) | null;
+  el.shadowRoot.querySelector('ok-data-table') as (HTMLElement & { addable: boolean; fill: boolean; open: (p?: string) => void; rowClickable: boolean }) | null;
 
 const formulario = (el: HTMLElement & { shadowRoot: ShadowRoot }) =>
   el.shadowRoot.querySelector('form[slot="create"]') as HTMLFormElement | null;
@@ -145,5 +145,31 @@ describe('alta y edición comparten el panel de la tabla', () => {
     expect(edicion, 'editar una fila creó un campo nuevo en vez de actualizarla').toBeTruthy();
     expect(edicion!.payload.field_id).toBe('f1');
     expect(comandos.some((c) => c.name === 'customers.fields.create')).toBe(false);
+  });
+});
+
+// ── pm#155 (outfitkit#67, second half) ────────────────────────────────────────────────────────
+//
+// At 1440 px the «Actions» column fell off the screen with nothing hinting the table went on to
+// the right, so the only door into a field was a button nobody could see. OutfitKit 0.1.44 pins
+// that column, but the other half of the fix is opt-in: `rowClickable` turns the whole row into a
+// door — the first thing a user tries. The list has to ask for it, and wire `rowClick` to the
+// same edit panel the «edit» action opens.
+describe('clicking the row opens the field (pm#155)', () => {
+  it('the table declares `rowClickable` → the whole row is a door, not just the action button', async () => {
+    const el = await montar();
+    expect(
+      tabla(el)?.rowClickable,
+      'without `rowClickable` the row is dead: if the actions column is off-screen there is no way in',
+    ).toBe(true);
+  });
+
+  it('`rowClick` puts the field in the edit panel, same as the «edit» action', async () => {
+    const el = await montar();
+    tabla(el)!.dispatchEvent(new CustomEvent('rowClick', { detail: { row: CAMPO } }));
+    await new Promise((r) => setTimeout(r, 0));
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const wc = el as unknown as { editing: unknown };
+    expect(wc.editing, 'the row was clicked and the edit panel did not take the field').toEqual(CAMPO);
   });
 });

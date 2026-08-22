@@ -50,7 +50,7 @@ async function montar() {
 }
 
 const tabla = (el: HTMLElement & { shadowRoot: ShadowRoot }) =>
-  el.shadowRoot.querySelector('ok-data-table') as (HTMLElement & { addable: boolean; fill: boolean }) | null;
+  el.shadowRoot.querySelector('ok-data-table') as (HTMLElement & { addable: boolean; fill: boolean; rowClickable: boolean }) | null;
 
 describe('el alta vive DENTRO de la tabla (paridad con /employees e inventory)', () => {
   it('la tabla declara `addable` → pinta el «+» en su barra', async () => {
@@ -431,5 +431,35 @@ describe('borrado de datos personales desde la ficha (customers#11)', () => {
     await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     expect(el.shadowRoot.querySelector('.erase')).toBeNull();
+  });
+});
+
+// ── pm#155 (outfitkit#67, second half) ────────────────────────────────────────────────────────
+//
+// At 1440 px the «Actions» column fell off the screen with nothing hinting the table went on to
+// the right, so the only door into a customer was a button nobody could see. OutfitKit 0.1.44
+// pins that column, but the other half of the fix is opt-in: `rowClickable` turns the whole row
+// into a door — the first thing a user tries. The component will not switch it on by itself: the
+// list has to ask for it, and wire `rowClick` to the same ficha the «view» action opens.
+describe('clicking the row opens the customer (pm#155)', () => {
+  it('the table declares `rowClickable` → the whole row is a door, not just the action button', async () => {
+    const el = await montar();
+    expect(
+      tabla(el)?.rowClickable,
+      'without `rowClickable` the row is dead: if the actions column is off-screen there is no way in',
+    ).toBe(true);
+  });
+
+  it('`rowClick` opens the ficha of the clicked customer, same as the «view» action', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.query = async (name: string) => (name === 'customers.get' ? [CLIENTE] : name === 'customers.stats' ? [{ total: 1, active: 1, vip: 0, total_revenue: 0 }] : []);
+    const el = await montar();
+    tabla(el)!.dispatchEvent(new CustomEvent('rowClick', { detail: { row: CLIENTE } }));
+    await new Promise((r) => setTimeout(r, 0));
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(
+      el.shadowRoot.querySelector('.detail-page'),
+      'the row was clicked and the ficha did not open',
+    ).toBeTruthy();
   });
 });
