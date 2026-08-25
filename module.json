@@ -42,6 +42,15 @@
     "admin": [
       "*"
     ],
+    "cashier": [
+      "customers.view_customer",
+      "customers.add_customer",
+      "customers.change_customer",
+      "customers.add_note",
+      "customers.view_activity",
+      "customers.view_customergroup",
+      "customers.view_customertag"
+    ],
     "manager": [
       "customers.add_activity",
       "customers.add_customer",
