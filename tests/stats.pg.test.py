@@ -137,12 +137,24 @@ def stats(hub: str) -> tuple[int, int, int, int]:
     return int(total), int(active), int(vip), int(revenue)
 
 
+def listed(hub: str) -> list[str]:
+    """Ids `customers.list` answers for `hub`, bound exactly like the runtime binds it."""
+    sql = (MODULE_DIR / MANIFEST["queries"]["customers.list"]["sql"]).read_text()
+    rows = q(
+        "SELECT COALESCE(json_agg(id ORDER BY id), '[]') FROM ("
+        + bind(sql, {"hub_id": hub}).rstrip().rstrip(";")
+        + ") l"
+    )
+    return json.loads(rows)
+
+
 def main() -> int:
     print("· the manifest")
     check("customers.stats exists", True, "customers.stats" in MANIFEST["queries"])
+    check("customers.list exists", True, "customers.list" in MANIFEST["queries"])
 
     if not docker_available():
-        print(f"SKIPPED (SQL half): no Postgres in container {CONTAINER}")
+        print(f"SKIPPED: no Postgres in container {CONTAINER} (SQL half; nothing was verified)")
         return 1 if failures else 0
     if failures:
         return 1
@@ -172,6 +184,13 @@ def main() -> int:
         check("active", 1, active)
         check("vip", 1, vip)
         check("total_revenue", 900, revenue)
+
+        # The third leg of the deleted `customer_crud_and_stats` (hub#1264): `customers.list`
+        # under another hub answers nothing. The kernel stamps `:hub_id`, but the WHERE that
+        # honours it is THIS module's `list.sql` — nothing else in the module reads it cross-hub.
+        print("· customers.list is hub-scoped too: hub B lists only its own row")
+        check("hub A lists its three", ["c-a1", "c-a2", "c-a3"], listed(HUB_A))
+        check("hub B lists only its own", ["c-b1"], listed(HUB_B))
 
         print("· soft-deleted customers do not count")
         psql(

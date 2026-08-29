@@ -175,7 +175,7 @@ def main() -> int:
     )
 
     if not docker_available():
-        print(f"SKIPPED (SQL half): no Postgres in container {CONTAINER}")
+        print(f"SKIPPED: no Postgres in container {CONTAINER} (SQL half; nothing was verified)")
         return 1 if failures else 0
     if failures:
         return 1
