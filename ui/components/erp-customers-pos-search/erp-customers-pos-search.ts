@@ -46,6 +46,8 @@ interface ErploraLike {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
   command<T = unknown>(name: string, payload?: Record<string, unknown>): Promise<T>;
   hasPermission?(permission: string): boolean;
+  /** Shell toast (`Notification`, module-sdk). Optional: an older shell may not expose it. */
+  notify?(n: { type: 'success' | 'error' | 'info' | 'warning'; message: string }): void;
   /** i18n del módulo (ADR-0055): idioma activo + traducción del catálogo `ui`. */
   locale: string;
   t(catalog: Record<string, unknown>, key: string, params?: Record<string, unknown>): string;
@@ -87,6 +89,21 @@ function can(permission: string): boolean {
 
 const isForbidden = (e: unknown): boolean => (e as { code?: unknown } | null)?.code === 'permission_denied';
 const looksLikePhone = (v: string): boolean => /^[+\d][\d\s().-]{5,}$/.test(v.trim());
+
+/** Domain codes the dispatcher answers with → this module's own translated phrase, the escalator of
+ *  cash_register#38. It stops one step earlier than that one on purpose: the raw `Display` of a
+ *  server error never reaches the till (tables#55 — «db: sqlx: … violates check constraint at line
+ *  2076» was a red banner in production), so anything without a code falls back to the module's
+ *  generic phrase and the detail goes to the console for whoever reads the runtime log. */
+const LINK_MESSAGES: Record<string, string> = {
+  permission_denied: 'ui.errLinkOrderNoPermission',
+};
+
+function linkFailureMessage(e: unknown): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  const key = (typeof code === 'string' ? LINK_MESSAGES[code] : undefined) ?? 'ui.errLinkOrder';
+  return erplora().t(CATALOG, key);
+}
 
 export class ErpCustomersPosSearch extends LitElement {
   // El CHROME del buscador (overlay Spotlight + input + ✕ + trigger) lo pone `ok-spotlight-search`
@@ -140,8 +157,25 @@ export class ErpCustomersPosSearch extends LitElement {
     if (!d?.order_id || !this.selectedId) return;
     try {
       await erplora().command('customers.orders.link', { customer_id: this.selectedId, order_id: d.order_id });
-    } catch { /* la asociación es operativa: nunca debe romper la venta */ }
+    } catch (err) {
+      // La asociación es OPERATIVA: nunca debe romper la venta — por eso se traga. Tragarla en
+      // SILENCIO era el fallo (customers#59): el historial del cliente se quedaba vacío hub tras
+      // hub y nadie se enteraba. Se dice y se registra; el cobro sigue su camino.
+      this.reportLinkFailure(err);
+    }
   };
+
+  /** Un fallo que no se ve no existe: rastro para el runtime + aviso traducido para el cajero. */
+  private reportLinkFailure(err: unknown): void {
+    // El log va PRIMERO: es el rastro que queda aunque el shell no sepa avisar.
+    console.warn('[customers] customers.orders.link failed; the sale goes on without customer history', err);
+    const c = erplora();
+    try {
+      c.notify?.({ type: 'warning', message: linkFailureMessage(err) });
+    } catch (notifyErr) {
+      console.warn('[customers] the shell could not show the link warning', notifyErr);
+    }
+  }
 
   connectedCallback() {
     super.connectedCallback();

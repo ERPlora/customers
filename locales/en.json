@@ -175,6 +175,8 @@
     "customFields": "Custom fields",
     "posNoPermission": "You do not have permission to look up customers.",
     "errCustomerSnapshot": "Could not load {name}'s fiscal data. Tap again to retry.",
+    "errLinkOrder": "The sale goes on, but the customer could not be attached to the order: it will not show in their history.",
+    "errLinkOrderNoPermission": "The sale goes on, but you do not have permission to attach customers to orders: it will not show in their history.",
     "retry": "Retry",
     "quickAddCustomer": "+ New customer “{term}”",
     "quickName": "Name",

@@ -116,7 +116,12 @@ The sell screen shows a customer button, contributed by this module (requires
 4. After charging, the till clears the customer — the next check starts anonymous.
 
 When the check is materialised as an order, this module records the link between that customer and
-that order, so "which checks does this customer have open" is answerable.
+that order (`customers.link_order`, held by employee, cashier, manager and admin), so "which checks
+does this customer have open" is answerable.
+
+That link never breaks a charge — but it never fails in silence either: if it cannot be written the
+till shows a warning saying the sale goes on and the order will not appear in the customer's
+history, and the runtime log carries the detail.
 
 ## Dashboard widgets
 

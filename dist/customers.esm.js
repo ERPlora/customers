@@ -3808,6 +3808,8 @@ var es_default = {
     customFields: "Campos personalizados",
     posNoPermission: "No tienes permiso para consultar clientes.",
     errCustomerSnapshot: "No se pudieron cargar los datos fiscales de {name}. Vuelve a pulsar para reintentar.",
+    errLinkOrder: "La venta sigue, pero el cliente no se pudo asociar al pedido: no aparecer\xE1 en su historial.",
+    errLinkOrderNoPermission: "La venta sigue, pero no tienes permiso para asociar clientes a pedidos: no aparecer\xE1 en su historial.",
     retry: "Reintentar",
     quickAddCustomer: "+ Nuevo cliente \xAB{term}\xBB",
     quickName: "Nombre",
@@ -4039,6 +4041,8 @@ var en_default = {
     customFields: "Custom fields",
     posNoPermission: "You do not have permission to look up customers.",
     errCustomerSnapshot: "Could not load {name}'s fiscal data. Tap again to retry.",
+    errLinkOrder: "The sale goes on, but the customer could not be attached to the order: it will not show in their history.",
+    errLinkOrderNoPermission: "The sale goes on, but you do not have permission to attach customers to orders: it will not show in their history.",
     retry: "Retry",
     quickAddCustomer: "+ New customer \u201C{term}\u201D",
     quickName: "Name",
@@ -6275,6 +6279,14 @@ function can4(permission) {
 }
 var isForbidden = (e6) => e6?.code === "permission_denied";
 var looksLikePhone = (v3) => /^[+\d][\d\s().-]{5,}$/.test(v3.trim());
+var LINK_MESSAGES = {
+  permission_denied: "ui.errLinkOrderNoPermission"
+};
+function linkFailureMessage(e6) {
+  const code = e6?.code;
+  const key = (typeof code === "string" ? LINK_MESSAGES[code] : void 0) ?? "ui.errLinkOrder";
+  return erplora4().t(CATALOG4, key);
+}
 var ErpCustomersPosSearch = class extends i3 {
   constructor() {
     super(...arguments);
@@ -6305,7 +6317,8 @@ var ErpCustomersPosSearch = class extends i3 {
       if (!d3?.order_id || !this.selectedId) return;
       try {
         await erplora4().command("customers.orders.link", { customer_id: this.selectedId, order_id: d3.order_id });
-      } catch {
+      } catch (err) {
+        this.reportLinkFailure(err);
       }
     };
   }
@@ -6326,6 +6339,16 @@ var ErpCustomersPosSearch = class extends i3 {
     .quick-add { --padding-start:.75rem; min-height:44px; }
     .retry { min-height:44px; }
   `;
+  }
+  /** Un fallo que no se ve no existe: rastro para el runtime + aviso traducido para el cajero. */
+  reportLinkFailure(err) {
+    console.warn("[customers] customers.orders.link failed; the sale goes on without customer history", err);
+    const c5 = erplora4();
+    try {
+      c5.notify?.({ type: "warning", message: linkFailureMessage(err) });
+    } catch (notifyErr) {
+      console.warn("[customers] the shell could not show the link warning", notifyErr);
+    }
   }
   connectedCallback() {
     super.connectedCallback();

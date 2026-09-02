@@ -210,3 +210,60 @@ describe('estados diferenciados y alta rápida (customers#18)', () => {
     expect(el.shadowRoot.querySelector('.quick-add')).toBeNull();
   });
 });
+
+// customers#59 — the junction write (`customers.orders.link`, ADR-0141) is swallowed ON PURPOSE:
+// the sale is what matters and an operational link must never break a charge. Swallowing it in
+// SILENCE is the bug. Nobody found out the customer's history stayed empty hub after hub, because a
+// failure that leaves no trace does not exist. It is now said out loud, translated (the escalator of
+// cash_register#38: a domain code the module owns → its own phrase; anything else → the module's
+// generic one, never the server's raw `Display`, tables#55) and logged for the runtime.
+describe('el enlace cliente↔pedido nunca falla en SILENCIO (customers#59)', () => {
+  type WC = HTMLElement & { shadowRoot: ShadowRoot; updateComplete: Promise<unknown> } & Record<string, unknown>;
+  const flush = async (el: WC) => { await el.updateComplete; await new Promise((r) => setTimeout(r, 0)); await el.updateComplete; };
+  const sdk = () => (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+
+  /** Deja un cliente elegido y lanza el `erp:order-linked` que dispara la escritura de la junction. */
+  async function elegirYEnlazar(el: WC) {
+    await abrir(el);
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
+    await flush(el);
+    el.dispatchEvent(new CustomEvent('erp:order-linked', { detail: { order_id: 'ord-1' } }));
+    await flush(el);
+  }
+
+  it('un 403 al enlazar avisa al TPV con su clave traducida y NO rompe la venta', async () => {
+    const avisos: { type: string; message: string }[] = [];
+    sdk().notify = (n: { type: string; message: string }) => avisos.push(n);
+    sdk().command = async () => { throw Object.assign(new Error('nope'), { code: 'permission_denied' }); };
+
+    const el = (await montar()) as WC;
+    await elegirYEnlazar(el);
+
+    expect(avisos, 'el cajero se entera de que el cliente no quedó en el pedido').toEqual([
+      { type: 'warning', message: 'ui.errLinkOrderNoPermission' },
+    ]);
+    expect(el.selectedId, 'la venta sigue con su cliente: el enlace es operativo, no el cobro').toBe('cus-1');
+  });
+
+  it('cualquier otro fallo avisa con la frase genérica del módulo, no con el texto del servidor', async () => {
+    const avisos: { type: string; message: string }[] = [];
+    sdk().notify = (n: { type: string; message: string }) => avisos.push(n);
+    sdk().command = async () => { throw new Error('db: sqlx: violates check constraint at line 2076'); };
+
+    const el = (await montar()) as WC;
+    await elegirYEnlazar(el);
+
+    expect(avisos).toEqual([{ type: 'warning', message: 'ui.errLinkOrder' }]);
+  });
+
+  it('cuando el enlace sale bien no molesta a nadie', async () => {
+    const avisos: unknown[] = [];
+    sdk().notify = (n: unknown) => avisos.push(n);
+    sdk().command = async () => ({ ok: true });
+
+    const el = (await montar()) as WC;
+    await elegirYEnlazar(el);
+
+    expect(avisos, 'sin aviso: el enlace se escribió').toEqual([]);
+  });
+});
