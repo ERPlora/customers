@@ -6309,6 +6309,14 @@ var ErpCustomersPosSearch = class extends i3 {
       this.selectedName = "";
     };
     this.onLocaleChange = () => this.requestUpdate();
+    /** El cobro EXIGE cliente y no lo hay (`sales.require_customer` → `erp:customer-required`,
+     *  sales#222). Se abre el buscador como si lo hubiera tocado el cajero: mismo camino que el
+     *  `ok-open` del trigger, así que la carga inicial y el estado salen de un único sitio.
+     *  IDEMPOTENTE — si ya está abierto no vuelve a buscar (el POS puede reavisar en cada intento). */
+    this.onCustomerRequired = () => {
+      if (this.open) return;
+      this.onOkOpen(true);
+    };
     /** El POS abrió un pedido → `customers` escribe SU junction cliente↔pedido (ADR-0141).
      *  Simétrico a lo que hace `tables`: el dueño de la asociación es quien la escribe; el pedido
      *  no guarda `customer_id` y `sales` no llama a este módulo. */
@@ -6353,11 +6361,13 @@ var ErpCustomersPosSearch = class extends i3 {
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener("erp:customer-context-reset", this.onReset);
+    this.addEventListener("erp:customer-required", this.onCustomerRequired);
     this.addEventListener("erp:order-linked", this.onOrderLinked);
     window.addEventListener("erplora:locale-changed", this.onLocaleChange);
   }
   disconnectedCallback() {
     this.removeEventListener("erp:customer-context-reset", this.onReset);
+    this.removeEventListener("erp:customer-required", this.onCustomerRequired);
     this.removeEventListener("erp:order-linked", this.onOrderLinked);
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
@@ -6488,6 +6498,7 @@ var ErpCustomersPosSearch = class extends i3 {
         trigger-icon=${this.selectedId ? "person" : "person-add-outline"}
         trigger-label=${this.selectedName || t5("ui.assignCustomer")}
         placeholder=${t5("ui.searchPosCustomer")}
+        .open=${this.open}
         .value=${this.q}
         @ok-open=${(e6) => this.onOkOpen(e6.detail.open)}
         @ok-input=${(e6) => this.onInput(e6.detail.value)}>

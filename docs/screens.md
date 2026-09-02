@@ -115,6 +115,10 @@ The sell screen shows a customer button, contributed by this module (requires
 3. Charge normally. The invoice will carry the customer's tax details.
 4. After charging, the till clears the customer — the next check starts anonymous.
 
+With **«Require a customer on every sale»** on in `sales`, step 1 does not need the cashier: on
+pressing Charge the till warns and this search **opens on its own**, the way Odoo and Shopify POS ask
+for what is mandatory inside the charge flow instead of sending you off to find a button.
+
 When the check is materialised as an order, this module records the link between that customer and
 that order (`customers.link_order`, held by employee, cashier, manager and admin), so "which checks
 does this customer have open" is answerable.
