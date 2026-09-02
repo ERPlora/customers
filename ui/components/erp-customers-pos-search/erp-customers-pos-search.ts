@@ -11,13 +11,15 @@ const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
 // erp-customers-pos-search — selector de CLIENTE (ficha) inyectado en la pantalla de venta
 // (ADR-0043). El módulo `customers` declara en su manifest que rellena el slot
-// `sales.pos.customer_context`; el shell monta este Web Component dentro del POS de `sales`.
+// `sales.pos.assign`; el shell monta este Web Component dentro del POS de `sales`.
 // El POS NO conoce a `customers`: la comunicación es por eventos del DOM (contrato), igual que
-// el selector de mesa (`erp-tables-pos-zones`) sobre `sales.pos.order_context`.
+// el selector de mesa (`erp-tables-pos-zones`) sobre el mismo slot.
 //
 //   ─ emite `erp:customer-context` {customer_id, customer_name, customer_tax_id, customer_address}
 //     → el POS lo adjunta a la venta, y de ahí viaja en `sale.completed` hasta la factura.
 //   ─ escucha `erp:customer-context-reset` → el POS lo dispara tras cobrar.
+//   ─ escucha `erp:customer-required` → el POS lo dispara cuando la venta EXIGE cliente y no lo hay
+//     (`sales.require_customer`, sales#222): el buscador se abre solo, sin buscar el icono a mano.
 //
 // UI (ADR-0133): el disparador es un ICONO (con aria-label) que abre un overlay con buscador
 // (`customers.list`) y listado; al pulsar un cliente se asocia a la venta.
@@ -149,6 +151,18 @@ export class ErpCustomersPosSearch extends LitElement {
 
   private readonly onLocaleChange = (): void => this.requestUpdate();
 
+  /** El cobro EXIGE cliente y no lo hay (`sales.require_customer` → `erp:customer-required`,
+   *  sales#222). Se abre el buscador como si lo hubiera tocado el cajero: mismo camino que el
+   *  `ok-open` del trigger, así que la carga inicial y el estado salen de un único sitio.
+   *  IDEMPOTENTE — si ya está abierto no vuelve a buscar (el POS puede reavisar en cada intento). */
+  private readonly onCustomerRequired = (): void => {
+    if (this.open) return;
+    // Mismo camino que un `ok-open` del trigger: `this.open` va ENLAZADO a la propiedad `open` del
+    // chrome (ver `render`), así que basta con el estado — funciona incluso si el aviso llega antes
+    // del primer render, cuando todavía no hay `ok-spotlight-search` que tocar.
+    this.onOkOpen(true);
+  };
+
   /** El POS abrió un pedido → `customers` escribe SU junction cliente↔pedido (ADR-0141).
    *  Simétrico a lo que hace `tables`: el dueño de la asociación es quien la escribe; el pedido
    *  no guarda `customer_id` y `sales` no llama a este módulo. */
@@ -180,12 +194,14 @@ export class ErpCustomersPosSearch extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener('erp:customer-context-reset', this.onReset);
+    this.addEventListener('erp:customer-required', this.onCustomerRequired);
     this.addEventListener('erp:order-linked', this.onOrderLinked);
     window.addEventListener('erplora:locale-changed', this.onLocaleChange);
   }
 
   disconnectedCallback() {
     this.removeEventListener('erp:customer-context-reset', this.onReset);
+    this.removeEventListener('erp:customer-required', this.onCustomerRequired);
     this.removeEventListener('erp:order-linked', this.onOrderLinked);
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     super.disconnectedCallback();
@@ -323,6 +339,7 @@ export class ErpCustomersPosSearch extends LitElement {
         trigger-icon=${this.selectedId ? 'person' : 'person-add-outline'}
         trigger-label=${this.selectedName || t('ui.assignCustomer')}
         placeholder=${t('ui.searchPosCustomer')}
+        .open=${this.open}
         .value=${this.q}
         @ok-open=${(e: CustomEvent) => this.onOkOpen(e.detail.open)}
         @ok-input=${(e: CustomEvent) => this.onInput(e.detail.value)}>
