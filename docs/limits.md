@@ -60,7 +60,8 @@ anybody asks. The old yes/no still exists on the record and still reads the same
 |---|---|
 | See customers and their custom fields | `customers.view_customer` |
 | Create a customer | `customers.add_customer` |
-| Change a customer, assign groups or tags, link an order | `customers.change_customer` |
+| Change a customer, assign groups or tags | `customers.change_customer` |
+| Attach a customer to an open order at the counter | `customers.link_order` |
 | Delete a customer | `customers.delete_customer` |
 | Export customers | `customers.export_customer` |
 | See groups / tags | `customers.view_customergroup` / `customers.view_customertag` |

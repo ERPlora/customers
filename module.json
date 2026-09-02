@@ -24,6 +24,7 @@
     "customers.delete_customer",
     "customers.erase_customer",
     "customers.export_customer",
+    "customers.link_order",
     "customers.view_customergroup",
     "customers.add_customergroup",
     "customers.change_customergroup",
@@ -46,6 +47,7 @@
       "customers.view_customer",
       "customers.add_customer",
       "customers.change_customer",
+      "customers.link_order",
       "customers.add_note",
       "customers.view_activity",
       "customers.view_customergroup",
@@ -61,6 +63,7 @@
       "customers.change_customergroup",
       "customers.change_customertag",
       "customers.export_customer",
+      "customers.link_order",
       "customers.manage_custom_fields",
       "customers.view_activity",
       "customers.view_customer",
@@ -70,6 +73,7 @@
     "employee": [
       "customers.add_customer",
       "customers.add_note",
+      "customers.link_order",
       "customers.view_activity",
       "customers.view_customer",
       "customers.view_customergroup",
@@ -812,14 +816,14 @@
       }
     },
     "customers.orders.link": {
-      "permission": "customers.change_customer",
+      "permission": "customers.link_order",
       "transaction": true,
       "sql": [
         "commands/customer_link_order.sql",
         "commands/customer_link_order_insert.sql"
       ],
       "ai": {
-        "description": "Links a customer to an open order (ADR-0141 customer-order junction). Owned by customers: the order itself knows nothing about customers."
+        "description": "Links a customer to an open order (ADR-0141 customer-order junction). Owned by customers: the order itself knows nothing about customers. Guarded by its own key `customers.link_order` (customers#59): attaching a customer at the counter is what every waiter and receptionist does, and it must not require the sheet/GDPR key."
       }
     }
   },

@@ -6,7 +6,8 @@ touches GRANTS to that key what a cashier needs there. The runtime does not inhe
 switches the role on and installs this module without this grant hands the cashier a POS with no
 customer: the `sales.pos.assign` slot (`customers.view_customer`) never renders, the inline quick
 add (`customers.add_customer`, customers#18) is hidden and `customers.orders.link` — the junction
-this module owns (ADR-0141), which needs `change_customer` — fails silently on every sale.
+this module owns (ADR-0141), which needs `link_order` (customers#59: its own additive key, not the
+`change_customer` drawer that also withdraws GDPR consents) — fails on every sale.
 
 Contract: search, attach and quick-add at the counter, which is the one thing every reference agrees
 on (Odoo's basic right «Set customers», Shopify POS «Create new customers»/«View customer details»,
@@ -16,6 +17,7 @@ What stays out is the GDPR surface — deleting, anonymising, exporting — plus
 curate them.
 Usage: tests/cashier_role.contract.test.py   (exit 0 = green)
 """
+
 import json, pathlib, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -25,10 +27,11 @@ MUST = [
     "customers.view_customer",
     "customers.add_customer",
     "customers.change_customer",
+    "customers.link_order",
     "customers.add_note",
     "customers.view_activity",
     "customers.view_customergroup",
-    "customers.view_customertag"
+    "customers.view_customertag",
 ]
 MUST_NOT = [
     "customers.delete_customer",
@@ -41,7 +44,7 @@ MUST_NOT = [
     "customers.delete_customergroup",
     "customers.add_customertag",
     "customers.change_customertag",
-    "customers.delete_customertag"
+    "customers.delete_customertag",
 ]
 
 errors = []
@@ -49,12 +52,17 @@ if grants is None:
     errors.append("role_permissions.cashier is not declared")
 else:
     for p in MUST:
-        if p not in grants: errors.append(f"cashier lacks {p}")
+        if p not in grants:
+            errors.append(f"cashier lacks {p}")
     for p in MUST_NOT:
-        if p in grants: errors.append(f"cashier must not get {p}")
-    if "*" in grants: errors.append("cashier must never get *")
+        if p in grants:
+            errors.append(f"cashier must not get {p}")
+    if "*" in grants:
+        errors.append("cashier must never get *")
     for p in grants:
-        if p not in m["permissions"]: errors.append(f"cashier is granted {p}, which this module does not declare")
-for e in errors: print("FAIL:", e)
+        if p not in m["permissions"]:
+            errors.append(f"cashier is granted {p}, which this module does not declare")
+for e in errors:
+    print("FAIL:", e)
 print("cashier role grants:", "OK" if not errors else f"{len(errors)} error(s)")
 sys.exit(1 if errors else 0)

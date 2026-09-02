@@ -113,8 +113,9 @@ away.
 The row is marked deleted, not erased. Sales that referenced them keep their frozen fiscal snapshot,
 so history stays readable and invoices stay valid.
 
-Note the permission asymmetry: an **employee can create** a customer (you need that at the counter)
-but **cannot change or delete** one. Only an **admin** can delete a customer, a group or a tag.
+Note the permission asymmetry: an **employee can create** a customer and **attach one to the open
+order** (`customers.link_order` — you need both at the counter) but **cannot change or delete** one.
+Only an **admin** can delete a customer, a group or a tag.
 
 ## Bulk creation exists, but only through the API
 
