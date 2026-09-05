@@ -50,6 +50,20 @@ describe('domainErrorText — the flat catalogue (ADR-0398)', () => {
     expect(domainErrorText(CATALOG, 'fr', refusal('customers.tag_unavailable'))).toBe('That tag is not available.');
   });
 
+  // hub#1570: on a shell whose SDK already indexes this catalogue, `unwrap()` throws the refusal
+  // with `e.message` ALREADY spoken — the module's own sentence, `{message}` already spliced by
+  // `refusalText()` in the SDK. Splicing it a second time here would read «Falta un campo
+  // obligatorio: Falta un campo obligatorio: …» on every hub that is up to date, which is exactly
+  // the hub this migration targets. A message that already fits one of the module's own templates
+  // is the spoken sentence, and it stays as it arrived.
+  it('does NOT splice twice when the shell’s SDK already spoke the sentence (hub#1570)', () => {
+    const spoken = 'Falta un campo obligatorio: `Tinte habitual` is required.';
+    expect(domainErrorText(CATALOG, 'es', refusal('customers.field_required', spoken))).toBe(spoken);
+    // Spoken in the source language (the shell fell back to `en`): still once, never re-wrapped.
+    const spokenEn = 'A required field is missing: `Tinte habitual` is required.';
+    expect(domainErrorText(CATALOG, 'es', refusal('customers.field_required', spokenEn))).toBe(spokenEn);
+  });
+
   it('gives back nothing — never the raw message — when the code is not declared', () => {
     expect(domainErrorText(CATALOG, 'es', refusal('customers.never_declared', 'raw server detail'))).toBe('');
     expect(domainErrorText(CATALOG, 'es', new Error('no code at all'))).toBe('');

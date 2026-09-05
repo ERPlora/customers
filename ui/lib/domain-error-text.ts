@@ -13,7 +13,9 @@
 // refusal on its own, but `module.json` cannot demand a minimum shell version, so on a hub whose
 // SDK predates it this file is the only thing between a Spanish counter and the handler's English.
 // The two paths are written to produce the SAME sentence (see the `{message}` splice below), so
-// whichever one answers first, the operator reads the same words.
+// whichever one answers first, the operator reads the same words — and when BOTH answer (an
+// up-to-date shell already spoke the refusal before this screen caught it), the sentence is
+// spliced once, not twice: see `alreadySpoken`.
 
 /** `catalog` is `{ <lang>: { errors: { "<module>.<code>": "…" } } }` — what the WC imports. */
 type Catalogs = Record<string, unknown>;
@@ -43,6 +45,36 @@ export function domainErrorText(catalog: Catalogs, locale: string, e: unknown): 
   const code = (e as { code?: unknown } | null | undefined)?.code;
   if (typeof code !== 'string' || !code) return '';
   const text = textFor(catalog, locale, code) || textFor(catalog, SOURCE_LANG, code);
-  if (!text.includes('{message}')) return text;
-  return text.replaceAll('{message}', e instanceof Error ? e.message : '');
+  if (!text.includes(PLACEHOLDER)) return text;
+  const message = e instanceof Error ? e.message : '';
+  if (alreadySpoken(catalog, code, message)) return message;
+  return text.replaceAll(PLACEHOLDER, message);
+}
+
+/** The slot a declared sentence leaves for the handler's own detail (`refusalText()` in the SDK). */
+const PLACEHOLDER = '{message}';
+
+/**
+ * Has the shell's SDK already spoken this refusal with the module's own sentence?
+ *
+ * Since hub#1570 `unwrap()` in the SDK throws a module's refusal with `e.message` REPLACED by the
+ * declared text, `{message}` already spliced (`refusalText()`). Splicing it again here would read
+ * «Falta un campo obligatorio: Falta un campo obligatorio: …» on every shell that is up to date —
+ * the very shell this catalogue is published for. A message that already fits one of the module's
+ * own templates, in whichever language the shell spoke it, IS the spoken sentence: it stays as it
+ * arrived. The handler's raw detail (`\`Birthday\` must be a date …`) never fits a template, so
+ * an older shell that hands it over untouched still gets it spliced below.
+ */
+function alreadySpoken(catalog: Catalogs, code: string, message: string): boolean {
+  if (!message) return false;
+  for (const lang of Object.keys(catalog)) {
+    const template = textFor(catalog, lang, code);
+    const at = template.indexOf(PLACEHOLDER);
+    if (at < 0) continue;
+    const prefix = template.slice(0, at);
+    const suffix = template.slice(at + PLACEHOLDER.length);
+    if (message.length < prefix.length + suffix.length) continue;
+    if (message.startsWith(prefix) && message.endsWith(suffix)) return true;
+  }
+  return false;
 }

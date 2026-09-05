@@ -266,6 +266,23 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(wc.formError).toContain('Falta un campo obligatorio');
     expect(wc.formError).toContain('Tinte habitual');
   });
+
+  // hub#1570: a shell whose SDK indexes this catalogue throws the refusal ALREADY spoken — the
+  // module's sentence with `{message}` spliced. The screen paints it once, never with the prefix
+  // doubled («Falta un campo obligatorio: Falta un campo obligatorio: …»).
+  it('un rechazo que el SDK ya tradujo (hub#1570) se pinta UNA vez, no con el prefijo duplicado', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    const spoken = 'Falta un campo obligatorio: `Tinte habitual` is required.';
+    sdk.command = async () => {
+      throw Object.assign(new Error(spoken), { code: 'customers.field_required' });
+    };
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; formError: string };
+    wc.startEdit();
+    await wc.saveEdit(new Event('submit'));
+    expect(wc.formError).toBe(spoken);
+  });
 });
 
 describe('el dinero habla céntimos → formatMoney (bug ×100, issue #16)', () => {

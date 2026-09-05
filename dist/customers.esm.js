@@ -4175,8 +4175,24 @@ function domainErrorText(catalog, locale, e6) {
   const code = e6?.code;
   if (typeof code !== "string" || !code) return "";
   const text = textFor(catalog, locale, code) || textFor(catalog, SOURCE_LANG, code);
-  if (!text.includes("{message}")) return text;
-  return text.replaceAll("{message}", e6 instanceof Error ? e6.message : "");
+  if (!text.includes(PLACEHOLDER)) return text;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (alreadySpoken(catalog, code, message)) return message;
+  return text.replaceAll(PLACEHOLDER, message);
+}
+var PLACEHOLDER = "{message}";
+function alreadySpoken(catalog, code, message) {
+  if (!message) return false;
+  for (const lang of Object.keys(catalog)) {
+    const template = textFor(catalog, lang, code);
+    const at = template.indexOf(PLACEHOLDER);
+    if (at < 0) continue;
+    const prefix = template.slice(0, at);
+    const suffix = template.slice(at + PLACEHOLDER.length);
+    if (message.length < prefix.length + suffix.length) continue;
+    if (message.startsWith(prefix) && message.endsWith(suffix)) return true;
+  }
+  return false;
 }
 
 // ui/components/erp-customers-fields/erp-customers-fields.ts
