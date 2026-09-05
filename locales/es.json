@@ -217,16 +217,14 @@
     "errConsent": "No se ha podido registrar el consentimiento."
   },
   "errors": {
-    "customers": {
-      "field_required": "Falta un campo obligatorio: {message}",
-      "field_invalid_number": "Número no válido: {message}",
-      "field_invalid_date": "Fecha no válida (usa AAAA-MM-DD): {message}",
-      "field_invalid_boolean": "Valor sí/no no válido: {message}",
-      "field_invalid_option": "El valor no está entre las opciones del campo: {message}",
-      "field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
-      "customer_unavailable": "Ese cliente no está disponible en este negocio.",
-      "group_unavailable": "Ese grupo no está disponible en este negocio (puede haberse borrado).",
-      "tag_unavailable": "Esa etiqueta no está disponible en este negocio (puede haberse borrado)."
-    }
+    "customers.customer_unavailable": "Ese cliente no está disponible en este negocio.",
+    "customers.field_invalid_boolean": "Valor sí/no no válido: {message}",
+    "customers.field_invalid_date": "Fecha no válida (usa AAAA-MM-DD): {message}",
+    "customers.field_invalid_number": "Número no válido: {message}",
+    "customers.field_invalid_option": "El valor no está entre las opciones del campo: {message}",
+    "customers.field_required": "Falta un campo obligatorio: {message}",
+    "customers.field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
+    "customers.group_unavailable": "Ese grupo no está disponible en este negocio (puede haberse borrado).",
+    "customers.tag_unavailable": "Esa etiqueta no está disponible en este negocio (puede haberse borrado)."
   }
 }

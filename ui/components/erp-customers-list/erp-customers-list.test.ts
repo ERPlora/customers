@@ -257,8 +257,6 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     sdk.command = async () => {
       throw Object.assign(new Error('`Tinte habitual` is required.'), { code: 'customers.field_required' });
     };
-    sdk.t = (_c: unknown, key: string, params?: Record<string, unknown>) =>
-      key === 'errors.customers.field_required' ? `Falta un campo obligatorio: ${params?.message ?? ''}` : key;
     const el = await montar();
     await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
     const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; editing: boolean; formError: string };
@@ -267,6 +265,23 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(wc.editing, 'a rejected save keeps the form open to fix it').toBe(true);
     expect(wc.formError).toContain('Falta un campo obligatorio');
     expect(wc.formError).toContain('Tinte habitual');
+  });
+
+  // hub#1570: a shell whose SDK indexes this catalogue throws the refusal ALREADY spoken — the
+  // module's sentence with `{message}` spliced. The screen paints it once, never with the prefix
+  // doubled («Falta un campo obligatorio: Falta un campo obligatorio: …»).
+  it('un rechazo que el SDK ya tradujo (hub#1570) se pinta UNA vez, no con el prefijo duplicado', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    const spoken = 'Falta un campo obligatorio: `Tinte habitual` is required.';
+    sdk.command = async () => {
+      throw Object.assign(new Error(spoken), { code: 'customers.field_required' });
+    };
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; formError: string };
+    wc.startEdit();
+    await wc.saveEdit(new Event('submit'));
+    expect(wc.formError).toBe(spoken);
   });
 });
 

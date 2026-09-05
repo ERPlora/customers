@@ -216,16 +216,14 @@
     "errConsent": "The consent could not be recorded."
   },
   "errors": {
-    "customers": {
-      "field_required": "A required field is missing: {message}",
-      "field_invalid_number": "Invalid number: {message}",
-      "field_invalid_date": "Invalid date (use YYYY-MM-DD): {message}",
-      "field_invalid_boolean": "Invalid yes/no value: {message}",
-      "field_invalid_option": "Value not among the field's options: {message}",
-      "field_unavailable": "That field is not available in this business (it may have been deleted).",
-      "customer_unavailable": "That customer is not available in this business.",
-      "group_unavailable": "That group is not available in this business (it may have been deleted).",
-      "tag_unavailable": "That tag is not available in this business (it may have been deleted)."
-    }
+    "customers.customer_unavailable": "That customer is not available in this business.",
+    "customers.field_invalid_boolean": "Invalid yes/no value: {message}",
+    "customers.field_invalid_date": "Invalid date (use YYYY-MM-DD): {message}",
+    "customers.field_invalid_number": "Invalid number: {message}",
+    "customers.field_invalid_option": "Value not among the field's options: {message}",
+    "customers.field_required": "A required field is missing: {message}",
+    "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
+    "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
+    "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
 }

@@ -9,6 +9,7 @@ import { createListController, dataTableLabels } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
+import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -93,18 +94,19 @@ function erplora(): ErploraClientLike {
   return c;
 }
 
-/** A business rejection (hub#139) carries a stable `code` (`customers.field_required`…): translate it
- *  through `errors.<code>` in the module catalog, with the handler's message as `{message}`; anything
- *  else falls back to the error text or the generic key. */
+/** A business rejection (hub#139) carries a stable `code` (`customers.field_required`…): translate it with
+ *  the sentence the module DECLARES for that code (`locales/<lang>.json → errors.<code>`,
+ *  ADR-0398), which splices the handler's detail into `{message}`; anything else falls back to the
+ *  error text or the generic key.
+ *
+ *  Read from the catalogue, NOT through `erplora().t()`: `t()` splits its key on `.` and walks the
+ *  path, which only ever worked while these texts sat in a nested `errors.customers.<name>` bucket.
+ *  Against the flat contract the walk dies on the second segment and the operator reads the
+ *  handler's English (customers#68). */
 function domainErrorText(e: unknown, fallbackKey: string): string {
-  const code = (e as { code?: unknown } | null)?.code;
-  const message = e instanceof Error ? e.message : '';
-  if (typeof code === 'string' && code.startsWith('customers.')) {
-    const key = `errors.${code}`;
-    const text = erplora().t(CATALOG, key, { message });
-    if (text && text !== key) return text;
-  }
-  return message || erplora().t(CATALOG, fallbackKey);
+  const declared = declaredErrorText(CATALOG, erplora().locale, e);
+  if (declared) return declared;
+  return (e instanceof Error ? e.message : '') || erplora().t(CATALOG, fallbackKey);
 }
 
 /** Visibilidad de UI; el runtime vuelve a validar el permiso en cada command. */

@@ -1951,6 +1951,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
     this.page = 0;
     this.searchable = false;
     this.sortDir = "asc";
+    this.filterValues = {};
     this.title = "";
     this.views = false;
     this.exportable = false;
@@ -1968,6 +1969,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
     this.clientSortDir = "asc";
     this.clientFilters = {};
     this.filterDraft = {};
+    this.serverFilters = {};
     this.panel = "none";
     this.viewMode = "table";
     this.viewChosenByUser = false;
@@ -2580,11 +2582,54 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   get hasFilterRow() {
     return this.filterColumns.length > 0;
   }
-  /** Nº de filtros activos (modo cliente) → badge del botón Filtros. */
+  /** Nº de filtros activos → badge del botón Filtros. En servidor cuenta `filterValues` (#106): sin
+   *  esto el embudo no daba NINGUNA señal de que la lista venía acotada. */
   get activeFilterCount() {
+    if (this.serverSide) {
+      return Object.keys(this.serverFilters).filter((k2) => this.serverFilterState(k2) !== void 0).length;
+    }
     return Object.values(this.clientFilters).filter(
       (f3) => f3.values && f3.values.size > 0 || f3.from || f3.to
     ).length;
+  }
+  // ── Estado de filtro VISIBLE (#106) ──────────────────────────────────────────────────────────
+  /** Traduce un valor de `filterValues` (la forma que emite `filterChange`) a la forma interna que
+   *  usan los `render*Filter`. `undefined` = ese filtro no está puesto. */
+  serverFilterState(key) {
+    const raw = this.serverFilters[key];
+    if (raw === void 0 || raw === null || raw === "") return void 0;
+    if (Array.isArray(raw)) {
+      const values = raw.filter((v3) => v3 !== null && v3 !== void 0 && v3 !== "").map((v3) => String(v3));
+      return values.length ? { values: new Set(values) } : void 0;
+    }
+    if (typeof raw === "object") {
+      const range = raw;
+      const from = range.from === null || range.from === void 0 || range.from === "" ? void 0 : String(range.from);
+      const to = range.to === null || range.to === void 0 || range.to === "" ? void 0 : String(range.to);
+      return from !== void 0 || to !== void 0 ? { from, to } : void 0;
+    }
+    return { values: /* @__PURE__ */ new Set([String(raw)]) };
+  }
+  /** Estado de filtro efectivo de una columna: servidor → `filterValues`/espejo; cliente → memoria. */
+  filterStateOf(key) {
+    return this.serverSide ? this.serverFilterState(key) : this.clientFilters[key];
+  }
+  /** Fija (o borra) el valor visible de un filtro en el espejo de servidor. */
+  setServerFilter(key, value) {
+    const next = { ...this.serverFilters };
+    const empty = value === void 0 || value === null || value === "" || Array.isArray(value) && value.length === 0;
+    if (empty) delete next[key];
+    else next[key] = value;
+    this.serverFilters = next;
+  }
+  /** Fija UN extremo de un rango en el espejo. Los dos extremos viajan en eventos SEPARADOS
+   *  (`{from}` y luego `{to}`), así que aquí se MEZCLA: reemplazar borraría el otro extremo. */
+  setServerRangeEdge(key, edge, value) {
+    const prev = this.serverFilters[key];
+    const base = prev && typeof prev === "object" && !Array.isArray(prev) ? { ...prev } : {};
+    base[edge] = value;
+    const alive = (v3) => v3 !== void 0 && v3 !== null && v3 !== "";
+    this.setServerFilter(key, alive(base.from) || alive(base.to) ? base : void 0);
   }
   /** Valor crudo de una columna para ordenar/filtrar (usa format si lo hay, si no row[key]). */
   rawValue(col, row) {
@@ -2674,15 +2719,18 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   }
   onFilterInput(col, ev) {
     const value = ev.target.value ?? "";
+    this.setServerFilter(col.key, value);
     this.emit("filterChange", { col: col.key, value });
   }
   onRangeInput(col, edge, ev) {
     const raw = ev.target.value ?? "";
     const v3 = raw === "" ? "" : Number(raw);
+    this.setServerRangeEdge(col.key, edge, v3);
     this.emit("filterChange", { col: col.key, value: { [edge]: v3 } });
   }
   onDateRangeInput(col, edge, ev) {
     const v3 = ev.target.value ?? "";
+    this.setServerRangeEdge(col.key, edge, v3);
     this.emit("filterChange", { col: col.key, value: { [edge]: v3 } });
   }
   // ── Filtros EN LÍNEA (toolbar) ────────────────────────────────────────────────────────────
@@ -2702,7 +2750,9 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   // `filterChange`; en cliente escribe `clientFilters` (multiselect ⇒ filtra por inclusión).
   onFilterSelect(col, value, multi) {
     if (this.serverSide) {
-      this.emit("filterChange", { col: col.key, value: value ?? (multi ? [] : "") });
+      const next = value ?? (multi ? [] : "");
+      this.setServerFilter(col.key, next);
+      this.emit("filterChange", { col: col.key, value: next });
       return;
     }
     if (multi) {
@@ -2716,6 +2766,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   onInlineRange(col, edge, ev) {
     const v3 = ev.target.value ?? "";
     if (this.serverSide) {
+      this.setServerRangeEdge(col.key, edge, v3);
       this.emit("filterChange", { col: col.key, value: { [edge]: v3 } });
       return;
     }
@@ -2746,6 +2797,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
    */
   willUpdate(changed) {
     this.applyInitialView();
+    if (changed.has("filterValues")) this.serverFilters = { ...this.filterValues ?? {} };
     if (!this.serverSide && changed.has("rows") && this.mobileShown !== 0) this.mobileShown = 0;
   }
   applyInitialView() {
@@ -2768,9 +2820,11 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   renderFilterControl(col) {
     if (!col.filterable) return A;
     const type = col.filterType ?? "text";
+    const f3 = this.filterStateOf(col.key);
     if (type === "select" || type === "multiselect") {
       const multi = type === "multiselect";
       const opts = col.options ?? this.distinctValues(col).map((v3) => ({ value: v3, label: v3 }));
+      const current = this.selectValue(f3, multi);
       return b2`
         <ion-select
           label=${col.header}
@@ -2780,6 +2834,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           interface="modal"
           .interfaceOptions=${{ cssClass: "ok-overlay" }}
           placeholder=${this.t.select}
+          .value=${current}
           @ionChange=${(e6) => this.onFilterSelect(col, e6.detail.value, multi)}
         >
           ${multi ? A : b2`<ion-select-option value="">${this.t.select}</ion-select-option>`}
@@ -2795,8 +2850,10 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           <span class="flabel">${col.header}</span>
           <div class="frange">
             <ion-input type=${t5} fill="outline" mode="md" placeholder=${type === "daterange" ? this.t.from : this.t.gte}
+              .value=${f3?.from ?? ""}
               @ionInput=${(e6) => onEdge(col, "from", e6)}></ion-input>
             <ion-input type=${t5} fill="outline" mode="md" placeholder=${type === "daterange" ? this.t.to : this.t.lte}
+              .value=${f3?.to ?? ""}
               @ionInput=${(e6) => onEdge(col, "to", e6)}></ion-input>
           </div>
         </div>
@@ -2810,9 +2867,17 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
         label=${col.header}
         label-placement="stacked"
         placeholder=${this.t.filterPlaceholder}
+        .value=${this.selectValue(f3, false)}
         @ionInput=${(e6) => this.onFilterInput(col, e6)}
       ></ion-input>
     `;
+  }
+  /** Valor para un control de un solo valor (`ion-select`/`ion-input`) o multi (`ion-select
+   *  multiple`) a partir del estado de filtro interno. '' / [] = sin filtro. */
+  selectValue(f3, multi) {
+    const values = [...f3?.values ?? /* @__PURE__ */ new Set()];
+    if (multi) return values;
+    return values.length ? values[0] : "";
   }
   // Controles de filtro COMPACTOS para la toolbar (modo `inlineFilters`). Solo select y rango de
   // fechas (los del screenshot); el resto de tipos siguen disponibles vía el drawer si no se activa
@@ -2827,11 +2892,11 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   }
   renderInlineFilter(col) {
     const type = col.filterType ?? "text";
-    const f3 = this.clientFilters[col.key];
+    const f3 = this.filterStateOf(col.key);
     if (type === "select" || type === "multiselect") {
       const multi = type === "multiselect";
       const opts = col.options ?? this.distinctValues(col).map((v3) => ({ value: v3, label: v3 }));
-      const current = multi ? [...f3?.values ?? /* @__PURE__ */ new Set()] : f3?.values && f3.values.size ? [...f3.values][0] : "";
+      const current = this.selectValue(f3, multi);
       return b2`
         <ion-select
           class="tk-filter"
@@ -2897,6 +2962,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
       (a3) => {
         const loading = a3.loading?.(row) === true;
         const disabled = loading || a3.disabled?.(row) === true;
+        const label = typeof a3.label === "function" ? a3.label(row) : a3.label;
         return b2`
             <ion-button
               size="small"
@@ -2904,11 +2970,11 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
               color=${a3.color ?? "medium"}
               ?disabled=${disabled}
               aria-disabled=${disabled ? "true" : A}
-              aria-label=${a3.label}
-              title=${a3.label}
+              aria-label=${label}
+              title=${label}
               @click=${() => this.emit("rowAction", { actionId: a3.id, row })}
             >
-              ${loading ? b2`<ion-spinner slot="icon-only" name="dots"></ion-spinner>` : a3.icon ? b2`<ion-icon slot="icon-only" .icon=${okIcon(a3.icon)}></ion-icon>` : a3.label}
+              ${loading ? b2`<ion-spinner slot="icon-only" name="dots"></ion-spinner>` : a3.icon ? b2`<ion-icon slot="icon-only" .icon=${okIcon(a3.icon)}></ion-icon>` : label}
             </ion-button>
           `;
       }
@@ -3029,7 +3095,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                             ${this.toolButton("grid-outline", this.viewMode === "cards", () => this.setViewMode("cards"), this.t.viewCards)}
                           </span>
                         ` : A}
-                    ${this.hasFilterRow && !this.inlineFilters ? this.toolButton("funnel-outline", this.panel === "filters" || this.activeFilterCount > 0, () => this.toggle("filters"), this.t.filters, this.serverSide ? void 0 : this.activeFilterCount) : A}
+                    ${this.hasFilterRow && !this.inlineFilters ? this.toolButton("funnel-outline", this.panel === "filters" || this.activeFilterCount > 0, () => this.toggle("filters"), this.t.filters, this.activeFilterCount) : A}
                     ${this.effImport ? b2`
                           ${this.toolButton("cloud-upload-outline", false, () => this.renderRoot.querySelector(".tk-file")?.click(), this.t.importCsv)}
                           <input class="tk-file" type="file" accept=".csv,text/csv" hidden @change=${(e6) => this.onImportFile(e6)} />
@@ -3341,6 +3407,9 @@ __decorateClass3([
   n4({ attribute: "sort-dir" })
 ], _OkDataTable.prototype, "sortDir");
 __decorateClass3([
+  n4({ attribute: false })
+], _OkDataTable.prototype, "filterValues");
+__decorateClass3([
   n4()
 ], _OkDataTable.prototype, "title");
 __decorateClass3([
@@ -3412,6 +3481,9 @@ __decorateClass3([
 __decorateClass3([
   r5()
 ], _OkDataTable.prototype, "filterDraft");
+__decorateClass3([
+  r5()
+], _OkDataTable.prototype, "serverFilters");
 __decorateClass3([
   r5()
 ], _OkDataTable.prototype, "panel");
@@ -3849,17 +3921,15 @@ var es_default = {
     errConsent: "No se ha podido registrar el consentimiento."
   },
   errors: {
-    customers: {
-      field_required: "Falta un campo obligatorio: {message}",
-      field_invalid_number: "N\xFAmero no v\xE1lido: {message}",
-      field_invalid_date: "Fecha no v\xE1lida (usa AAAA-MM-DD): {message}",
-      field_invalid_boolean: "Valor s\xED/no no v\xE1lido: {message}",
-      field_invalid_option: "El valor no est\xE1 entre las opciones del campo: {message}",
-      field_unavailable: "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
-      customer_unavailable: "Ese cliente no est\xE1 disponible en este negocio.",
-      group_unavailable: "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
-      tag_unavailable: "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
-    }
+    "customers.customer_unavailable": "Ese cliente no est\xE1 disponible en este negocio.",
+    "customers.field_invalid_boolean": "Valor s\xED/no no v\xE1lido: {message}",
+    "customers.field_invalid_date": "Fecha no v\xE1lida (usa AAAA-MM-DD): {message}",
+    "customers.field_invalid_number": "N\xFAmero no v\xE1lido: {message}",
+    "customers.field_invalid_option": "El valor no est\xE1 entre las opciones del campo: {message}",
+    "customers.field_required": "Falta un campo obligatorio: {message}",
+    "customers.field_unavailable": "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
+    "customers.group_unavailable": "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
+    "customers.tag_unavailable": "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
   }
 };
 
@@ -4082,19 +4152,48 @@ var en_default = {
     errConsent: "The consent could not be recorded."
   },
   errors: {
-    customers: {
-      field_required: "A required field is missing: {message}",
-      field_invalid_number: "Invalid number: {message}",
-      field_invalid_date: "Invalid date (use YYYY-MM-DD): {message}",
-      field_invalid_boolean: "Invalid yes/no value: {message}",
-      field_invalid_option: "Value not among the field's options: {message}",
-      field_unavailable: "That field is not available in this business (it may have been deleted).",
-      customer_unavailable: "That customer is not available in this business.",
-      group_unavailable: "That group is not available in this business (it may have been deleted).",
-      tag_unavailable: "That tag is not available in this business (it may have been deleted)."
-    }
+    "customers.customer_unavailable": "That customer is not available in this business.",
+    "customers.field_invalid_boolean": "Invalid yes/no value: {message}",
+    "customers.field_invalid_date": "Invalid date (use YYYY-MM-DD): {message}",
+    "customers.field_invalid_number": "Invalid number: {message}",
+    "customers.field_invalid_option": "Value not among the field's options: {message}",
+    "customers.field_required": "A required field is missing: {message}",
+    "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
+    "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
+    "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
 };
+
+// ui/lib/domain-error-text.ts
+var SOURCE_LANG = "en";
+function textFor(catalog, lang, code) {
+  const dict = catalog[lang];
+  const text = dict?.errors?.[code];
+  return typeof text === "string" && text.trim() ? text : "";
+}
+function domainErrorText(catalog, locale, e6) {
+  const code = e6?.code;
+  if (typeof code !== "string" || !code) return "";
+  const text = textFor(catalog, locale, code) || textFor(catalog, SOURCE_LANG, code);
+  if (!text.includes(PLACEHOLDER)) return text;
+  const message = e6 instanceof Error ? e6.message : "";
+  if (alreadySpoken(catalog, code, message)) return message;
+  return text.replaceAll(PLACEHOLDER, message);
+}
+var PLACEHOLDER = "{message}";
+function alreadySpoken(catalog, code, message) {
+  if (!message) return false;
+  for (const lang of Object.keys(catalog)) {
+    const template = textFor(catalog, lang, code);
+    const at = template.indexOf(PLACEHOLDER);
+    if (at < 0) continue;
+    const prefix = template.slice(0, at);
+    const suffix = template.slice(at + PLACEHOLDER.length);
+    if (message.length < prefix.length + suffix.length) continue;
+    if (message.startsWith(prefix) && message.endsWith(suffix)) return true;
+  }
+  return false;
+}
 
 // ui/components/erp-customers-fields/erp-customers-fields.ts
 var CATALOG = { es: es_default, en: en_default };
@@ -4106,15 +4205,10 @@ function erplora() {
 function can(permission) {
   return erplora().hasPermission?.(permission) ?? true;
 }
-function domainErrorText(e6, fallbackKey) {
-  const code = e6?.code;
-  const message = e6 instanceof Error ? e6.message : "";
-  if (typeof code === "string" && code.startsWith("customers.")) {
-    const key = `errors.${code}`;
-    const text = erplora().t(CATALOG, key, { message });
-    if (text && text !== key) return text;
-  }
-  return message || erplora().t(CATALOG, fallbackKey);
+function domainErrorText2(e6, fallbackKey) {
+  const declared = domainErrorText(CATALOG, erplora().locale, e6);
+  if (declared) return declared;
+  return (e6 instanceof Error ? e6.message : "") || erplora().t(CATALOG, fallbackKey);
 }
 var TYPE_KEY = {
   text: "ui.typeText",
@@ -4306,7 +4400,7 @@ var ErpCustomersFields = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = domainErrorText(e6, "ui.errDeleteField");
+      this.formError = domainErrorText2(e6, "ui.errDeleteField");
     } finally {
       this.saving = false;
     }
@@ -4402,15 +4496,10 @@ function erplora2() {
 function can2(permission) {
   return erplora2().hasPermission?.(permission) ?? true;
 }
-function domainErrorText2(e6, fallbackKey) {
-  const code = e6?.code;
-  const message = e6 instanceof Error ? e6.message : "";
-  if (typeof code === "string" && code.startsWith("customers.")) {
-    const key = `errors.${code}`;
-    const text = erplora2().t(CATALOG2, key, { message });
-    if (text && text !== key) return text;
-  }
-  return message || erplora2().t(CATALOG2, fallbackKey);
+function domainErrorText3(e6, fallbackKey) {
+  const declared = domainErrorText(CATALOG2, erplora2().locale, e6);
+  if (declared) return declared;
+  return (e6 instanceof Error ? e6.message : "") || erplora2().t(CATALOG2, fallbackKey);
 }
 var ErpCustomersGroups = class extends i3 {
   constructor() {
@@ -4556,7 +4645,7 @@ var ErpCustomersGroups = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = domainErrorText2(e6, "ui.errDeleteGroup");
+      this.formError = domainErrorText3(e6, "ui.errDeleteGroup");
     } finally {
       this.saving = false;
     }
@@ -4786,15 +4875,10 @@ function erplora3() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-function domainErrorText3(e6, fallbackKey) {
-  const code = e6?.code;
-  const message = e6 instanceof Error ? e6.message : "";
-  if (typeof code === "string" && code.startsWith("customers.")) {
-    const key = `errors.${code}`;
-    const text = erplora3().t(CATALOG3, key, { message });
-    if (text && text !== key) return text;
-  }
-  return message || erplora3().t(CATALOG3, fallbackKey);
+function domainErrorText4(e6, fallbackKey) {
+  const declared = domainErrorText(CATALOG3, erplora3().locale, e6);
+  if (declared) return declared;
+  return (e6 instanceof Error ? e6.message : "") || erplora3().t(CATALOG3, fallbackKey);
 }
 function can3(permission) {
   const client = erplora3();
@@ -5210,7 +5294,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.dataTable()?.close();
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errCreate");
+      this.formError = domainErrorText4(e6, "ui.errCreate");
     } finally {
       this.saving = false;
     }
@@ -5286,7 +5370,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.consentRecorded");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errConsent");
+      this.formError = domainErrorText4(e6, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -5310,7 +5394,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.consentWithdrawnMsg");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errConsent");
+      this.formError = domainErrorText4(e6, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -5449,7 +5533,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errUpdate");
+      this.formError = domainErrorText4(e6, "ui.errUpdate");
     } finally {
       this.saving = false;
     }
@@ -5467,7 +5551,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerDeleted", { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errDelete");
+      this.formError = domainErrorText4(e6, "ui.errDelete");
     } finally {
       this.saving = false;
     }
@@ -5545,7 +5629,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.formMsg = erplora3().t(CATALOG3, "ui.customerErased");
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errErase");
+      this.formError = domainErrorText4(e6, "ui.errErase");
     } finally {
       this.saving = false;
     }
@@ -6589,15 +6673,10 @@ function erplora5() {
 function can5(permission) {
   return erplora5().hasPermission?.(permission) ?? true;
 }
-function domainErrorText4(e6, fallbackKey) {
-  const code = e6?.code;
-  const message = e6 instanceof Error ? e6.message : "";
-  if (typeof code === "string" && code.startsWith("customers.")) {
-    const key = `errors.${code}`;
-    const text = erplora5().t(CATALOG5, key, { message });
-    if (text && text !== key) return text;
-  }
-  return message || erplora5().t(CATALOG5, fallbackKey);
+function domainErrorText5(e6, fallbackKey) {
+  const declared = domainErrorText(CATALOG5, erplora5().locale, e6);
+  if (declared) return declared;
+  return (e6 instanceof Error ? e6.message : "") || erplora5().t(CATALOG5, fallbackKey);
 }
 var ErpCustomersTags = class extends i3 {
   constructor() {
@@ -6731,7 +6810,7 @@ var ErpCustomersTags = class extends i3 {
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errDeleteTag");
+      this.formError = domainErrorText5(e6, "ui.errDeleteTag");
     } finally {
       this.saving = false;
     }
