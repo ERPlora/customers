@@ -257,8 +257,6 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     sdk.command = async () => {
       throw Object.assign(new Error('`Tinte habitual` is required.'), { code: 'customers.field_required' });
     };
-    sdk.t = (_c: unknown, key: string, params?: Record<string, unknown>) =>
-      key === 'errors.customers.field_required' ? `Falta un campo obligatorio: ${params?.message ?? ''}` : key;
     const el = await montar();
     await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
     const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; editing: boolean; formError: string };

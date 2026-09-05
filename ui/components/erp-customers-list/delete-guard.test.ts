@@ -26,10 +26,14 @@ beforeEach(() => {
     hasPermission: () => true,
     on: () => () => {},
     locale: 'es',
+    // The real `t()` SPLITS the key on `.` and walks the catalogue, so under the FLAT contract
+    // (ADR-0398) nothing under `errors.` resolves through it any more: it hands back the raw key.
+    // This mock says exactly that. Answering one hard-coded `errors.…` key — which is what it used
+    // to do — kept this test green against a catalogue no shell could actually read, and that is
+    // how the nested shape survived unnoticed. The sentence below must now come from the module's
+    // own locales, through `ui/lib/domain-error-text`.
     t: (_catalog: unknown, key: string, params?: Record<string, unknown>) =>
-      key === 'errors.customers.customer_unavailable'
-        ? 'Ese cliente no está disponible en este negocio.'
-        : `${key}${params?.name ? `:${params.name}` : ''}`,
+      `${key}${params?.name ? `:${params.name}` : ''}`,
     currency: 'EUR',
     formatMoney: (cents: number) => `${(cents / 100).toFixed(2)} €`,
   };

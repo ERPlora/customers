@@ -827,6 +827,17 @@
       }
     }
   },
+  "errors": {
+    "customers.customer_unavailable": {},
+    "customers.field_invalid_boolean": {},
+    "customers.field_invalid_date": {},
+    "customers.field_invalid_number": {},
+    "customers.field_invalid_option": {},
+    "customers.field_required": {},
+    "customers.field_unavailable": {},
+    "customers.group_unavailable": {},
+    "customers.tag_unavailable": {}
+  },
   "events": {
     "listen": {
       "sale.completed": {
