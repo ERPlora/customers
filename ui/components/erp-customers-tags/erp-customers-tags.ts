@@ -204,13 +204,13 @@ export class ErpCustomersTags extends LitElement {
   private renderForm() {
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     const editing = this.editing;
-    return html`<form slot="create" class="form" @submit=${(e: Event) => this.save(e)}>
+    return html`<form slot="create" class="form" data-testid="customers-tags-form" @submit=${(e: Event) => this.save(e)}>
       ${editing ? html`<h3>${t('ui.editTagTitle', { name: editing.name })}</h3>` : nothing}
-      <ion-input mode="md" fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
-      ${editing ? html`<ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActiveTag')}</ion-checkbox>` : nothing}
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
-      ${editing ? html`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
+      ${editing ? html`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActiveTag')}</ion-checkbox>` : nothing}
+      <ion-button type="submit" size="small" data-testid="customers-tags-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+      ${editing ? html`<ion-button size="small" fill="outline" data-testid="customers-tags-cancel" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
     </form>`;
   }
 
@@ -220,8 +220,8 @@ export class ErpCustomersTags extends LitElement {
     return html`<section class="panel">
       <h3>${t('ui.deleteTagTitle')}</h3>
       <p>${t('ui.deleteTagConfirm', { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
+      <ion-button size="small" color="danger" data-testid="customers-tags-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+      <ion-button size="small" fill="outline" data-testid="customers-tags-delete-cancel" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
     </section>`;
   }
 
@@ -229,13 +229,13 @@ export class ErpCustomersTags extends LitElement {
     const t = (k: string): string => erplora().t(CATALOG, k);
     // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
     return html`<div class="page">
-      ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
-      ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+      ${this.formError ? html`<ok-inline-feedback data-testid="customers-tags-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
+      ${this.formMsg ? html`<p class="ok" data-testid="customers-tags-form-msg">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
-      ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
+      ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-tags-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'pricetag-outline'} .addable=${can('customers.add_customertag')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.change_customertag')) this.startEdit(e.detail.row as unknown as Tag); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table testid="customers-tags-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'pricetag-outline'} .addable=${can('customers.add_customertag')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchTag')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyTags')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.change_customertag')) this.startEdit(e.detail.row as unknown as Tag); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;

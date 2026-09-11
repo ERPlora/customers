@@ -260,18 +260,18 @@ export class ErpCustomersFields extends LitElement {
   private renderForm() {
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     const editing = this.editing;
-    return html`<form slot="create" class="form" @submit=${(e: Event) => this.save(e)}>
+    return html`<form slot="create" class="form" data-testid="customers-fields-form" @submit=${(e: Event) => this.save(e)}>
       ${editing ? html`<h3>${t('ui.editFieldTitle', { name: editing.name })}</h3>` : nothing}
-      <ion-input mode="md" fill="outline" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
-      <ion-select mode="md" fill="outline" label=${t('ui.fieldType')} label-placement="floating" .value=${this.fType} @ionChange=${(e: any) => (this.fType = e.target.value)}>
+      <ion-input mode="md" fill="outline" data-testid="customers-fields-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-select mode="md" fill="outline" data-testid="customers-fields-type" label=${t('ui.fieldType')} label-placement="floating" .value=${this.fType} @ionChange=${(e: any) => (this.fType = e.target.value)}>
         ${Object.keys(TYPE_KEY).map((v) => html`<ion-select-option value=${v}>${typeLabel(v)}</ion-select-option>`)}
       </ion-select>
-      ${this.fType === 'select' ? html`<ion-input mode="md" fill="outline" label=${t('ui.fieldOptions')} label-placement="floating" .value=${this.fOptions} @ionInput=${(e: any) => (this.fOptions = e.target.value)}></ion-input>` : nothing}
-      <ion-input mode="md" type="number" fill="outline" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
-      <ion-checkbox .checked=${this.fRequired} @ionChange=${(e: any) => (this.fRequired = e.target.checked)}>${t('ui.fieldRequired')}</ion-checkbox>
-      ${editing ? html`<ion-checkbox .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActive')}</ion-checkbox>` : nothing}
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
-      ${editing ? html`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
+      ${this.fType === 'select' ? html`<ion-input mode="md" fill="outline" data-testid="customers-fields-options" label=${t('ui.fieldOptions')} label-placement="floating" .value=${this.fOptions} @ionInput=${(e: any) => (this.fOptions = e.target.value)}></ion-input>` : nothing}
+      <ion-input mode="md" type="number" fill="outline" data-testid="customers-fields-order" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
+      <ion-checkbox data-testid="customers-fields-required" .checked=${this.fRequired} @ionChange=${(e: any) => (this.fRequired = e.target.checked)}>${t('ui.fieldRequired')}</ion-checkbox>
+      ${editing ? html`<ion-checkbox data-testid="customers-fields-active" .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActive')}</ion-checkbox>` : nothing}
+      <ion-button type="submit" size="small" data-testid="customers-fields-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+      ${editing ? html`<ion-button size="small" fill="outline" data-testid="customers-fields-cancel" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
     </form>`;
   }
 
@@ -281,8 +281,8 @@ export class ErpCustomersFields extends LitElement {
     return html`<section class="panel">
       <h3>${t('ui.deleteFieldTitle')}</h3>
       <p>${t('ui.deleteFieldConfirm', { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
+      <ion-button size="small" color="danger" data-testid="customers-fields-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+      <ion-button size="small" fill="outline" data-testid="customers-fields-delete-cancel" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
     </section>`;
   }
 
@@ -290,13 +290,13 @@ export class ErpCustomersFields extends LitElement {
     const t = (k: string): string => erplora().t(CATALOG, k);
     // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
     return html`<div class="page">
-      ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
-      ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+      ${this.formError ? html`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
+      ${this.formMsg ? html`<p class="ok" data-testid="customers-fields-form-msg">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
-      ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
+      ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${can('customers.manage_custom_fields')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.manage_custom_fields')) this.startEdit(e.detail.row as unknown as Field); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table testid="customers-fields-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${can('customers.manage_custom_fields')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.manage_custom_fields')) this.startEdit(e.detail.row as unknown as Field); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
