@@ -75,6 +75,17 @@ export class ErpCustomersFields extends LitElement {
     .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
   `;
 
   @state() saving = false;
@@ -281,7 +292,7 @@ export class ErpCustomersFields extends LitElement {
     return html`<section class="panel">
       <h3>${t('ui.deleteFieldTitle')}</h3>
       <p>${t('ui.deleteFieldConfirm', { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
       <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
     </section>`;
   }

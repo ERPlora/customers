@@ -128,6 +128,8 @@ export class ErpCustomersPosSearch extends LitElement {
     .quick ion-input { flex:1; }
     .quick-add { --padding-start:.75rem; min-height:44px; }
     .retry { min-height:44px; }
+    /* pm#392 — \`color="primary"\` paints nothing inside this shadow root; the token does. */
+    ion-icon.selected-mark { color: var(--ion-color-primary, #0054e9); }
   `;
 
   @state() private open = false;
@@ -358,7 +360,7 @@ export class ErpCustomersPosSearch extends LitElement {
                 <h3>${c.name}</h3>
                 ${c.phone || c.email ? html`<p>${c.phone || c.email}</p>` : nothing}
               </ion-label>
-              ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : nothing}
+              ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" class="selected-mark"></ion-icon>` : nothing}
             </ion-item>`)}
           ${this.state === 'empty' ? html`<ok-empty-state icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
           ${this.state === 'searching' ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
