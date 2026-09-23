@@ -6,6 +6,7 @@ import '@erplora/outfitkit/ok-spotlight-search';
 import '@erplora/outfitkit/ok-empty-state';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
+import { countryCode } from '../../lib/country';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -15,7 +16,8 @@ const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 // El POS NO conoce a `customers`: la comunicación es por eventos del DOM (contrato), igual que
 // el selector de mesa (`erp-tables-pos-zones`) sobre el mismo slot.
 //
-//   ─ emite `erp:customer-context` {customer_id, customer_name, customer_tax_id, customer_address}
+//   ─ emite `erp:customer-context` {customer_id, customer_name, customer_tax_id, customer_address,
+//     customer_country} — the country as an ISO alpha-2 code ('' if the file names none, customers#71)
 //     → el POS lo adjunta a la venta, y de ahí viaja en `sale.completed` hasta la factura.
 //   ─ escucha `erp:customer-context-reset` → el POS lo dispara tras cobrar.
 //   ─ escucha `erp:customer-required` → el POS lo dispara cuando la venta EXIGE cliente y no lo hay
@@ -78,9 +80,12 @@ interface Snapshot {
   customer_name: string;
   customer_tax_id: string;
   customer_address: string;
+  customer_country: string;
 }
 
-const VACIO: Snapshot = { customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '' };
+const VACIO: Snapshot = {
+  customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '', customer_country: '',
+};
 
 type SearchState = 'idle' | 'searching' | 'empty' | 'error' | 'forbidden';
 
@@ -285,6 +290,7 @@ export class ErpCustomersPosSearch extends LitElement {
       customer_name: ficha.name || c.name,
       customer_tax_id: ficha.tax_id ?? '',
       customer_address: direccionFiscal(ficha),
+      customer_country: countryCode(ficha.country, erplora().locale),
     });
   }
 
