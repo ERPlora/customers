@@ -4486,6 +4486,17 @@ var ErpCustomersFields = class extends i3 {
     .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
   `;
   }
   get columns() {
@@ -4668,7 +4679,7 @@ var ErpCustomersFields = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteFieldTitle")}</h3>
       <p>${t5("ui.deleteFieldConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
       <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
@@ -4767,6 +4778,17 @@ var ErpCustomersGroups = class extends i3 {
     .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
   `;
   }
   get columns() {
@@ -4910,7 +4932,7 @@ var ErpCustomersGroups = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteGroupTitle")}</h3>
       <p>${t5("ui.deleteGroupConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
       <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
@@ -5309,6 +5331,23 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
     footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
+    ion-button.tone-danger[fill] {
+      --border-color: var(--ion-color-danger, #c5000f);
+      --color: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger, #c5000f);
+      --background-focused: var(--ion-color-danger, #c5000f);
+    }
   `;
   }
   get columns() {
@@ -5881,7 +5920,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <ion-input mode="md" fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e6) => this.eraseReason = String(e6.target.value ?? "")}></ion-input>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
+        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
       </footer>
     </section>`;
@@ -5893,7 +5932,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <h3>${t5("ui.deleteCustomerTitle")}</h3>
       <p>${t5("ui.deleteCustomerConfirm", { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
       </footer>
     </section>`;
@@ -6055,9 +6094,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
             <span class="muted">${t5(CONSENT_STATE_KEY[state] ?? "ui.consentNeverAsked")}</span>
             ${row?.occurred_at ? b2`<span class="muted">${formatTimestamp(row.occurred_at)}${row.contact_point ? ` \xB7 ${row.contact_point}` : ""}</span>` : A}
           </div>
-          ${!editable ? A : state === "granted" ? b2`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+          ${!editable ? A : state === "granted" ? b2`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
                   ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
-                  >${t5("ui.consentWithdraw")}</ion-button>` : channel === "any" ? b2`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                  >${t5("ui.consentWithdraw")}</ion-button>` : channel === "any" ? b2`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
                     ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                     >${t5("ui.consentClose")}</ion-button>` : asking ? A : b2`<ion-button size="small" data-act="grant" ?disabled=${this.saving}
                       @click=${() => {
@@ -6102,10 +6141,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         <h2>${d3.name}</h2>
         <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
         ${this.editing || !can3("customers.change_customer") ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
-        ${can3("customers.delete_customer") ? b2`<ion-button size="small" color="danger" fill="outline" @click=${() => {
+        ${can3("customers.delete_customer") ? b2`<ion-button size="small" class="tone-danger" fill="outline" @click=${() => {
       this.pendingDelete = d3;
     }}>${t5("ui.delete")}</ion-button>` : A}
-        ${can3("customers.erase_customer") ? b2`<ion-button class="erase" size="small" color="danger" fill="clear" @click=${() => {
+        ${can3("customers.erase_customer") ? b2`<ion-button class="erase tone-danger" size="small" fill="clear" @click=${() => {
       this.pendingErase = true;
       this.eraseReason = "";
       this.formError = "";
@@ -6731,6 +6770,8 @@ var ErpCustomersPosSearch = class extends i3 {
     .quick ion-input { flex:1; }
     .quick-add { --padding-start:.75rem; min-height:44px; }
     .retry { min-height:44px; }
+    /* pm#392 — \`color="primary"\` paints nothing inside this shadow root; the token does. */
+    ion-icon.selected-mark { color: var(--ion-color-primary, #0054e9); }
   `;
   }
   /** Un fallo que no se ve no existe: rastro para el runtime + aviso traducido para el cajero. */
@@ -6897,7 +6938,7 @@ var ErpCustomersPosSearch = class extends i3 {
                 <h3>${c5.name}</h3>
                 ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
               </ion-label>
-              ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>` : A}
+              ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" class="selected-mark"></ion-icon>` : A}
             </ion-item>`)}
           ${this.state === "empty" ? b2`<ok-empty-state icon=${this.q ? "search-outline" : "people-outline"} message=${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}></ok-empty-state>` : A}
           ${this.state === "searching" ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
@@ -7006,6 +7047,17 @@ var ErpCustomersTags = class extends i3 {
     .form h3 { margin:0; font-size:1rem; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
   `;
   }
   get columns() {
@@ -7137,7 +7189,7 @@ var ErpCustomersTags = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteTagTitle")}</h3>
       <p>${t5("ui.deleteTagConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
       <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }

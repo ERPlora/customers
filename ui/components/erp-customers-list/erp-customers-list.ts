@@ -315,6 +315,23 @@ export class ErpCustomersList extends LitElement {
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
     footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+    /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
+       \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
+       root, so a solid button came out as white text on a transparent background (invisible).
+       Custom properties do inherit through the boundary, so the theme token still applies. */
+    ion-button.tone-danger:not([fill]) {
+      --background: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger-shade, #ad000d);
+      --background-focused: var(--ion-color-danger-shade, #ad000d);
+      --background-hover: var(--ion-color-danger-tint, #cb1a27);
+      --color: var(--ion-color-danger-contrast, #fff);
+    }
+    ion-button.tone-danger[fill] {
+      --border-color: var(--ion-color-danger, #c5000f);
+      --color: var(--ion-color-danger, #c5000f);
+      --background-activated: var(--ion-color-danger, #c5000f);
+      --background-focused: var(--ion-color-danger, #c5000f);
+    }
   `;
 
   // — Lista —
@@ -930,7 +947,7 @@ export class ErpCustomersList extends LitElement {
       <ion-input mode="md" fill="outline" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e: Event) => (this.eraseReason = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
+        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => (this.pendingErase = false)}>${t('ui.cancel')}</ion-button>
       </footer>
     </section>`;
@@ -943,7 +960,7 @@ export class ErpCustomersList extends LitElement {
       <h3>${t('ui.deleteCustomerTitle')}</h3>
       <p>${t('ui.deleteCustomerConfirm', { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" color="danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
       </footer>
     </section>`;
@@ -1118,11 +1135,11 @@ export class ErpCustomersList extends LitElement {
           ${!editable
             ? nothing
             : state === 'granted'
-              ? html`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+              ? html`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
                   ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                   >${t('ui.consentWithdraw')}</ion-button>`
               : channel === 'any'
-                ? html`<ion-button size="small" fill="outline" color="danger" data-act="withdraw"
+                ? html`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
                     ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                     >${t('ui.consentClose')}</ion-button>`
                 : asking
@@ -1175,10 +1192,10 @@ export class ErpCustomersList extends LitElement {
           ? nothing
           : html`<ion-button size="small" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
         ${can('customers.delete_customer')
-          ? html`<ion-button size="small" color="danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
+          ? html`<ion-button size="small" class="tone-danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
           : nothing}
         ${can('customers.erase_customer')
-          ? html`<ion-button class="erase" size="small" color="danger" fill="clear" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
+          ? html`<ion-button class="erase tone-danger" size="small" fill="clear" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
           : nothing}
       </header>
       ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
