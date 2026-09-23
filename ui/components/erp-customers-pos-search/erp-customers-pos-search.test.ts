@@ -77,7 +77,47 @@ describe('erp-customers-pos-search', () => {
       customer_name: 'Ana García',
       customer_tax_id: '12345678Z',
       customer_address: 'Calle Mayor 1, 28013 Madrid, ES',
+      customer_country: 'ES',
     });
+  });
+
+  // customers#71 — `sales` reads the invoice country from `customer_country` (sales#332); without
+  // it a foreign customer's invoice came out as Spain. The file keeps the country as free text.
+  it('al elegir un cliente extranjero emite su país como código ISO', async () => {
+    (globalThis as Record<string, unknown> & { erplora: Record<string, unknown> }).erplora.query =
+      async (name: string) => {
+        if (name === 'customers.get') return [{ ...ANA_FICHA, tax_id: 'FR40303265045', country: 'Francia' }];
+        if (name === 'customers.list') return [ANA];
+        return [];
+      };
+    const el = await montar();
+    const emitidos: Record<string, unknown>[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+
+    await abrir(el);
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(emitidos[0]).toMatchObject({ customer_tax_id: 'FR40303265045', customer_country: 'FR' });
+  });
+
+  it("lee el país escrito en el idioma del usuario", async () => {
+    const sdk = (globalThis as Record<string, unknown> & { erplora: Record<string, unknown> }).erplora;
+    sdk.locale = 'de';
+    sdk.query = async (name: string) => {
+      if (name === 'customers.get') return [{ ...ANA_FICHA, country: 'Deutschland' }];
+      if (name === 'customers.list') return [ANA];
+      return [];
+    };
+    const el = await montar();
+    const emitidos: Record<string, unknown>[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+
+    await abrir(el);
+    el.shadowRoot.querySelector<HTMLElement>('ion-item')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(emitidos[0]).toMatchObject({ customer_country: 'DE' });
   });
 
   it('al quitar el cliente vacía también el snapshot fiscal', async () => {
@@ -95,7 +135,7 @@ describe('erp-customers-pos-search', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(emitidos.at(-1)).toEqual({
-      customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '',
+      customer_id: null, customer_name: '', customer_tax_id: '', customer_address: '', customer_country: '',
     });
   });
 });
