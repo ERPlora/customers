@@ -177,6 +177,11 @@ def main() -> int:
             "searching for the fragment itself finds nobody", [], found(HUB_A, "111222")
         )
         check("a number nobody has", [], found(HUB_A, "34699999999"))
+        check(
+            "the card plus FOUR digits is not a country code",
+            [],
+            found(HUB_A, "1234600111333"),
+        )
 
         print("· tenancy and soft-delete")
         check(
