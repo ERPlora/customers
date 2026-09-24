@@ -17,7 +17,8 @@ page). Requires `customers.view_customer`.
 
 1. Use the quick-add on the list, or open the full form.
 2. Fill in the name. Contact details (email, phone, address, city, postal code, country), tax details
-   (tax id, company name) and CRM fields are optional.
+   (tax id, company name) and CRM fields are optional. The country is picked from a searchable list
+   (Spain first) and stored as its ISO code, so the till always recognises it on the invoice.
 3. Save.
 
 Requires `customers.add_customer` — an employee can do this.

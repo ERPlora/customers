@@ -26,7 +26,9 @@ leaving the sale screen.
 - **It does not own the customer data printed on an invoice.** That is a frozen snapshot living on
   the sale — see [concepts.md](concepts.md).
 - **CSV import lives in the list.** The table's import button sends the file in batches of 50 and
-  reports what was created, what was skipped and why, and what failed.
+  reports what was created, what was skipped and why, and what failed. The «País»/`country` column
+  is stored as the ISO code of the country it names (name or code, in Spanish or English); a value
+  that names no country is imported as written and flagged in the report for review.
 - **Custom-field values live in the customer sheet.** Editing the sheet saves the base data and the
   values in one validated write: a required field cannot stay empty, and number/date/yes-no/select
   values must match their type — otherwise nothing is saved and the form tells you which field.

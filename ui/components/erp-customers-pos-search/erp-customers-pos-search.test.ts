@@ -76,7 +76,8 @@ describe('erp-customers-pos-search', () => {
       customer_id: 'cus-1',
       customer_name: 'Ana García',
       customer_tax_id: '12345678Z',
-      customer_address: 'Calle Mayor 1, 28013 Madrid, ES',
+      // customers#72: the file stores the ISO code now; the printed address reads the country name.
+      customer_address: 'Calle Mayor 1, 28013 Madrid, España',
       customer_country: 'ES',
     });
   });
