@@ -1,10 +1,20 @@
-// customers#71 — the customer file keeps its country as free text (the form and the CSV «País»
-// column take whatever was typed), while the till's invoice needs an ISO 3166 alpha-2 code
-// (`customer_country`, read by `sales`, sales#332). This turns one into the other. Country names
-// come from the runtime's `Intl.DisplayNames`, never from a list written here.
+// customers#71 — the customer file used to keep its country as free text (the form and the CSV
+// «País» column took whatever was typed), while the till's invoice needs an ISO 3166 alpha-2 code
+// (`customer_country`, read by `sales`, sales#332). This turns one into the other. Since
+// customers#72 the form picks the country from a list and stores the code, but files written
+// before still hold text, so every reader goes through here. Country names come from the runtime's
+// `Intl.DisplayNames`, never from a list written here.
 
 /** Region codes CLDR names that are not a country: groupings and pseudo-regions. */
 const NOT_A_COUNTRY = new Set(['EU', 'EZ', 'QO', 'UN', 'XA', 'XB', 'ZZ']);
+
+/** The till's own country: first in the picker, where most customers are from. */
+const HOME_COUNTRY = 'ES';
+
+/** Spanish regions CLDR names as if they were countries — Canarias (IC), Ceuta y Melilla (EA). They
+ *  are Spain: the AEAT's `CountryType2` has no such country and `taxes`/`sales` leave them out, so
+ *  the picker does not offer them and a file that names one reads as Spain. */
+const SPANISH_REGIONS = new Set(['IC', 'EA']);
 
 /** The code a region goes by today: CLDR still names retired aliases (FX, UK, DD…) exactly like
  *  the country that replaced them, so «France» would otherwise resolve to FX. */
@@ -24,7 +34,7 @@ const REGION_CODES: readonly string[] = (() => {
     for (let b = 65; b <= 90; b++) {
       const code = String.fromCharCode(a, b);
       const name = names.of(code);
-      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code)) out.push(code);
+      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code) && !SPANISH_REGIONS.has(code)) out.push(code);
     }
   }
   return out;
@@ -50,6 +60,10 @@ function namesIn(lang: string): Map<string, string> {
         const name = names.of(code);
         if (name) index.set(normalize(name), code);
       }
+      for (const code of SPANISH_REGIONS) {
+        const name = names.of(code);
+        if (name) index.set(normalize(name), HOME_COUNTRY);
+      }
     } catch {
       // An invalid language tag names nothing: the other languages still resolve.
     }
@@ -65,6 +79,7 @@ export function countryCode(raw: string | null | undefined, lang?: string): stri
   if (!text) return '';
   if (/^[a-z]{2}$/i.test(text)) {
     const code = canonical(text.toUpperCase());
+    if (SPANISH_REGIONS.has(code)) return HOME_COUNTRY;
     return CODES.has(code) ? code : '';
   }
   const key = normalize(text);
@@ -73,4 +88,56 @@ export function countryCode(raw: string | null | undefined, lang?: string): stri
     if (code) return code;
   }
   return '';
+}
+
+/** One entry of the country picker, shaped for `ok-combo`. */
+export interface CountryOption {
+  /** ISO alpha-2 code — what the file stores (customers#72). */
+  value: string;
+  /** What the person reads and types against. It carries the code too (`Francia (FR)`): `ok-combo`
+   *  filters on the label only, and someone who knows the code types the code. */
+  label: string;
+}
+
+const optionsByLanguage = new Map<string, CountryOption[]>();
+
+/** customers#72 — the picker's options in the reader's language: Spain first, the rest by name.
+ *  Built once per language (the form re-renders on every keystroke). Shared: never mutate it. */
+export function countryOptions(lang: string): CountryOption[] {
+  const cached = optionsByLanguage.get(lang);
+  if (cached) return cached;
+  let names: Intl.DisplayNames | null = null;
+  try {
+    names = new Intl.DisplayNames([lang, 'en'], { type: 'region', fallback: 'none' });
+  } catch {
+    // An invalid language tag: the codes alone still make a usable picker.
+  }
+  const option = (value: string): CountryOption => {
+    const name = names?.of(value);
+    return { value, label: name ? `${name} (${value})` : value };
+  };
+  let compare: (a: string, b: string) => number;
+  try {
+    compare = new Intl.Collator(lang).compare;
+  } catch {
+    compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  }
+  const rest = REGION_CODES.filter((c) => c !== HOME_COUNTRY).map(option);
+  rest.sort((a, b) => compare(a.label, b.label));
+  const options = [option(HOME_COUNTRY), ...rest];
+  optionsByLanguage.set(lang, options);
+  return options;
+}
+
+/** customers#72 — the country the file holds, named in the reader's language: a stored code or a
+ *  legacy name it resolves reads «Francia»; text it cannot resolve is shown as it was written. */
+export function countryName(raw: string | null | undefined, lang: string): string {
+  const text = (raw ?? '').trim();
+  const code = countryCode(text, lang);
+  if (!code) return text;
+  try {
+    return new Intl.DisplayNames([lang, 'en'], { type: 'region', fallback: 'none' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }

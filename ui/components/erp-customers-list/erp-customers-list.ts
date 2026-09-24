@@ -4,12 +4,14 @@ import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
 import '@erplora/outfitkit/ok-kpi';
+import '@erplora/outfitkit/ok-combo';
 import type { DataTableColumn, DataTableAction } from '@erplora/outfitkit';
 import { createListController, dataTableLabels } from '@erplora/module-sdk';
 import type { ListController, ListClient, ListParams, ListPage } from '@erplora/module-sdk';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
+import { countryCode, countryName, countryOptions } from '../../lib/country';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -82,6 +84,8 @@ interface ImportReport {
   created: number;
   skipped: { row: number; reason: string }[];
   failed: { rows: string; reason: string }[];
+  /** Rows imported with something to review — a country it could not read (customers#72). */
+  warnings: { row: number; reason: string }[];
 }
 
 interface Activity {
@@ -504,7 +508,7 @@ export class ErpCustomersList extends LitElement {
   private async onCsvImport(ev: CustomEvent<{ rows: Record<string, string>[] }>): Promise<void> {
     if (!can('customers.add_customer')) return;
     const rows = ev.detail?.rows ?? [];
-    const report: ImportReport = { total: rows.length, created: 0, skipped: [], failed: [] };
+    const report: ImportReport = { total: rows.length, created: 0, skipped: [], failed: [], warnings: [] };
     const valid: Array<{ row: number; item: Record<string, unknown> }> = [];
     rows.forEach((r, i) => {
       const row = i + 1;
@@ -513,11 +517,17 @@ export class ErpCustomersList extends LitElement {
       if (!name) { report.skipped.push({ row, reason: 'ui.importReasonName' }); return; }
       if (email && !ErpCustomersList.EMAIL_SHAPE.test(email)) { report.skipped.push({ row, reason: 'ui.importReasonEmail' }); return; }
       const stage = ErpCustomersList.csvValue(r, 'lifecycle_stage') || 'lead';
+      // The country is stored as its code, resolved the way the till reads it (customers#72). Text
+      // it cannot read is kept — nothing typed is thrown away — and the row is flagged to review.
+      const rawCountry = ErpCustomersList.csvValue(r, 'country');
+      const code = countryCode(rawCountry, erplora().locale);
+      if (rawCountry && !code) report.warnings.push({ row, reason: 'ui.importReasonCountry' });
+      const country = code || rawCountry;
       valid.push({ row, item: {
         name, email, phone: ErpCustomersList.csvValue(r, 'phone'), tax_id: ErpCustomersList.csvValue(r, 'tax_id'),
         company_name: ErpCustomersList.csvValue(r, 'company_name'), address: ErpCustomersList.csvValue(r, 'address'),
         city: ErpCustomersList.csvValue(r, 'city'), postal_code: ErpCustomersList.csvValue(r, 'postal_code'),
-        country: ErpCustomersList.csvValue(r, 'country'), notes: ErpCustomersList.csvValue(r, 'notes'),
+        country, notes: ErpCustomersList.csvValue(r, 'notes'),
         lifecycle_stage: STAGE_KEY[stage] ? stage : 'lead', source: 'import',
       } });
     });
@@ -545,11 +555,13 @@ export class ErpCustomersList extends LitElement {
     const r = this.importReport;
     if (!r) return nothing;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
-    const tone = r.failed.length ? 'danger' : r.skipped.length ? 'warning' : 'success';
+    const tone = r.failed.length ? 'danger' : r.skipped.length || r.warnings.length ? 'warning' : 'success';
     return html`<ok-inline-feedback class="import-report" tone=${tone} icon=${r.failed.length ? 'alert-circle-outline' : 'checkmark-outline'}>
       <strong>${t('ui.importSummary', { total: r.total, created: r.created, skipped: r.skipped.length, failed: r.failed.reduce((n, f) => n + (Number(f.rows.split('-')[1] ?? f.rows) - Number(f.rows.split('-')[0]) + 1), 0) })}</strong>
       ${r.skipped.length ? html`<ul class="import-list">${r.skipped.slice(0, 20).map((s) => html`<li>${t('ui.importRow', { row: s.row })}: ${t(s.reason)}</li>`)}
         ${r.skipped.length > 20 ? html`<li>…</li>` : nothing}</ul>` : nothing}
+      ${r.warnings.length ? html`<ul class="import-list import-warnings">${r.warnings.slice(0, 20).map((w) => html`<li>${t('ui.importRow', { row: w.row })}: ${t(w.reason)}</li>`)}
+        ${r.warnings.length > 20 ? html`<li>…</li>` : nothing}</ul>` : nothing}
       ${r.failed.length ? html`<ul class="import-list">${r.failed.map((f) => html`<li>${t('ui.importRows', { rows: f.rows })}: ${f.reason}</li>`)}</ul>` : nothing}
       <ion-button size="small" fill="clear" @click=${() => (this.importReport = null)}>${t('ui.close')}</ion-button>
     </ok-inline-feedback>`;
@@ -783,7 +795,8 @@ export class ErpCustomersList extends LitElement {
     this.form = {
       name: d.name ?? '', email: d.email ?? '', phone: d.phone ?? '', tax_id: d.tax_id ?? '',
       address: d.address ?? '', city: d.city ?? '', postal_code: d.postal_code ?? '',
-      country: d.country ?? '', notes: d.notes ?? '', lifecycle_stage: d.lifecycle_stage || 'lead',
+      // A legacy free-text country opens as the code it names; text that names none is kept (customers#72).
+      country: countryCode(d.country, erplora().locale) || (d.country ?? '').trim(), notes: d.notes ?? '', lifecycle_stage: d.lifecycle_stage || 'lead',
       source: d.source || 'walk_in', company_name: d.company_name ?? '',
       birthday: d.birthday ?? '', anniversary: d.anniversary ?? '',
       preferred_channel: d.preferred_channel || 'none',
@@ -1033,6 +1046,7 @@ export class ErpCustomersList extends LitElement {
         ${Object.keys(options).map((v) => html`<ion-select-option value=${v}>${label_(v)}</ion-select-option>`)}
       </ion-select>`;
     }
+    if (key === 'country') return this.countryField(form, label, patch);
     if (key === 'notes') {
       return html`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
         label-placement="floating" auto-grow .value=${value}
@@ -1042,6 +1056,25 @@ export class ErpCustomersList extends LitElement {
     return html`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
       label-placement="floating" .value=${value}
       @ionInput=${(e: any) => patch({ [key]: e.target.value } as Partial<EditForm>)}></ion-input>`;
+  }
+
+  /**
+   * The country is PICKED from a searchable list and stored as its ISO code (customers#72): typed by
+   * hand, «Fr.» or a typo reached the till unread and the invoice went out as Spain. `ok-combo`, as
+   * in `taxes` (taxes#41): 249 options in a plain select is a scroll nobody finishes. A file written
+   * before whose text cannot be read keeps it as an option of its own, so it stays visible and an
+   * unrelated edit never erases it; «No country» is how it is cleared.
+   */
+  private countryField(form: EditForm, label: string, patch: (part: Partial<EditForm>) => void) {
+    const t = (k: string): string => erplora().t(CATALOG, k);
+    const countries = countryOptions(erplora().locale);
+    const value = form.country;
+    const legacy = value && !countries.some((o) => o.value === value) ? [{ value, label: value }] : [];
+    return html`<ok-combo data-sheet-field="country" label=${label}
+      .options=${[{ value: '', label: t('ui.countryNone') }, ...legacy, ...countries]}
+      .value=${value}
+      .labels=${{ placeholder: t('ui.countrySearch'), empty: t('ui.countryNoMatch') }}
+      @ok-change=${(e: CustomEvent<{ value: string }>) => patch({ country: e.detail.value })}></ok-combo>`;
   }
 
   private renderEditForm() {
@@ -1208,7 +1241,7 @@ export class ErpCustomersList extends LitElement {
           <div><dt>${t('ui.colPhone')}</dt><dd>${d.phone || '—'}</dd></div>
           <div><dt>${t('ui.fieldNif')}</dt><dd>${d.tax_id || '—'}</dd></div>
           <div><dt>${t('ui.fieldCompany')}</dt><dd>${d.company_name || '—'}</dd></div>
-          <div><dt>${t('ui.fieldAddress')}</dt><dd>${[d.address, d.postal_code, d.city, d.country].filter(Boolean).join(', ') || '—'}</dd></div>
+          <div><dt>${t('ui.fieldAddress')}</dt><dd>${[d.address, d.postal_code, d.city, countryName(d.country, erplora().locale)].filter(Boolean).join(', ') || '—'}</dd></div>
           <div><dt>${t('ui.colStage')}</dt><dd>${stageLabel(d.lifecycle_stage)}</dd></div>
           <div><dt>${t('ui.fieldSource')}</dt><dd>${d.source || '—'}</dd></div>
           <div><dt>${t('ui.fieldPreferredChannel')}</dt><dd>${channelLabel(d.preferred_channel)}</dd></div>

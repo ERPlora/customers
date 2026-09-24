@@ -4013,6 +4013,9 @@ var es_default = {
     fieldCity: "Ciudad",
     fieldPostalCode: "C\xF3digo postal",
     fieldCountry: "Pa\xEDs",
+    countryNone: "Sin pa\xEDs",
+    countrySearch: "Busca un pa\xEDs\u2026",
+    countryNoMatch: "Ning\xFAn pa\xEDs coincide",
     fieldBirthday: "Cumplea\xF1os",
     fieldAnniversary: "Aniversario",
     fieldSource: "Origen",
@@ -4132,6 +4135,7 @@ var es_default = {
     importRows: "Filas {rows}",
     importReasonName: "falta el nombre",
     importReasonEmail: "el email no es v\xE1lido",
+    importReasonCountry: "pa\xEDs no reconocido \u2014 importado tal cual, rev\xEDsalo en la ficha",
     close: "Cerrar",
     eraseData: "Borrar datos personales",
     eraseDataTitle: "Borrar datos personales (RGPD)",
@@ -4244,6 +4248,9 @@ var en_default = {
     fieldCity: "City",
     fieldPostalCode: "Postal code",
     fieldCountry: "Country",
+    countryNone: "No country",
+    countrySearch: "Search a country\u2026",
+    countryNoMatch: "No country matches",
     fieldBirthday: "Birthday",
     fieldAnniversary: "Anniversary",
     fieldSource: "Source",
@@ -4363,6 +4370,7 @@ var en_default = {
     importRows: "Rows {rows}",
     importReasonName: "name is required",
     importReasonEmail: "email is not valid",
+    importReasonCountry: "country not recognised \u2014 imported as written, review it on the customer",
     close: "Close",
     eraseData: "Erase personal data",
     eraseDataTitle: "Erase personal data (GDPR)",
@@ -5128,6 +5136,395 @@ __decorateClass4([
 ], OkKpi.prototype, "icon");
 define("ok-kpi", OkKpi);
 
+// @erplora/outfitkit/dist/ok-combo.js
+var __defProp5 = Object.defineProperty;
+var __decorateClass5 = (decorators, target, key, kind) => {
+  var result = void 0;
+  for (var i7 = decorators.length - 1, decorator; i7 >= 0; i7--)
+    if (decorator = decorators[i7])
+      result = decorator(target, key, result) || result;
+  if (result) __defProp5(target, key, result);
+  return result;
+};
+var DEFAULT_LABELS3 = {
+  placeholder: "Search\u2026",
+  empty: "No results"
+};
+var OkCombo = class extends i3 {
+  constructor() {
+    super(...arguments);
+    this.options = [];
+    this.value = "";
+    this.placeholder = "";
+    this.labels = {};
+    this.query = "";
+    this.open = false;
+    this.activeIndex = -1;
+    this.onDocClick = (e6) => {
+      if (!this.open) return;
+      if (!e6.composedPath().includes(this)) this.close();
+    };
+  }
+  static {
+    this.styles = i`
+    :host {
+      /* Vars overridable (estilo Ionic), default = cadena --ok-* → --ion-* → hex */
+      --color: var(--ok-text, var(--ion-text-color, #1c1b17));
+      --color-muted: var(--ok-text-muted, rgba(var(--ion-text-color-rgb, 28, 27, 23), 0.55));
+      --primary-color: var(--ok-primary, var(--ion-color-primary, #3880ff));
+      --primary-contrast: var(--ok-primary-contrast, var(--ion-color-primary-contrast, #ffffff));
+      --background: var(--ok-surface, var(--ion-background-color, #ffffff));
+      --hover-bg: var(--ok-hover, rgba(var(--ion-text-color-rgb, 28, 27, 23), 0.06));
+      --border-color: var(--ok-border, rgba(var(--ion-text-color-rgb, 28, 27, 23), 0.18));
+      --border-radius: var(--ok-radius, 8px);
+      --font: var(--ok-font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+      --shadow: var(--ok-shadow, 0 6px 24px rgba(0, 0, 0, 0.14));
+
+      /* Por defecto ocupa el ancho del contenedor y es responsive. */
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      position: relative;
+      color: var(--color);
+      font-family: var(--font);
+      font-size: 0.95rem;
+    }
+    .field {
+      position: relative;
+      width: 100%;
+    }
+    /* El ion-input se estiliza vía sus propias vars (estilo Ionic). */
+    ion-input {
+      --background: var(--background);
+      --color: var(--color);
+      --placeholder-color: var(--color-muted);
+      --border-radius: var(--border-radius);
+      width: 100%;
+    }
+    /* Chevron decorativo a la derecha del campo. */
+    .chevron {
+      position: absolute;
+      right: 0.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      color: var(--color-muted);
+      pointer-events: none;
+      transition: transform 0.18s ease;
+    }
+    :host([data-open]) .chevron {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    /* Dropdown de resultados: posicionado bajo el campo, ancho del contenedor. */
+    .dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 50;
+      max-height: 16rem;
+      overflow-y: auto;
+      margin: 0;
+      padding: 0.25rem;
+      list-style: none;
+      background: var(--background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      box-sizing: border-box;
+    }
+    .option {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem 0.6rem;
+      border-radius: calc(var(--border-radius) - 2px);
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: background-color var(--ok-transition, 150ms ease),
+        color var(--ok-transition, 150ms ease),
+        border-color var(--ok-transition, 150ms ease),
+        box-shadow var(--ok-transition, 150ms ease), transform 120ms ease;
+    }
+    @media (hover: hover) {
+      .option:hover {
+        background: var(--hover-bg);
+      }
+    }
+    .option:active {
+      transform: scale(var(--ok-press-scale, 0.97));
+    }
+    .option.active {
+      background: var(--primary-color);
+      color: var(--primary-contrast);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .option:hover,
+      .option:active {
+        transform: none;
+      }
+    }
+    .empty {
+      padding: 0.6rem;
+      color: var(--color-muted);
+      text-align: center;
+    }
+  `;
+  }
+  // Textos efectivos: defaults inglés sobreescritos por los pasados desde fuera.
+  get t() {
+    return { ...DEFAULT_LABELS3, ...this.labels };
+  }
+  // Placeholder efectivo: prop explícita si se pasó, si no el de los labels.
+  get effectivePlaceholder() {
+    return this.placeholder || this.t.placeholder;
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("click", this.onDocClick, true);
+  }
+  disconnectedCallback() {
+    document.removeEventListener("click", this.onDocClick, true);
+    super.disconnectedCallback();
+  }
+  // Texto a mostrar en el input: si está escribiendo usa la query, si no, el label del value.
+  get displayText() {
+    if (this.open) return this.query;
+    const current = this.options.find((o7) => o7.value === this.value);
+    return current ? current.label : this.query;
+  }
+  // Opciones que casan con la query (case-insensitive, substring).
+  get filtered() {
+    const q = this.query.trim().toLowerCase();
+    if (!q) return this.options;
+    return this.options.filter((o7) => o7.label.toLowerCase().includes(q));
+  }
+  close() {
+    this.open = false;
+    this.activeIndex = -1;
+  }
+  // Maneja la escritura en el ion-input: actualiza query, abre dropdown y emite `ok-input`.
+  handleInput(e6) {
+    const detail = e6.detail;
+    const value = detail?.value ?? "";
+    this.query = value;
+    this.open = true;
+    this.activeIndex = -1;
+    this.dispatchEvent(
+      new CustomEvent("ok-input", {
+        detail: { query: value },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+  // Elige una opción: fija value, rellena input, cierra y emite `ok-change`.
+  choose(option) {
+    this.value = option.value;
+    this.query = option.label;
+    this.close();
+    this.dispatchEvent(
+      new CustomEvent("ok-change", {
+        detail: { value: option.value, label: option.label },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
+  // Navegación por teclado sobre la lista filtrada.
+  handleKeydown(e6) {
+    const items = this.filtered;
+    switch (e6.key) {
+      case "ArrowDown":
+        e6.preventDefault();
+        if (!this.open) this.open = true;
+        if (items.length) this.activeIndex = (this.activeIndex + 1) % items.length;
+        break;
+      case "ArrowUp":
+        e6.preventDefault();
+        if (!this.open) this.open = true;
+        if (items.length)
+          this.activeIndex = (this.activeIndex - 1 + items.length) % items.length;
+        break;
+      case "Enter":
+        if (this.open && this.activeIndex >= 0 && items[this.activeIndex]) {
+          e6.preventDefault();
+          this.choose(items[this.activeIndex]);
+        }
+        break;
+      case "Escape":
+        if (this.open) {
+          e6.preventDefault();
+          this.close();
+        }
+        break;
+    }
+  }
+  render() {
+    const items = this.filtered;
+    this.toggleAttribute("data-open", this.open);
+    return b2`<div class="field">
+      <ion-input
+        .label=${this.label ?? ""}
+        label-placement=${this.label ? "stacked" : "start"}
+        fill="outline" mode="md"
+        .value=${this.displayText}
+        placeholder=${this.effectivePlaceholder}
+        @ionInput=${(e6) => this.handleInput(e6)}
+        @ionFocus=${() => {
+      this.open = true;
+    }}
+        @keydown=${(e6) => this.handleKeydown(e6)}
+      ></ion-input>
+      <span class="chevron">
+        <ion-icon .icon=${iconChevronDownOutline}></ion-icon>
+      </span>
+      ${this.open ? b2`<ul class="dropdown" role="listbox">
+            ${items.length ? items.map(
+      (option, i7) => b2`<li
+                    role="option"
+                    class=${`option ${i7 === this.activeIndex ? "active" : ""}`.trim()}
+                    aria-selected=${option.value === this.value ? "true" : "false"}
+                    @mouseenter=${() => {
+        this.activeIndex = i7;
+      }}
+                    @click=${() => this.choose(option)}
+                  >
+                    ${option.label}
+                  </li>`
+    ) : b2`<li class="empty">${this.t.empty}</li>`}
+          </ul>` : ""}
+    </div>`;
+  }
+};
+__decorateClass5([
+  n4({ attribute: false })
+], OkCombo.prototype, "options");
+__decorateClass5([
+  n4()
+], OkCombo.prototype, "value");
+__decorateClass5([
+  n4()
+], OkCombo.prototype, "placeholder");
+__decorateClass5([
+  n4()
+], OkCombo.prototype, "label");
+__decorateClass5([
+  n4({ attribute: false })
+], OkCombo.prototype, "labels");
+__decorateClass5([
+  r5()
+], OkCombo.prototype, "query");
+__decorateClass5([
+  r5()
+], OkCombo.prototype, "open");
+__decorateClass5([
+  r5()
+], OkCombo.prototype, "activeIndex");
+define("ok-combo", OkCombo);
+
+// ui/lib/country.ts
+var NOT_A_COUNTRY = /* @__PURE__ */ new Set(["EU", "EZ", "QO", "UN", "XA", "XB", "ZZ"]);
+var HOME_COUNTRY = "ES";
+var SPANISH_REGIONS = /* @__PURE__ */ new Set(["IC", "EA"]);
+function canonical(code) {
+  try {
+    return Intl.getCanonicalLocales(`und-${code}`)[0].slice(4);
+  } catch {
+    return "";
+  }
+}
+var REGION_CODES = (() => {
+  const names = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" });
+  const out = [];
+  for (let a3 = 65; a3 <= 90; a3++) {
+    for (let b3 = 65; b3 <= 90; b3++) {
+      const code = String.fromCharCode(a3, b3);
+      const name = names.of(code);
+      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code) && !SPANISH_REGIONS.has(code)) out.push(code);
+    }
+  }
+  return out;
+})();
+var CODES = new Set(REGION_CODES);
+function normalize(text) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+var byLanguage = /* @__PURE__ */ new Map();
+function namesIn(lang) {
+  let index = byLanguage.get(lang);
+  if (!index) {
+    index = /* @__PURE__ */ new Map();
+    try {
+      const names = new Intl.DisplayNames([lang], { type: "region", fallback: "none" });
+      for (const code of REGION_CODES) {
+        const name = names.of(code);
+        if (name) index.set(normalize(name), code);
+      }
+      for (const code of SPANISH_REGIONS) {
+        const name = names.of(code);
+        if (name) index.set(normalize(name), HOME_COUNTRY);
+      }
+    } catch {
+    }
+    byLanguage.set(lang, index);
+  }
+  return index;
+}
+function countryCode(raw, lang) {
+  const text = (raw ?? "").trim();
+  if (!text) return "";
+  if (/^[a-z]{2}$/i.test(text)) {
+    const code = canonical(text.toUpperCase());
+    if (SPANISH_REGIONS.has(code)) return HOME_COUNTRY;
+    return CODES.has(code) ? code : "";
+  }
+  const key = normalize(text);
+  for (const l3 of /* @__PURE__ */ new Set(["es", "en", ...lang ? [lang] : []])) {
+    const code = namesIn(l3).get(key);
+    if (code) return code;
+  }
+  return "";
+}
+var optionsByLanguage = /* @__PURE__ */ new Map();
+function countryOptions(lang) {
+  const cached = optionsByLanguage.get(lang);
+  if (cached) return cached;
+  let names = null;
+  try {
+    names = new Intl.DisplayNames([lang, "en"], { type: "region", fallback: "none" });
+  } catch {
+  }
+  const option = (value) => {
+    const name = names?.of(value);
+    return { value, label: name ? `${name} (${value})` : value };
+  };
+  let compare;
+  try {
+    compare = new Intl.Collator(lang).compare;
+  } catch {
+    compare = (a3, b3) => a3 < b3 ? -1 : a3 > b3 ? 1 : 0;
+  }
+  const rest = REGION_CODES.filter((c5) => c5 !== HOME_COUNTRY).map(option);
+  rest.sort((a3, b3) => compare(a3.label, b3.label));
+  const options = [option(HOME_COUNTRY), ...rest];
+  optionsByLanguage.set(lang, options);
+  return options;
+}
+function countryName(raw, lang) {
+  const text = (raw ?? "").trim();
+  const code = countryCode(text, lang);
+  if (!code) return text;
+  try {
+    return new Intl.DisplayNames([lang, "en"], { type: "region", fallback: "none" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 // ui/components/erp-customers-list/erp-customers-list.ts
 var CATALOG3 = { es: es_default, en: en_default };
 function erplora3() {
@@ -5468,7 +5865,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   async onCsvImport(ev) {
     if (!can3("customers.add_customer")) return;
     const rows2 = ev.detail?.rows ?? [];
-    const report = { total: rows2.length, created: 0, skipped: [], failed: [] };
+    const report = { total: rows2.length, created: 0, skipped: [], failed: [], warnings: [] };
     const valid = [];
     rows2.forEach((r6, i7) => {
       const row = i7 + 1;
@@ -5483,6 +5880,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         return;
       }
       const stage = _ErpCustomersList.csvValue(r6, "lifecycle_stage") || "lead";
+      const rawCountry = _ErpCustomersList.csvValue(r6, "country");
+      const code = countryCode(rawCountry, erplora3().locale);
+      if (rawCountry && !code) report.warnings.push({ row, reason: "ui.importReasonCountry" });
+      const country = code || rawCountry;
       valid.push({ row, item: {
         name,
         email,
@@ -5492,7 +5893,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         address: _ErpCustomersList.csvValue(r6, "address"),
         city: _ErpCustomersList.csvValue(r6, "city"),
         postal_code: _ErpCustomersList.csvValue(r6, "postal_code"),
-        country: _ErpCustomersList.csvValue(r6, "country"),
+        country,
         notes: _ErpCustomersList.csvValue(r6, "notes"),
         lifecycle_stage: STAGE_KEY[stage] ? stage : "lead",
         source: "import"
@@ -5521,11 +5922,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     const r6 = this.importReport;
     if (!r6) return A;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
-    const tone = r6.failed.length ? "danger" : r6.skipped.length ? "warning" : "success";
+    const tone = r6.failed.length ? "danger" : r6.skipped.length || r6.warnings.length ? "warning" : "success";
     return b2`<ok-inline-feedback class="import-report" tone=${tone} icon=${r6.failed.length ? "alert-circle-outline" : "checkmark-outline"}>
       <strong>${t5("ui.importSummary", { total: r6.total, created: r6.created, skipped: r6.skipped.length, failed: r6.failed.reduce((n6, f3) => n6 + (Number(f3.rows.split("-")[1] ?? f3.rows) - Number(f3.rows.split("-")[0]) + 1), 0) })}</strong>
       ${r6.skipped.length ? b2`<ul class="import-list">${r6.skipped.slice(0, 20).map((s5) => b2`<li>${t5("ui.importRow", { row: s5.row })}: ${t5(s5.reason)}</li>`)}
         ${r6.skipped.length > 20 ? b2`<li>…</li>` : A}</ul>` : A}
+      ${r6.warnings.length ? b2`<ul class="import-list import-warnings">${r6.warnings.slice(0, 20).map((w2) => b2`<li>${t5("ui.importRow", { row: w2.row })}: ${t5(w2.reason)}</li>`)}
+        ${r6.warnings.length > 20 ? b2`<li>…</li>` : A}</ul>` : A}
       ${r6.failed.length ? b2`<ul class="import-list">${r6.failed.map((f3) => b2`<li>${t5("ui.importRows", { rows: f3.rows })}: ${f3.reason}</li>`)}</ul>` : A}
       <ion-button size="small" fill="clear" @click=${() => this.importReport = null}>${t5("ui.close")}</ion-button>
     </ok-inline-feedback>`;
@@ -5760,7 +6163,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       address: d3.address ?? "",
       city: d3.city ?? "",
       postal_code: d3.postal_code ?? "",
-      country: d3.country ?? "",
+      // A legacy free-text country opens as the code it names; text that names none is kept (customers#72).
+      country: countryCode(d3.country, erplora3().locale) || (d3.country ?? "").trim(),
       notes: d3.notes ?? "",
       lifecycle_stage: d3.lifecycle_stage || "lead",
       source: d3.source || "walk_in",
@@ -6006,6 +6410,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${Object.keys(options).map((v3) => b2`<ion-select-option value=${v3}>${label_(v3)}</ion-select-option>`)}
       </ion-select>`;
     }
+    if (key === "country") return this.countryField(form, label, patch);
     if (key === "notes") {
       return b2`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
         label-placement="floating" auto-grow .value=${value}
@@ -6015,6 +6420,24 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     return b2`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
       label-placement="floating" .value=${value}
       @ionInput=${(e6) => patch({ [key]: e6.target.value })}></ion-input>`;
+  }
+  /**
+   * The country is PICKED from a searchable list and stored as its ISO code (customers#72): typed by
+   * hand, «Fr.» or a typo reached the till unread and the invoice went out as Spain. `ok-combo`, as
+   * in `taxes` (taxes#41): 249 options in a plain select is a scroll nobody finishes. A file written
+   * before whose text cannot be read keeps it as an option of its own, so it stays visible and an
+   * unrelated edit never erases it; «No country» is how it is cleared.
+   */
+  countryField(form, label, patch) {
+    const t5 = (k2) => erplora3().t(CATALOG3, k2);
+    const countries = countryOptions(erplora3().locale);
+    const value = form.country;
+    const legacy = value && !countries.some((o7) => o7.value === value) ? [{ value, label: value }] : [];
+    return b2`<ok-combo data-sheet-field="country" label=${label}
+      .options=${[{ value: "", label: t5("ui.countryNone") }, ...legacy, ...countries]}
+      .value=${value}
+      .labels=${{ placeholder: t5("ui.countrySearch"), empty: t5("ui.countryNoMatch") }}
+      @ok-change=${(e6) => patch({ country: e6.detail.value })}></ok-combo>`;
   }
   renderEditForm() {
     const f3 = this.form;
@@ -6160,7 +6583,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           <div><dt>${t5("ui.colPhone")}</dt><dd>${d3.phone || "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldNif")}</dt><dd>${d3.tax_id || "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldCompany")}</dt><dd>${d3.company_name || "\u2014"}</dd></div>
-          <div><dt>${t5("ui.fieldAddress")}</dt><dd>${[d3.address, d3.postal_code, d3.city, d3.country].filter(Boolean).join(", ") || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldAddress")}</dt><dd>${[d3.address, d3.postal_code, d3.city, countryName(d3.country, erplora3().locale)].filter(Boolean).join(", ") || "\u2014"}</dd></div>
           <div><dt>${t5("ui.colStage")}</dt><dd>${stageLabel(d3.lifecycle_stage)}</dd></div>
           <div><dt>${t5("ui.fieldSource")}</dt><dd>${d3.source || "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldPreferredChannel")}</dt><dd>${channelLabel(d3.preferred_channel)}</dd></div>
@@ -6310,13 +6733,13 @@ var ErpCustomersList = _ErpCustomersList;
 define("erp-customers-list", ErpCustomersList);
 
 // @erplora/outfitkit/dist/ok-spotlight-search.js
-var __defProp5 = Object.defineProperty;
-var __decorateClass5 = (decorators, target, key, kind) => {
+var __defProp6 = Object.defineProperty;
+var __decorateClass6 = (decorators, target, key, kind) => {
   var result = void 0;
   for (var i7 = decorators.length - 1, decorator; i7 >= 0; i7--)
     if (decorator = decorators[i7])
       result = decorator(target, key, result) || result;
-  if (result) __defProp5(target, key, result);
+  if (result) __defProp6(target, key, result);
   return result;
 };
 var OkSpotlightSearch = class extends i3 {
@@ -6497,34 +6920,34 @@ var OkSpotlightSearch = class extends i3 {
     `;
   }
 };
-__decorateClass5([
+__decorateClass6([
   n4({ type: Boolean, reflect: true })
 ], OkSpotlightSearch.prototype, "open");
-__decorateClass5([
+__decorateClass6([
   n4()
 ], OkSpotlightSearch.prototype, "placeholder");
-__decorateClass5([
+__decorateClass6([
   n4()
 ], OkSpotlightSearch.prototype, "value");
-__decorateClass5([
+__decorateClass6([
   n4({ attribute: "trigger-icon" })
 ], OkSpotlightSearch.prototype, "triggerIcon");
-__decorateClass5([
+__decorateClass6([
   n4({ attribute: "trigger-label" })
 ], OkSpotlightSearch.prototype, "triggerLabel");
-__decorateClass5([
+__decorateClass6([
   e4(".top input")
 ], OkSpotlightSearch.prototype, "input");
 define("ok-spotlight-search", OkSpotlightSearch);
 
 // @erplora/outfitkit/dist/ok-empty-state.js
-var __defProp6 = Object.defineProperty;
-var __decorateClass6 = (decorators, target, key, kind) => {
+var __defProp7 = Object.defineProperty;
+var __decorateClass7 = (decorators, target, key, kind) => {
   var result = void 0;
   for (var i7 = decorators.length - 1, decorator; i7 >= 0; i7--)
     if (decorator = decorators[i7])
       result = decorator(target, key, result) || result;
-  if (result) __defProp6(target, key, result);
+  if (result) __defProp7(target, key, result);
   return result;
 };
 var OkEmptyState = class extends i3 {
@@ -6606,73 +7029,16 @@ var OkEmptyState = class extends i3 {
     `;
   }
 };
-__decorateClass6([
+__decorateClass7([
   n4()
 ], OkEmptyState.prototype, "icon");
-__decorateClass6([
+__decorateClass7([
   n4()
 ], OkEmptyState.prototype, "heading");
-__decorateClass6([
+__decorateClass7([
   n4()
 ], OkEmptyState.prototype, "message");
 define("ok-empty-state", OkEmptyState);
-
-// ui/lib/country.ts
-var NOT_A_COUNTRY = /* @__PURE__ */ new Set(["EU", "EZ", "QO", "UN", "XA", "XB", "ZZ"]);
-function canonical(code) {
-  try {
-    return Intl.getCanonicalLocales(`und-${code}`)[0].slice(4);
-  } catch {
-    return "";
-  }
-}
-var REGION_CODES = (() => {
-  const names = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" });
-  const out = [];
-  for (let a3 = 65; a3 <= 90; a3++) {
-    for (let b3 = 65; b3 <= 90; b3++) {
-      const code = String.fromCharCode(a3, b3);
-      const name = names.of(code);
-      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code)) out.push(code);
-    }
-  }
-  return out;
-})();
-var CODES = new Set(REGION_CODES);
-function normalize(text) {
-  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
-}
-var byLanguage = /* @__PURE__ */ new Map();
-function namesIn(lang) {
-  let index = byLanguage.get(lang);
-  if (!index) {
-    index = /* @__PURE__ */ new Map();
-    try {
-      const names = new Intl.DisplayNames([lang], { type: "region", fallback: "none" });
-      for (const code of REGION_CODES) {
-        const name = names.of(code);
-        if (name) index.set(normalize(name), code);
-      }
-    } catch {
-    }
-    byLanguage.set(lang, index);
-  }
-  return index;
-}
-function countryCode(raw, lang) {
-  const text = (raw ?? "").trim();
-  if (!text) return "";
-  if (/^[a-z]{2}$/i.test(text)) {
-    const code = canonical(text.toUpperCase());
-    return CODES.has(code) ? code : "";
-  }
-  const key = normalize(text);
-  for (const l3 of /* @__PURE__ */ new Set(["es", "en", ...lang ? [lang] : []])) {
-    const code = namesIn(l3).get(key);
-    if (code) return code;
-  }
-  return "";
-}
 
 // ui/components/erp-customers-pos-search/erp-customers-pos-search.ts
 var CATALOG4 = { es: es_default, en: en_default };
@@ -6688,7 +7054,7 @@ function rows(r6) {
 }
 function direccionFiscal(c5) {
   const localidad = [c5.postal_code, c5.city].filter(Boolean).join(" ");
-  return [c5.address, localidad, c5.country].filter((p4) => p4 && String(p4).trim()).join(", ");
+  return [c5.address, localidad, countryName(c5.country, erplora4().locale)].filter((p4) => p4 && String(p4).trim()).join(", ");
 }
 var VACIO = {
   customer_id: null,

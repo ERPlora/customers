@@ -6,7 +6,7 @@ import '@erplora/outfitkit/ok-spotlight-search';
 import '@erplora/outfitkit/ok-empty-state';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
-import { countryCode } from '../../lib/country';
+import { countryCode, countryName } from '../../lib/country';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -72,7 +72,8 @@ function rows<T>(r: unknown): T[] {
 /** Dirección fiscal en UNA línea, como la espera el documento: «calle, CP ciudad, país». */
 function direccionFiscal(c: CustomerFicha): string {
   const localidad = [c.postal_code, c.city].filter(Boolean).join(' ');
-  return [c.address, localidad, c.country].filter((p) => p && String(p).trim()).join(', ');
+  // The file stores the country's ISO code (customers#72); the printed address reads its name.
+  return [c.address, localidad, countryName(c.country, erplora().locale)].filter((p) => p && String(p).trim()).join(', ');
 }
 
 interface Snapshot {
