@@ -1,0 +1,6 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.by_phone params",
+  "description": "The number to look for, typed any way (`34600111222`, `+34 600 111 222`, `600111222`). Not required: an absent phone answers no rows, and a listener that pre-loads this read must not dead-letter because its event carried no phone.",
+  "type": "object", "additionalProperties": true,
+  "properties": {
+    "phone": { "type": ["string", "null"] } } }
