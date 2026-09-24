@@ -4667,18 +4667,18 @@ var ErpCustomersFields = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
+    return b2`<form slot="create" class="form" data-testid="customers-fields-form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
-      <ion-select mode="md" fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e7) => this.fType = e7.target.value}>
+      <ion-input mode="md" fill="outline" data-testid="customers-fields-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-select mode="md" fill="outline" data-testid="customers-fields-type" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e7) => this.fType = e7.target.value}>
         ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
       </ion-select>
-      ${this.fType === "select" ? b2`<ion-input mode="md" fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e7) => this.fOptions = e7.target.value}></ion-input>` : A}
-      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
-      <ion-checkbox .checked=${this.fRequired} @ionChange=${(e7) => this.fRequired = e7.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+      ${this.fType === "select" ? b2`<ion-input mode="md" fill="outline" data-testid="customers-fields-options" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e7) => this.fOptions = e7.target.value}></ion-input>` : A}
+      <ion-input mode="md" type="number" fill="outline" data-testid="customers-fields-order" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
+      <ion-checkbox data-testid="customers-fields-required" .checked=${this.fRequired} @ionChange=${(e7) => this.fRequired = e7.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
+      ${editing ? b2`<ion-checkbox data-testid="customers-fields-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" data-testid="customers-fields-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-fields-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
   renderDeleteConfirm() {
@@ -4687,20 +4687,20 @@ var ErpCustomersFields = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteFieldTitle")}</h3>
       <p>${t5("ui.deleteFieldConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
+      <ion-button size="small" class="tone-danger" data-testid="customers-fields-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" data-testid="customers-fields-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
     const t5 = (k2) => erplora().t(CATALOG, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
-      ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.formMsg ? b2`<p class="ok" data-testid="customers-fields-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
-      ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
+      ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      <ok-data-table testid="customers-fields-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
       if (can("customers.manage_custom_fields")) this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
@@ -4923,15 +4923,15 @@ var ErpCustomersGroups = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
+    return b2`<form slot="create" class="form" data-testid="customers-groups-form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e7) => this.fDescription = e7.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
-      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+      <ion-input mode="md" fill="outline" data-testid="customers-groups-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-groups-description" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e7) => this.fDescription = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
+      <ion-input mode="md" type="number" fill="outline" data-testid="customers-groups-order" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox data-testid="customers-groups-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" data-testid="customers-groups-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-groups-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
   renderDeleteConfirm() {
@@ -4940,20 +4940,20 @@ var ErpCustomersGroups = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteGroupTitle")}</h3>
       <p>${t5("ui.deleteGroupConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
+      <ion-button size="small" class="tone-danger" data-testid="customers-groups-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" data-testid="customers-groups-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
     const t5 = (k2) => erplora2().t(CATALOG2, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
-      ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-groups-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.formMsg ? b2`<p class="ok" data-testid="customers-groups-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
-      ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
+      ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-groups-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      <ok-data-table testid="customers-groups-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
       if (can2("customers.change_customergroup")) this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
@@ -5923,14 +5923,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     if (!r6) return A;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
     const tone = r6.failed.length ? "danger" : r6.skipped.length || r6.warnings.length ? "warning" : "success";
-    return b2`<ok-inline-feedback class="import-report" tone=${tone} icon=${r6.failed.length ? "alert-circle-outline" : "checkmark-outline"}>
+    return b2`<ok-inline-feedback class="import-report" data-testid="customers-list-import-report" tone=${tone} icon=${r6.failed.length ? "alert-circle-outline" : "checkmark-outline"}>
       <strong>${t5("ui.importSummary", { total: r6.total, created: r6.created, skipped: r6.skipped.length, failed: r6.failed.reduce((n6, f3) => n6 + (Number(f3.rows.split("-")[1] ?? f3.rows) - Number(f3.rows.split("-")[0]) + 1), 0) })}</strong>
       ${r6.skipped.length ? b2`<ul class="import-list">${r6.skipped.slice(0, 20).map((s5) => b2`<li>${t5("ui.importRow", { row: s5.row })}: ${t5(s5.reason)}</li>`)}
         ${r6.skipped.length > 20 ? b2`<li>…</li>` : A}</ul>` : A}
       ${r6.warnings.length ? b2`<ul class="import-list import-warnings">${r6.warnings.slice(0, 20).map((w2) => b2`<li>${t5("ui.importRow", { row: w2.row })}: ${t5(w2.reason)}</li>`)}
         ${r6.warnings.length > 20 ? b2`<li>…</li>` : A}</ul>` : A}
       ${r6.failed.length ? b2`<ul class="import-list">${r6.failed.map((f3) => b2`<li>${t5("ui.importRows", { rows: f3.rows })}: ${f3.reason}</li>`)}</ul>` : A}
-      <ion-button size="small" fill="clear" @click=${() => this.importReport = null}>${t5("ui.close")}</ion-button>
+      <ion-button size="small" fill="clear" data-testid="customers-list-import-report-close" @click=${() => this.importReport = null}>${t5("ui.close")}</ion-button>
     </ok-inline-feedback>`;
   }
   /** Referencia al ok-data-table para cerrar su panel lateral tras el alta. */
@@ -6289,10 +6289,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     const s5 = this.stats;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<div class="kpis">
-      <ok-kpi label=${t5("ui.customers")} value=${String(s5.total ?? 0)}></ok-kpi>
-      <ok-kpi label=${t5("ui.active")} value=${String(s5.active ?? 0)}></ok-kpi>
-      <ok-kpi label=${t5("ui.vip")} value=${String(s5.vip ?? 0)}></ok-kpi>
-      <ok-kpi label=${t5("ui.revenue")} value=${this.fmt(s5.total_revenue)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-total" label=${t5("ui.customers")} value=${String(s5.total ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-active" label=${t5("ui.active")} value=${String(s5.active ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-vip" label=${t5("ui.vip")} value=${String(s5.vip ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-revenue" label=${t5("ui.revenue")} value=${this.fmt(s5.total_revenue)}></ok-kpi>
     </div>`;
   }
   // — GDPR erasure (customers#11) → ONE transactional command `customers.anonymize`. Two steps with a
@@ -6321,11 +6321,11 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.eraseDataTitle")}</h3>
       <p>${t5("ui.eraseDataConfirm", { name: this.detail.name })}</p>
-      <ion-input mode="md" fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
+      <ion-input mode="md" fill="outline" data-testid="customers-list-erase-reason" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e7) => this.eraseReason = String(e7.target.value ?? "")}></ion-input>
       <footer class="actions">
-        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
+        <ion-button size="small" class="tone-danger" data-testid="customers-list-erase-submit" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-erase-cancel" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
       </footer>
     </section>`;
   }
@@ -6336,8 +6336,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <h3>${t5("ui.deleteCustomerTitle")}</h3>
       <p>${t5("ui.deleteCustomerConfirm", { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
+        <ion-button size="small" class="tone-danger" data-testid="customers-list-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
       </footer>
     </section>`;
   }
@@ -6359,23 +6359,23 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         } catch {
           opts = [];
         }
-        return b2`<ion-select mode="md" data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+        return b2`<ion-select mode="md" data-field=${f3.id} data-testid=${`customers-list-field-${f3.id}`} fill="outline" label=${label} label-placement="floating"
               .value=${f3.value} @ionChange=${set(f3.id)}>
               ${opts.map((o7) => b2`<ion-select-option value=${o7}>${o7}</ion-select-option>`)}
             </ion-select>`;
       }
       if (f3.field_type === "textarea") {
-        return b2`<ion-textarea mode="md" data-field=${f3.id} fill="outline" label=${label} label-placement="floating"
+        return b2`<ion-textarea mode="md" data-field=${f3.id} data-testid=${`customers-list-field-${f3.id}`} fill="outline" label=${label} label-placement="floating"
               auto-grow .value=${f3.value} @ionInput=${set(f3.id)}></ion-textarea>`;
       }
       if (f3.field_type === "boolean") {
-        return b2`<ion-checkbox data-field=${f3.id} .checked=${f3.value === "1"}
+        return b2`<ion-checkbox data-field=${f3.id} data-testid=${`customers-list-field-${f3.id}`} .checked=${f3.value === "1"}
               @ionChange=${(e7) => this.setFieldValue(f3.id, e7.target.checked ? "1" : "")}>
               ${label}
             </ion-checkbox>`;
       }
       const type = f3.field_type === "number" ? "number" : f3.field_type === "date" ? "date" : "text";
-      return b2`<ion-input mode="md" data-field=${f3.id} type=${type} fill="outline" label=${label}
+      return b2`<ion-input mode="md" data-field=${f3.id} data-testid=${`customers-list-field-${f3.id}`} type=${type} fill="outline" label=${label}
             label-placement="floating" .value=${f3.value} @ionInput=${set(f3.id)}></ion-input>`;
     })}
       </div>
@@ -6396,28 +6396,32 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
    * edit form (customers#51). Before this, the add panel had a hand-written form of its own with two
    * inputs in it, which is how the two screens drifted apart in the first place: adding a field to
    * the sheet only ever reached one of them.
+   *
+   * `scope` is only there for the `data-testid` (customers#70): the two screens never share the
+   * DOM, but a spec that fills `customers-list-sheet-create-name` says which flow it is driving,
+   * and a failure names the screen instead of «the name field».
    */
-  sheetField(key, form, patch) {
+  sheetField(key, form, patch, scope) {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const label = t5(SHEET_FIELD_LABEL[key]);
     const value = String(form[key] ?? "");
     if (key === "lifecycle_stage" || key === "preferred_channel") {
       const options = key === "lifecycle_stage" ? STAGE_KEY : CHANNEL_KEY;
       const label_ = key === "lifecycle_stage" ? stageLabel : channelLabel;
-      return b2`<ion-select mode="md" data-sheet-field=${key} fill="outline" label=${label}
+      return b2`<ion-select mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
         label-placement="floating" .value=${value}
         @ionChange=${(e7) => patch({ [key]: e7.target.value })}>
         ${Object.keys(options).map((v3) => b2`<ion-select-option value=${v3}>${label_(v3)}</ion-select-option>`)}
       </ion-select>`;
     }
-    if (key === "country") return this.countryField(form, label, patch);
+    if (key === "country") return this.countryField(form, label, patch, scope);
     if (key === "notes") {
-      return b2`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
+      return b2`<ion-textarea mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
         label-placement="floating" auto-grow .value=${value}
         @ionInput=${(e7) => patch({ notes: e7.target.value })}></ion-textarea>`;
     }
     const type = key === "email" ? "email" : key === "birthday" || key === "anniversary" ? "date" : "text";
-    return b2`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
+    return b2`<ion-input mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} type=${type} fill="outline" label=${label}
       label-placement="floating" .value=${value}
       @ionInput=${(e7) => patch({ [key]: e7.target.value })}></ion-input>`;
   }
@@ -6428,12 +6432,12 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
    * before whose text cannot be read keeps it as an option of its own, so it stays visible and an
    * unrelated edit never erases it; «No country» is how it is cleared.
    */
-  countryField(form, label, patch) {
+  countryField(form, label, patch, scope) {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const countries = countryOptions(erplora3().locale);
     const value = form.country;
     const legacy = value && !countries.some((o7) => o7.value === value) ? [{ value, label: value }] : [];
-    return b2`<ok-combo data-sheet-field="country" label=${label}
+    return b2`<ok-combo data-sheet-field="country" data-testid=${`customers-list-sheet-${scope}-country`} label=${label}
       .options=${[{ value: "", label: t5("ui.countryNone") }, ...legacy, ...countries]}
       .value=${value}
       .labels=${{ placeholder: t5("ui.countrySearch"), empty: t5("ui.countryNoMatch") }}
@@ -6442,8 +6446,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   renderEditForm() {
     const f3 = this.form;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    const field = (key) => this.sheetField(key, f3, (part) => this.form = { ...this.form, ...part });
-    return b2`<form @submit=${(e7) => this.saveEdit(e7)}>
+    const field = (key) => this.sheetField(key, f3, (part) => this.form = { ...this.form, ...part }, "edit");
+    return b2`<form data-testid="customers-list-edit-form" @submit=${(e7) => this.saveEdit(e7)}>
       <div class="grid2">
         ${[...SHEET_ESSENTIALS, ...SHEET_MORE].filter((k2) => k2 !== "notes").map(field)}
       </div>
@@ -6455,11 +6459,11 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
            consent with no purpose, no channel, no record of what the person was shown and no author
            — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
            decision lives in its own panel below, as an action with its evidence. -->
-      <label class="check"><ion-checkbox .checked=${f3.is_active}
+      <label class="check"><ion-checkbox data-testid="customers-list-edit-active" .checked=${f3.is_active}
         @ionChange=${(e7) => this.form = { ...this.form, is_active: e7.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
       <footer class="actions">
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => this.editing = false}>${t5("ui.cancel")}</ion-button>
+        <ion-button type="submit" size="small" data-testid="customers-list-edit-submit" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-edit-cancel" @click=${() => this.editing = false}>${t5("ui.cancel")}</ion-button>
       </footer>
     </form>`;
   }
@@ -6469,11 +6473,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     const selected = isGroups ? this.groupIds : this.tagIds;
     const editable = can3("customers.change_customer");
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    if (!items.length) return b2`<p>${t5(isGroups ? "ui.noGroupsDefined" : "ui.noTagsDefined")}</p>`;
+    if (!items.length) {
+      return b2`<p data-testid=${`customers-list-membership-${kind}-empty`}>${t5(isGroups ? "ui.noGroupsDefined" : "ui.noTagsDefined")}</p>`;
+    }
     return b2`<div>
       <div class="chips">
         ${items.map((it) => b2`<label class="check">
-          <ion-checkbox .checked=${selected.includes(String(it.id))}
+          <ion-checkbox data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
             ?disabled=${!editable}
             @ionChange=${() => {
       if (!editable) return;
@@ -6483,7 +6489,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           ${it.name}
         </label>`)}
       </div>
-      ${editable ? b2`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
+      ${editable ? b2`<ion-button size="small" data-testid=${`customers-list-membership-${kind}-save`} ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
     </div>`;
   }
   /**
@@ -6511,30 +6517,35 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       const row = byChannel.get(channel);
       const state = row?.state ?? "never_asked";
       const asking = this.consentAsking === channel;
-      return b2`<div class="consent-row" data-consent=${channel}>
+      return b2`<div class="consent-row" data-consent=${channel} data-testid=${`customers-list-consent-${channel}-row`}>
           <div class="consent-what">
             <strong>${channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(channel)}</strong>
             <span class="muted">${t5(CONSENT_STATE_KEY[state] ?? "ui.consentNeverAsked")}</span>
             ${row?.occurred_at ? b2`<span class="muted">${formatTimestamp(row.occurred_at)}${row.contact_point ? ` \xB7 ${row.contact_point}` : ""}</span>` : A}
           </div>
           ${!editable ? A : state === "granted" ? b2`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
+                  data-testid=${`customers-list-consent-${channel}-withdraw`}
                   ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                   >${t5("ui.consentWithdraw")}</ion-button>` : channel === "any" ? b2`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
+                  data-testid=${`customers-list-consent-${channel}-withdraw`}
                     ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
-                    >${t5("ui.consentClose")}</ion-button>` : asking ? A : b2`<ion-button size="small" data-act="grant" ?disabled=${this.saving}
+                    >${t5("ui.consentClose")}</ion-button>` : asking ? A : b2`<ion-button size="small" data-act="grant"
+                      data-testid=${`customers-list-consent-${channel}-grant`} ?disabled=${this.saving}
                       @click=${() => {
         this.consentAsking = channel;
         this.formError = "";
       }}
                       >${t5("ui.consentRecord")}</ion-button>`}
-          ${asking ? b2`<div class="consent-ask">
+          ${asking ? b2`<div class="consent-ask" data-testid=${`customers-list-consent-${channel}-ask`}>
                 <!-- Shown, then stored word for word: this is the evidence, so the operator reads
                      to the customer exactly what will end up in the record. -->
                 <p>${t5("ui.consentNotice")}</p>
                 <p class="muted">${t5("ui.consentAskHint")}</p>
-                <ion-button size="small" data-act="grant-confirm" ?disabled=${this.saving}
+                <ion-button size="small" data-act="grant-confirm"
+                  data-testid=${`customers-list-consent-${channel}-grant-confirm`} ?disabled=${this.saving}
                   @click=${() => this.recordConsent(channel)}>${t5("ui.consentConfirm")}</ion-button>
                 <ion-button size="small" fill="outline" data-act="grant-cancel"
+                  data-testid=${`customers-list-consent-${channel}-grant-cancel`}
                   @click=${() => {
         this.consentAsking = "";
       }}>${t5("ui.cancel")}</ion-button>
@@ -6543,7 +6554,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     })}
       <h4>${t5("ui.consentHistoryHeading")}</h4>
       ${this.consentHistory.length ? b2`<ul class="timeline">
-            ${this.consentHistory.map((f3) => b2`<li data-consent-fact=${f3.id}>
+            ${this.consentHistory.map((f3) => b2`<li data-consent-fact=${f3.id} data-testid=${`customers-list-consent-fact-${f3.id}`}>
               <div class="t">
                 ${t5(CONSENT_STATE_KEY[f3.state] ?? "ui.consentNeverAsked")} —
                 ${f3.channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(f3.channel)}
@@ -6553,7 +6564,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
               ${f3.reason ? b2`<div class="d">${f3.reason}</div>` : A}
               <div class="when">${formatTimestamp(f3.occurred_at)}${f3.recorded_by ? ` \xB7 ${f3.recorded_by}` : ""}</div>
             </li>`)}
-          </ul>` : b2`<p class="muted">${t5("ui.consentNoHistory")}</p>`}
+          </ul>` : b2`<p class="muted" data-testid="customers-list-consent-history-empty">${t5("ui.consentNoHistory")}</p>`}
     </section>`;
   }
   renderDetail() {
@@ -6562,19 +6573,19 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     return b2`<div class="detail-page">
       <header>
         <h2>${d3.name}</h2>
-        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
-        ${this.editing || !can3("customers.change_customer") ? A : b2`<ion-button size="small" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
-        ${can3("customers.delete_customer") ? b2`<ion-button size="small" class="tone-danger" fill="outline" @click=${() => {
+        <ion-button size="small" fill="outline" data-testid="customers-list-back" @click=${() => this.closeDetail()}>${t5("ui.back")}</ion-button>
+        ${this.editing || !can3("customers.change_customer") ? A : b2`<ion-button size="small" data-testid="customers-list-edit" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
+        ${can3("customers.delete_customer") ? b2`<ion-button size="small" class="tone-danger" fill="outline" data-testid="customers-list-delete" @click=${() => {
       this.pendingDelete = d3;
     }}>${t5("ui.delete")}</ion-button>` : A}
-        ${can3("customers.erase_customer") ? b2`<ion-button class="erase tone-danger" size="small" fill="clear" @click=${() => {
+        ${can3("customers.erase_customer") ? b2`<ion-button class="erase tone-danger" size="small" fill="clear" data-testid="customers-list-erase" @click=${() => {
       this.pendingErase = true;
       this.eraseReason = "";
       this.formError = "";
     }}>${t5("ui.eraseData")}</ion-button>` : A}
       </header>
-      ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
-      ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.formMsg ? b2`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
       <section class="panel">
@@ -6600,21 +6611,21 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       ${this.renderConsent()}
       ${can3("customers.add_note") || can3("customers.view_activity") ? b2`<section class="panel">
             ${can3("customers.add_note") ? b2`<h3>${t5("ui.addNote")}</h3>
-                  <form class="form" @submit=${(e7) => this.addNote(e7)}>
-                    <ion-textarea mode="md" fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
+                  <form class="form" data-testid="customers-list-note-form" @submit=${(e7) => this.addNote(e7)}>
+                    <ion-textarea mode="md" fill="outline" data-testid="customers-list-note-text" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
                       @ionInput=${(e7) => this.newNote = e7.target.value}></ion-textarea>
-                    <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
+                    <ion-button type="submit" size="small" data-testid="customers-list-note-submit" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
                   </form>` : A}
             ${can3("customers.view_activity") ? b2`<h3>${t5("ui.activityHeading")}</h3>
                   ${this.activities.length ? b2`<ul class="timeline">
-                    ${this.activities.map((a3) => b2`<li>
+                    ${this.activities.map((a3) => b2`<li data-testid=${`customers-list-activity-item-${a3.id}`}>
                       <div class="t">${activityTitle(a3.title)} <small>· ${activityTypeLabel(a3.activity_type)}</small></div>
                       ${a3.description ? b2`<div class="d">${a3.description}</div>` : A}
                       <div class="when">${formatTimestamp(a3.created_at)}</div>
                     </li>`)}
-                  </ul>` : b2`<p>${t5("ui.noActivity")}</p>`}` : A}
+                  </ul>` : b2`<p data-testid="customers-list-activity-empty">${t5("ui.noActivity")}</p>`}` : A}
           </section>` : A}
-      ${this.detailFillers.length ? b2`<section class="panel detail-slot"></section>` : A}
+      ${this.detailFillers.length ? b2`<section class="panel detail-slot" data-testid="customers-list-detail-slot"></section>` : A}
     </div>`;
   }
   /**
@@ -6631,14 +6642,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
    */
   renderCreateForm() {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    const field = (key) => this.sheetField(key, this.newForm, (part) => this.newForm = { ...this.newForm, ...part });
-    return b2`<form slot="create" class="create-form" @submit=${(e7) => this.create(e7)}>
+    const field = (key) => this.sheetField(key, this.newForm, (part) => this.newForm = { ...this.newForm, ...part }, "create");
+    return b2`<form slot="create" class="create-form" data-testid="customers-list-create-form" @submit=${(e7) => this.create(e7)}>
       ${SHEET_ESSENTIALS.map(field)}
       <details class="more">
-        <summary>${t5("ui.moreDetails")}</summary>
+        <summary data-testid="customers-list-more-details">${t5("ui.moreDetails")}</summary>
         <div class="create-form">${SHEET_MORE.map(field)}</div>
       </details>
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
+      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
     </form>`;
   }
   render() {
@@ -6646,15 +6657,15 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     return b2`<div class="page">
         ${this.renderStats()}
-        ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
-        ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
-        ${this.importing ? b2`<p class="ok">${t5("ui.importing")}</p>` : A}
+        ${this.formError ? b2`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+        ${this.formMsg ? b2`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : A}
+        ${this.importing ? b2`<p class="ok" data-testid="customers-list-importing">${t5("ui.importing")}</p>` : A}
         ${this.renderImportReport()}
         ${this.renderDeleteConfirm()}
-        ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
+        ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
+        <ok-data-table testid="customers-list-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
@@ -7319,38 +7330,38 @@ var ErpCustomersPosSearch = class extends i3 {
         .value=${this.q}
         @ok-open=${(e7) => this.onOkOpen(e7.detail.open)}
         @ok-input=${(e7) => this.onInput(e7.detail.value)}>
-        ${this.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : A}
-        ${this.state === "error" ? b2`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t5("ui.retry")}</ion-button>` : A}
+        ${this.error ? b2`<ok-inline-feedback data-testid="customers-pos-error" tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : A}
+        ${this.state === "error" ? b2`<ion-button class="retry" data-testid="customers-pos-retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t5("ui.retry")}</ion-button>` : A}
         <ion-list class="list" lines="none">
           ${this.results.map((c5) => b2`
-            <ion-item button detail="false" class=${e6({ sel: this.selectedId === c5.id })} @click=${() => void this.pick(c5)}>
+            <ion-item button detail="false" data-testid=${`customers-pos-result-${c5.id}`} class=${e6({ sel: this.selectedId === c5.id })} @click=${() => void this.pick(c5)}>
               <ion-label>
                 <h3>${c5.name}</h3>
                 ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
               </ion-label>
               ${this.selectedId === c5.id ? b2`<ion-icon slot="end" name="checkmark-outline" class="selected-mark"></ion-icon>` : A}
             </ion-item>`)}
-          ${this.state === "empty" ? b2`<ok-empty-state icon=${this.q ? "search-outline" : "people-outline"} message=${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}></ok-empty-state>` : A}
-          ${this.state === "searching" ? b2`<div class="empty">${t5("ui.loading")}</div>` : A}
+          ${this.state === "empty" ? b2`<ok-empty-state data-testid="customers-pos-empty" icon=${this.q ? "search-outline" : "people-outline"} message=${this.q ? t5("ui.noResults") : t5("ui.noCustomers")}></ok-empty-state>` : A}
+          ${this.state === "searching" ? b2`<div class="empty" data-testid="customers-pos-searching">${t5("ui.loading")}</div>` : A}
         </ion-list>
-        ${this.q.trim() && can4("customers.add_customer") && this.state !== "forbidden" && this.state !== "searching" && !this.quickOpen ? b2`<ion-button class="quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
+        ${this.q.trim() && can4("customers.add_customer") && this.state !== "forbidden" && this.state !== "searching" && !this.quickOpen ? b2`<ion-button class="quick-add" data-testid="customers-pos-quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
               <ion-icon slot="start" name="person-add-outline"></ion-icon>${erplora4().t(CATALOG4, "ui.quickAddCustomer", { term: this.q.trim() })}
             </ion-button>` : A}
-        ${this.quickOpen ? b2`<form class="quick" @submit=${(e7) => {
+        ${this.quickOpen ? b2`<form class="quick" data-testid="customers-pos-quick-form" @submit=${(e7) => {
       e7.preventDefault();
       void this.quickCreate();
     }}>
             <div class="row">
-              <ion-input mode="md" fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e7) => this.quickName = String(e7.target.value ?? "")}></ion-input>
-              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e7) => this.quickPhone = String(e7.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" data-testid="customers-pos-quick-name" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e7) => this.quickName = String(e7.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" data-testid="customers-pos-quick-phone" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e7) => this.quickPhone = String(e7.target.value ?? "")}></ion-input>
             </div>
-            ${this.quickError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : A}
+            ${this.quickError ? b2`<ok-inline-feedback data-testid="customers-pos-quick-error" tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : A}
             <div class="row">
-              <ion-button type="submit" size="small" ?disabled=${this.creating}>${this.creating ? t5("ui.saving") : t5("ui.quickCreate")}</ion-button>
-              <ion-button size="small" fill="clear" @click=${() => this.quickOpen = false}>${t5("ui.cancel")}</ion-button>
+              <ion-button type="submit" size="small" data-testid="customers-pos-quick-submit" ?disabled=${this.creating}>${this.creating ? t5("ui.saving") : t5("ui.quickCreate")}</ion-button>
+              <ion-button size="small" fill="clear" data-testid="customers-pos-quick-cancel" @click=${() => this.quickOpen = false}>${t5("ui.cancel")}</ion-button>
             </div>
           </form>` : A}
-        ${this.selectedId ? b2`<ion-button slot="footer" class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>` : A}
+        ${this.selectedId ? b2`<ion-button slot="footer" class="clear" data-testid="customers-pos-clear" fill="clear" size="small" @click=${() => this.clear()}>${t5("ui.removeCustomer")}</ion-button>` : A}
       </ok-spotlight-search>
     `;
   }
@@ -7564,13 +7575,13 @@ var ErpCustomersTags = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
+    return b2`<form slot="create" class="form" data-testid="customers-tags-form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
-      ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
+      <ion-button type="submit" size="small" data-testid="customers-tags-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
+      ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-tags-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
   renderDeleteConfirm() {
@@ -7579,20 +7590,20 @@ var ErpCustomersTags = class extends i3 {
     return b2`<section class="panel">
       <h3>${t5("ui.deleteTagTitle")}</h3>
       <p>${t5("ui.deleteTagConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
+      <ion-button size="small" class="tone-danger" data-testid="customers-tags-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
+      <ion-button size="small" fill="outline" data-testid="customers-tags-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
   render() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
-      ${this.formMsg ? b2`<p class="ok">${this.formMsg}</p>` : A}
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-tags-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.formMsg ? b2`<p class="ok" data-testid="customers-tags-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
-      ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
+      ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-tags-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      <ok-data-table testid="customers-tags-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
       if (can5("customers.change_customertag")) this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
