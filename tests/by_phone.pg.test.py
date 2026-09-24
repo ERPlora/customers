@@ -60,6 +60,7 @@ CARDS = [
     ("c-with-prefix", HUB_A, "+34600111555", 0),
     ("c-uk-trunk", HUB_A, "07700 900123", 0),
     ("c-longer", HUB_A, "+346001112229", 0),
+    ("c-four-digit-prefix", HUB_A, "+1234 600 111 777", 0),
     ("c-fragment", HUB_A, "111222", 0),
     ("c-empty", HUB_A, "", 0),
     ("c-deleted", HUB_A, "+34600111666", 1),
@@ -152,6 +153,11 @@ def main() -> int:
             found(HUB_A, "34600111444"),
         )
         check(
+            "a search typed with 00 → card typed WITHOUT the country code",
+            ["c-national"],
+            found(HUB_A, "0034 600 111 333"),
+        )
+        check(
             "a national search → card typed with the country code",
             ["c-with-prefix"],
             found(HUB_A, "600 111 555"),
@@ -177,6 +183,21 @@ def main() -> int:
             "searching for the fragment itself finds nobody", [], found(HUB_A, "111222")
         )
         check("a number nobody has", [], found(HUB_A, "34699999999"))
+        check(
+            "a short card is not found by a longer number ending in it",
+            ["c-intl"],
+            found(HUB_A, "600111222"),
+        )
+        check(
+            "a short search does not find a card ending in it",
+            [],
+            found(HUB_A, "111333"),
+        )
+        check(
+            "FOUR digits in front of the search on the card are not a country code",
+            [],
+            found(HUB_A, "600111777"),
+        )
         check(
             "the card plus FOUR digits is not a country code",
             [],
