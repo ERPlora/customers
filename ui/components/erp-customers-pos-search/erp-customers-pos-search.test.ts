@@ -308,3 +308,45 @@ describe('el enlace cliente↔pedido nunca falla en SILENCIO (customers#59)', ()
     expect(avisos, 'sin aviso: el enlace se escribió').toEqual([]);
   });
 });
+
+// customers#77: a Lit `class=${…}` binding on the row rewrites the WHOLE attribute each time the
+// selection changes and wipes the classes Ionic stamped on the host. Stencil only re-adds what its own
+// render changes, so `ion-activatable` (what tap-click looks for to paint the press) and
+// `ion-focusable` (the keyboard focus ring) are gone for good after the first pick. jsdom runs no
+// Ionic, so the test stamps those classes itself, as Ionic does on hydrate.
+describe('customers#77: the result rows keep responding to taps after a customer is picked', () => {
+  const BEA = { id: 'cus-2', name: 'Bea López', phone: '600333444' };
+  const IONIC = ['item', 'ios', 'item-lines-none', 'ion-activatable', 'ion-focusable', 'hydrated'];
+
+  it('picking, switching and clearing the customer never drops the Ionic host classes', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.query = async (name: string, params?: Record<string, unknown>) => {
+      if (name === 'customers.list') return [ANA, BEA];
+      if (name === 'customers.get') return [params?.id === BEA.id ? BEA : ANA_FICHA];
+      return [];
+    };
+    sdk.command = async () => ({ ok: true });
+    const el = await montar();
+    await abrir(el);
+    const rows = () => [...el.shadowRoot.querySelectorAll<HTMLElement>('ion-list ion-item')];
+    expect(rows()).toHaveLength(2);
+    rows().forEach((r) => r.classList.add(...IONIC));
+    const settle = async () => {
+      await new Promise((r) => setTimeout(r, 0));
+      await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    };
+    const lost = () => rows().map((r) => IONIC.filter((c) => !r.classList.contains(c)));
+
+    for (const [index, id] of [[0, ANA.id], [1, BEA.id], [0, ANA.id]] as const) {
+      rows()[index].click();
+      await settle();
+      expect(rows().map((r) => r.classList.contains('sel')), `row ${id} is marked selected`).toEqual([index === 0, index === 1]);
+      expect(lost(), 'Ionic classes lost after a pick').toEqual([[], []]);
+    }
+
+    el.shadowRoot.querySelector<HTMLElement>('ion-button.clear')!.click();
+    await settle();
+    expect(rows().map((r) => r.classList.contains('sel')), 'no row stays marked after clearing').toEqual([false, false]);
+    expect(lost(), 'Ionic classes lost after clearing').toEqual([[], []]);
+  });
+});

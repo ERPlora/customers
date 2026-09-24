@@ -680,16 +680,16 @@ var e = t.ShadowRoot && (void 0 === t.ShadyCSS || t.ShadyCSS.nativeShadow) && "a
 var s = Symbol();
 var o = /* @__PURE__ */ new WeakMap();
 var n = class {
-  constructor(t5, e6, o7) {
+  constructor(t5, e7, o7) {
     if (this._$cssResult$ = true, o7 !== s) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
-    this.cssText = t5, this.t = e6;
+    this.cssText = t5, this.t = e7;
   }
   get styleSheet() {
     let t5 = this.o;
     const s5 = this.t;
     if (e && void 0 === t5) {
-      const e6 = void 0 !== s5 && 1 === s5.length;
-      e6 && (t5 = o.get(s5)), void 0 === t5 && ((this.o = t5 = new CSSStyleSheet()).replaceSync(this.cssText), e6 && o.set(s5, t5));
+      const e7 = void 0 !== s5 && 1 === s5.length;
+      e7 && (t5 = o.get(s5)), void 0 === t5 && ((this.o = t5 = new CSSStyleSheet()).replaceSync(this.cssText), e7 && o.set(s5, t5));
     }
     return t5;
   }
@@ -698,8 +698,8 @@ var n = class {
   }
 };
 var r = (t5) => new n("string" == typeof t5 ? t5 : t5 + "", void 0, s);
-var i = (t5, ...e6) => {
-  const o7 = 1 === t5.length ? t5[0] : e6.reduce((e7, s5, o8) => e7 + ((t6) => {
+var i = (t5, ...e7) => {
+  const o7 = 1 === t5.length ? t5[0] : e7.reduce((e8, s5, o8) => e8 + ((t6) => {
     if (true === t6._$cssResult$) return t6.cssText;
     if ("number" == typeof t6) return t6;
     throw Error("Value passed to 'css' function must be a 'css' function result: " + t6 + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
@@ -708,15 +708,15 @@ var i = (t5, ...e6) => {
 };
 var S = (s5, o7) => {
   if (e) s5.adoptedStyleSheets = o7.map((t5) => t5 instanceof CSSStyleSheet ? t5 : t5.styleSheet);
-  else for (const e6 of o7) {
+  else for (const e7 of o7) {
     const o8 = document.createElement("style"), n6 = t.litNonce;
-    void 0 !== n6 && o8.setAttribute("nonce", n6), o8.textContent = e6.cssText, s5.appendChild(o8);
+    void 0 !== n6 && o8.setAttribute("nonce", n6), o8.textContent = e7.cssText, s5.appendChild(o8);
   }
 };
 var c = e || void 0 === t.CSSStyleSheet ? (t5) => t5 : (t5) => t5 instanceof CSSStyleSheet ? ((t6) => {
-  let e6 = "";
-  for (const s5 of t6.cssRules) e6 += s5.cssText;
-  return r(e6);
+  let e7 = "";
+  for (const s5 of t6.cssRules) e7 += s5.cssText;
+  return r(e7);
 })(t5) : t5;
 
 // @lit/reactive-element/node/reactive-element.js
@@ -768,18 +768,18 @@ var g = class extends (globalThis.HTMLElement ?? HTMLElementShimWithRealType) {
   }
   static createProperty(t5, s5 = y) {
     if (s5.state && (s5.attribute = false), this._$Ei(), this.prototype.hasOwnProperty(t5) && ((s5 = Object.create(s5)).wrapped = true), this.elementProperties.set(t5, s5), !s5.noAccessor) {
-      const i7 = Symbol(), e6 = this.getPropertyDescriptor(t5, i7, s5);
-      void 0 !== e6 && r2(this.prototype, t5, e6);
+      const i7 = Symbol(), e7 = this.getPropertyDescriptor(t5, i7, s5);
+      void 0 !== e7 && r2(this.prototype, t5, e7);
     }
   }
   static getPropertyDescriptor(t5, s5, i7) {
-    const { get: e6, set: h4 } = o2(this.prototype, t5) ?? { get() {
+    const { get: e7, set: h4 } = o2(this.prototype, t5) ?? { get() {
       return this[s5];
     }, set(t6) {
       this[s5] = t6;
     } };
-    return { get: e6, set(s6) {
-      const r6 = e6?.call(this);
+    return { get: e7, set(s6) {
+      const r6 = e7?.call(this);
       h4?.call(this, s6), this.requestUpdate(t5, r6, i7);
     }, configurable: true, enumerable: true };
   }
@@ -812,8 +812,8 @@ var g = class extends (globalThis.HTMLElement ?? HTMLElementShimWithRealType) {
   static finalizeStyles(t5) {
     const s5 = [];
     if (Array.isArray(t5)) {
-      const e6 = new Set(t5.flat(1 / 0).reverse());
-      for (const t6 of e6) s5.unshift(c(t6));
+      const e7 = new Set(t5.flat(1 / 0).reverse());
+      for (const t6 of e7) s5.unshift(c(t6));
     } else void 0 !== t5 && s5.push(c(t5));
     return s5;
   }
@@ -854,31 +854,31 @@ var g = class extends (globalThis.HTMLElement ?? HTMLElementShimWithRealType) {
     this._$AK(t5, i7);
   }
   _$ET(t5, s5) {
-    const i7 = this.constructor.elementProperties.get(t5), e6 = this.constructor._$Eu(t5, i7);
-    if (void 0 !== e6 && true === i7.reflect) {
+    const i7 = this.constructor.elementProperties.get(t5), e7 = this.constructor._$Eu(t5, i7);
+    if (void 0 !== e7 && true === i7.reflect) {
       const h4 = (void 0 !== i7.converter?.toAttribute ? i7.converter : b).toAttribute(s5, i7.type);
-      this._$Em = t5, null == h4 ? this.removeAttribute(e6) : this.setAttribute(e6, h4), this._$Em = null;
+      this._$Em = t5, null == h4 ? this.removeAttribute(e7) : this.setAttribute(e7, h4), this._$Em = null;
     }
   }
   _$AK(t5, s5) {
-    const i7 = this.constructor, e6 = i7._$Eh.get(t5);
-    if (void 0 !== e6 && this._$Em !== e6) {
-      const t6 = i7.getPropertyOptions(e6), h4 = "function" == typeof t6.converter ? { fromAttribute: t6.converter } : void 0 !== t6.converter?.fromAttribute ? t6.converter : b;
-      this._$Em = e6;
+    const i7 = this.constructor, e7 = i7._$Eh.get(t5);
+    if (void 0 !== e7 && this._$Em !== e7) {
+      const t6 = i7.getPropertyOptions(e7), h4 = "function" == typeof t6.converter ? { fromAttribute: t6.converter } : void 0 !== t6.converter?.fromAttribute ? t6.converter : b;
+      this._$Em = e7;
       const r6 = h4.fromAttribute(s5, t6.type);
-      this[e6] = r6 ?? this._$Ej?.get(e6) ?? r6, this._$Em = null;
+      this[e7] = r6 ?? this._$Ej?.get(e7) ?? r6, this._$Em = null;
     }
   }
-  requestUpdate(t5, s5, i7, e6 = false, h4) {
+  requestUpdate(t5, s5, i7, e7 = false, h4) {
     if (void 0 !== t5) {
       const r6 = this.constructor;
-      if (false === e6 && (h4 = this[t5]), i7 ??= r6.getPropertyOptions(t5), !((i7.hasChanged ?? m)(h4, s5) || i7.useDefault && i7.reflect && h4 === this._$Ej?.get(t5) && !this.hasAttribute(r6._$Eu(t5, i7)))) return;
+      if (false === e7 && (h4 = this[t5]), i7 ??= r6.getPropertyOptions(t5), !((i7.hasChanged ?? m)(h4, s5) || i7.useDefault && i7.reflect && h4 === this._$Ej?.get(t5) && !this.hasAttribute(r6._$Eu(t5, i7)))) return;
       this.C(t5, s5, i7);
     }
     false === this.isUpdatePending && (this._$ES = this._$EP());
   }
-  C(t5, s5, { useDefault: i7, reflect: e6, wrapped: h4 }, r6) {
-    i7 && !(this._$Ej ??= /* @__PURE__ */ new Map()).has(t5) && (this._$Ej.set(t5, r6 ?? s5 ?? this[t5]), true !== h4 || void 0 !== r6) || (this._$AL.has(t5) || (this.hasUpdated || i7 || (s5 = void 0), this._$AL.set(t5, s5)), true === e6 && this._$Em !== t5 && (this._$Eq ??= /* @__PURE__ */ new Set()).add(t5));
+  C(t5, s5, { useDefault: i7, reflect: e7, wrapped: h4 }, r6) {
+    i7 && !(this._$Ej ??= /* @__PURE__ */ new Map()).has(t5) && (this._$Ej.set(t5, r6 ?? s5 ?? this[t5]), true !== h4 || void 0 !== r6) || (this._$AL.has(t5) || (this.hasUpdated || i7 || (s5 = void 0), this._$AL.set(t5, s5)), true === e7 && this._$Em !== t5 && (this._$Eq ??= /* @__PURE__ */ new Set()).add(t5));
   }
   async _$EP() {
     this.isUpdatePending = true;
@@ -902,8 +902,8 @@ var g = class extends (globalThis.HTMLElement ?? HTMLElementShimWithRealType) {
       }
       const t6 = this.constructor.elementProperties;
       if (t6.size > 0) for (const [s6, i7] of t6) {
-        const { wrapped: t7 } = i7, e6 = this[s6];
-        true !== t7 || this._$AL.has(s6) || void 0 === e6 || this.C(s6, void 0, i7, e6);
+        const { wrapped: t7 } = i7, e7 = this[s6];
+        true !== t7 || this._$AL.has(s6) || void 0 === e7 || this.C(s6, void 0, i7, e7);
       }
     }
     let t5 = false;
@@ -978,32 +978,32 @@ function V(t5, i7) {
   return void 0 !== e2 ? e2.createHTML(i7) : i7;
 }
 var N = (t5, i7) => {
-  const s5 = t5.length - 1, e6 = [];
+  const s5 = t5.length - 1, e7 = [];
   let n6, l3 = 2 === i7 ? "<svg>" : 3 === i7 ? "<math>" : "", c5 = v;
   for (let i8 = 0; i8 < s5; i8++) {
     const s6 = t5[i8];
     let a3, u5, d3 = -1, f3 = 0;
     for (; f3 < s6.length && (c5.lastIndex = f3, u5 = c5.exec(s6), null !== u5); ) f3 = c5.lastIndex, c5 === v ? "!--" === u5[1] ? c5 = _ : void 0 !== u5[1] ? c5 = m2 : void 0 !== u5[2] ? (y2.test(u5[2]) && (n6 = RegExp("</" + u5[2], "g")), c5 = p2) : void 0 !== u5[3] && (c5 = p2) : c5 === p2 ? ">" === u5[0] ? (c5 = n6 ?? v, d3 = -1) : void 0 === u5[1] ? d3 = -2 : (d3 = c5.lastIndex - u5[2].length, a3 = u5[1], c5 = void 0 === u5[3] ? p2 : '"' === u5[3] ? $ : g2) : c5 === $ || c5 === g2 ? c5 = p2 : c5 === _ || c5 === m2 ? c5 = v : (c5 = p2, n6 = void 0);
     const x2 = c5 === p2 && t5[i8 + 1].startsWith("/>") ? " " : "";
-    l3 += c5 === v ? s6 + r3 : d3 >= 0 ? (e6.push(a3), s6.slice(0, d3) + h2 + s6.slice(d3) + o3 + x2) : s6 + o3 + (-2 === d3 ? i8 : x2);
+    l3 += c5 === v ? s6 + r3 : d3 >= 0 ? (e7.push(a3), s6.slice(0, d3) + h2 + s6.slice(d3) + o3 + x2) : s6 + o3 + (-2 === d3 ? i8 : x2);
   }
-  return [V(t5, l3 + (t5[s5] || "<?>") + (2 === i7 ? "</svg>" : 3 === i7 ? "</math>" : "")), e6];
+  return [V(t5, l3 + (t5[s5] || "<?>") + (2 === i7 ? "</svg>" : 3 === i7 ? "</math>" : "")), e7];
 };
 var S2 = class _S {
-  constructor({ strings: t5, _$litType$: i7 }, e6) {
+  constructor({ strings: t5, _$litType$: i7 }, e7) {
     let r6;
     this.parts = [];
     let l3 = 0, a3 = 0;
     const u5 = t5.length - 1, d3 = this.parts, [f3, v3] = N(t5, i7);
-    if (this.el = _S.createElement(f3, e6), P.currentNode = this.el.content, 2 === i7 || 3 === i7) {
+    if (this.el = _S.createElement(f3, e7), P.currentNode = this.el.content, 2 === i7 || 3 === i7) {
       const t6 = this.el.content.firstChild;
       t6.replaceWith(...t6.childNodes);
     }
     for (; null !== (r6 = P.nextNode()) && d3.length < u5; ) {
       if (1 === r6.nodeType) {
         if (r6.hasAttributes()) for (const t6 of r6.getAttributeNames()) if (t6.endsWith(h2)) {
-          const i8 = v3[a3++], s5 = r6.getAttribute(t6).split(o3), e7 = /([.?@])?(.*)/.exec(i8);
-          d3.push({ type: 1, index: l3, name: e7[2], strings: s5, ctor: "." === e7[1] ? I : "?" === e7[1] ? L : "@" === e7[1] ? z : H }), r6.removeAttribute(t6);
+          const i8 = v3[a3++], s5 = r6.getAttribute(t6).split(o3), e8 = /([.?@])?(.*)/.exec(i8);
+          d3.push({ type: 1, index: l3, name: e8[2], strings: s5, ctor: "." === e8[1] ? I : "?" === e8[1] ? L : "@" === e8[1] ? z : H }), r6.removeAttribute(t6);
         } else t6.startsWith(o3) && (d3.push({ type: 6, index: l3 }), r6.removeAttribute(t6));
         if (y2.test(r6.tagName)) {
           const t6 = r6.textContent.split(o3), i8 = t6.length - 1;
@@ -1026,11 +1026,11 @@ var S2 = class _S {
     return s5.innerHTML = t5, s5;
   }
 };
-function M(t5, i7, s5 = t5, e6) {
+function M(t5, i7, s5 = t5, e7) {
   if (i7 === E) return i7;
-  let h4 = void 0 !== e6 ? s5._$Co?.[e6] : s5._$Cl;
+  let h4 = void 0 !== e7 ? s5._$Co?.[e7] : s5._$Cl;
   const o7 = a2(i7) ? void 0 : i7._$litDirective$;
-  return h4?.constructor !== o7 && (h4?._$AO?.(false), void 0 === o7 ? h4 = void 0 : (h4 = new o7(t5), h4._$AT(t5, s5, e6)), void 0 !== e6 ? (s5._$Co ??= [])[e6] = h4 : s5._$Cl = h4), void 0 !== h4 && (i7 = M(t5, h4._$AS(t5, i7.values), h4, e6)), i7;
+  return h4?.constructor !== o7 && (h4?._$AO?.(false), void 0 === o7 ? h4 = void 0 : (h4 = new o7(t5), h4._$AT(t5, s5, e7)), void 0 !== e7 ? (s5._$Co ??= [])[e7] = h4 : s5._$Cl = h4), void 0 !== h4 && (i7 = M(t5, h4._$AS(t5, i7.values), h4, e7)), i7;
 }
 var R = class {
   constructor(t5, i7) {
@@ -1043,8 +1043,8 @@ var R = class {
     return this._$AM._$AU;
   }
   u(t5) {
-    const { el: { content: i7 }, parts: s5 } = this._$AD, e6 = (t5?.creationScope ?? l2).importNode(i7, true);
-    P.currentNode = e6;
+    const { el: { content: i7 }, parts: s5 } = this._$AD, e7 = (t5?.creationScope ?? l2).importNode(i7, true);
+    P.currentNode = e7;
     let h4 = P.nextNode(), o7 = 0, n6 = 0, r6 = s5[0];
     for (; void 0 !== r6; ) {
       if (o7 === r6.index) {
@@ -1053,7 +1053,7 @@ var R = class {
       }
       o7 !== r6?.index && (h4 = P.nextNode(), o7++);
     }
-    return P.currentNode = l2, e6;
+    return P.currentNode = l2, e7;
   }
   p(t5) {
     let i7 = 0;
@@ -1064,8 +1064,8 @@ var k = class _k {
   get _$AU() {
     return this._$AM?._$AU ?? this._$Cv;
   }
-  constructor(t5, i7, s5, e6) {
-    this.type = 2, this._$AH = A, this._$AN = void 0, this._$AA = t5, this._$AB = i7, this._$AM = s5, this.options = e6, this._$Cv = e6?.isConnected ?? true;
+  constructor(t5, i7, s5, e7) {
+    this.type = 2, this._$AH = A, this._$AN = void 0, this._$AA = t5, this._$AB = i7, this._$AM = s5, this.options = e7, this._$Cv = e7?.isConnected ?? true;
   }
   get parentNode() {
     let t5 = this._$AA.parentNode;
@@ -1091,10 +1091,10 @@ var k = class _k {
     this._$AH !== A && a2(this._$AH) ? this._$AA.nextSibling.data = t5 : this.T(l2.createTextNode(t5)), this._$AH = t5;
   }
   $(t5) {
-    const { values: i7, _$litType$: s5 } = t5, e6 = "number" == typeof s5 ? this._$AC(t5) : (void 0 === s5.el && (s5.el = S2.createElement(V(s5.h, s5.h[0]), this.options)), s5);
-    if (this._$AH?._$AD === e6) this._$AH.p(i7);
+    const { values: i7, _$litType$: s5 } = t5, e7 = "number" == typeof s5 ? this._$AC(t5) : (void 0 === s5.el && (s5.el = S2.createElement(V(s5.h, s5.h[0]), this.options)), s5);
+    if (this._$AH?._$AD === e7) this._$AH.p(i7);
     else {
-      const t6 = new R(e6, this), s6 = t6.u(this.options);
+      const t6 = new R(e7, this), s6 = t6.u(this.options);
       t6.p(i7), this.T(s6), this._$AH = t6;
     }
   }
@@ -1105,9 +1105,9 @@ var k = class _k {
   k(t5) {
     u2(this._$AH) || (this._$AH = [], this._$AR());
     const i7 = this._$AH;
-    let s5, e6 = 0;
-    for (const h4 of t5) e6 === i7.length ? i7.push(s5 = new _k(this.O(c3()), this.O(c3()), this, this.options)) : s5 = i7[e6], s5._$AI(h4), e6++;
-    e6 < i7.length && (this._$AR(s5 && s5._$AB.nextSibling, e6), i7.length = e6);
+    let s5, e7 = 0;
+    for (const h4 of t5) e7 === i7.length ? i7.push(s5 = new _k(this.O(c3()), this.O(c3()), this, this.options)) : s5 = i7[e7], s5._$AI(h4), e7++;
+    e7 < i7.length && (this._$AR(s5 && s5._$AB.nextSibling, e7), i7.length = e7);
   }
   _$AR(t5 = this._$AA.nextSibling, s5) {
     for (this._$AP?.(false, true, s5); t5 !== this._$AB; ) {
@@ -1126,19 +1126,19 @@ var H = class {
   get _$AU() {
     return this._$AM._$AU;
   }
-  constructor(t5, i7, s5, e6, h4) {
-    this.type = 1, this._$AH = A, this._$AN = void 0, this.element = t5, this.name = i7, this._$AM = e6, this.options = h4, s5.length > 2 || "" !== s5[0] || "" !== s5[1] ? (this._$AH = Array(s5.length - 1).fill(new String()), this.strings = s5) : this._$AH = A;
+  constructor(t5, i7, s5, e7, h4) {
+    this.type = 1, this._$AH = A, this._$AN = void 0, this.element = t5, this.name = i7, this._$AM = e7, this.options = h4, s5.length > 2 || "" !== s5[0] || "" !== s5[1] ? (this._$AH = Array(s5.length - 1).fill(new String()), this.strings = s5) : this._$AH = A;
   }
-  _$AI(t5, i7 = this, s5, e6) {
+  _$AI(t5, i7 = this, s5, e7) {
     const h4 = this.strings;
     let o7 = false;
     if (void 0 === h4) t5 = M(this, t5, i7, 0), o7 = !a2(t5) || t5 !== this._$AH && t5 !== E, o7 && (this._$AH = t5);
     else {
-      const e7 = t5;
+      const e8 = t5;
       let n6, r6;
-      for (t5 = h4[0], n6 = 0; n6 < h4.length - 1; n6++) r6 = M(this, e7[s5 + n6], i7, n6), r6 === E && (r6 = this._$AH[n6]), o7 ||= !a2(r6) || r6 !== this._$AH[n6], r6 === A ? t5 = A : t5 !== A && (t5 += (r6 ?? "") + h4[n6 + 1]), this._$AH[n6] = r6;
+      for (t5 = h4[0], n6 = 0; n6 < h4.length - 1; n6++) r6 = M(this, e8[s5 + n6], i7, n6), r6 === E && (r6 = this._$AH[n6]), o7 ||= !a2(r6) || r6 !== this._$AH[n6], r6 === A ? t5 = A : t5 !== A && (t5 += (r6 ?? "") + h4[n6 + 1]), this._$AH[n6] = r6;
     }
-    o7 && !e6 && this.j(t5);
+    o7 && !e7 && this.j(t5);
   }
   j(t5) {
     t5 === A ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t5 ?? "");
@@ -1161,13 +1161,13 @@ var L = class extends H {
   }
 };
 var z = class extends H {
-  constructor(t5, i7, s5, e6, h4) {
-    super(t5, i7, s5, e6, h4), this.type = 5;
+  constructor(t5, i7, s5, e7, h4) {
+    super(t5, i7, s5, e7, h4), this.type = 5;
   }
   _$AI(t5, i7 = this) {
     if ((t5 = M(this, t5, i7, 0) ?? A) === E) return;
-    const s5 = this._$AH, e6 = t5 === A && s5 !== A || t5.capture !== s5.capture || t5.once !== s5.once || t5.passive !== s5.passive, h4 = t5 !== A && (s5 === A || e6);
-    e6 && this.element.removeEventListener(this.name, this, s5), h4 && this.element.addEventListener(this.name, this, t5), this._$AH = t5;
+    const s5 = this._$AH, e7 = t5 === A && s5 !== A || t5.capture !== s5.capture || t5.once !== s5.once || t5.passive !== s5.passive, h4 = t5 !== A && (s5 === A || e7);
+    e7 && this.element.removeEventListener(this.name, this, s5), h4 && this.element.addEventListener(this.name, this, t5), this._$AH = t5;
   }
   handleEvent(t5) {
     "function" == typeof this._$AH ? this._$AH.call(this.options?.host ?? this.element, t5) : this._$AH.handleEvent(t5);
@@ -1188,11 +1188,11 @@ var j = { M: h2, P: o3, A: n3, C: 1, L: N, R, D: d2, V: M, I: k, H, N: L, U: z, 
 var B = t2.litHtmlPolyfillSupport;
 B?.(S2, k), (t2.litHtmlVersions ??= []).push("3.3.3");
 var D = (t5, i7, s5) => {
-  const e6 = s5?.renderBefore ?? i7;
-  let h4 = e6._$litPart$;
+  const e7 = s5?.renderBefore ?? i7;
+  let h4 = e7._$litPart$;
   if (void 0 === h4) {
     const t6 = s5?.renderBefore ?? null;
-    e6._$litPart$ = h4 = new k(i7.insertBefore(c3(), t6), t6, void 0, s5 ?? {});
+    e7._$litPart$ = h4 = new k(i7.insertBefore(c3(), t6), t6, void 0, s5 ?? {});
   }
   return h4._$AI(t5), h4;
 };
@@ -1228,32 +1228,32 @@ o4?.({ LitElement: i3 });
 
 // @lit/reactive-element/node/decorators/property.js
 var o5 = { attribute: true, type: String, converter: b, reflect: false, hasChanged: m };
-var r4 = (t5 = o5, e6, r6) => {
+var r4 = (t5 = o5, e7, r6) => {
   const { kind: n6, metadata: i7 } = r6;
   let s5 = globalThis.litPropertyMetadata.get(i7);
   if (void 0 === s5 && globalThis.litPropertyMetadata.set(i7, s5 = /* @__PURE__ */ new Map()), "setter" === n6 && ((t5 = Object.create(t5)).wrapped = true), s5.set(r6.name, t5), "accessor" === n6) {
     const { name: o7 } = r6;
     return { set(r7) {
-      const n7 = e6.get.call(this);
-      e6.set.call(this, r7), this.requestUpdate(o7, n7, t5, true, r7);
-    }, init(e7) {
-      return void 0 !== e7 && this.C(o7, void 0, t5, e7), e7;
+      const n7 = e7.get.call(this);
+      e7.set.call(this, r7), this.requestUpdate(o7, n7, t5, true, r7);
+    }, init(e8) {
+      return void 0 !== e8 && this.C(o7, void 0, t5, e8), e8;
     } };
   }
   if ("setter" === n6) {
     const { name: o7 } = r6;
     return function(r7) {
       const n7 = this[o7];
-      e6.call(this, r7), this.requestUpdate(o7, n7, t5, true, r7);
+      e7.call(this, r7), this.requestUpdate(o7, n7, t5, true, r7);
     };
   }
   throw Error("Unsupported decorator location: " + n6);
 };
 function n4(t5) {
-  return (e6, o7) => "object" == typeof o7 ? r4(t5, e6, o7) : ((t6, e7, o8) => {
-    const r6 = e7.hasOwnProperty(o8);
-    return e7.constructor.createProperty(o8, t6), r6 ? Object.getOwnPropertyDescriptor(e7, o8) : void 0;
-  })(t5, e6, o7);
+  return (e7, o7) => "object" == typeof o7 ? r4(t5, e7, o7) : ((t6, e8, o8) => {
+    const r6 = e8.hasOwnProperty(o8);
+    return e8.constructor.createProperty(o8, t6), r6 ? Object.getOwnPropertyDescriptor(e8, o8) : void 0;
+  })(t5, e7, o7);
 }
 
 // @lit/reactive-element/node/decorators/state.js
@@ -1262,23 +1262,23 @@ function r5(r6) {
 }
 
 // @lit/reactive-element/node/decorators/base.js
-var e3 = (e6, t5, c5) => (c5.configurable = true, c5.enumerable = true, Reflect.decorate && "object" != typeof t5 && Object.defineProperty(e6, t5, c5), c5);
+var e3 = (e7, t5, c5) => (c5.configurable = true, c5.enumerable = true, Reflect.decorate && "object" != typeof t5 && Object.defineProperty(e7, t5, c5), c5);
 
 // @lit/reactive-element/node/decorators/query.js
-function e4(e6, r6) {
+function e4(e7, r6) {
   return (n6, s5, i7) => {
-    const o7 = (t5) => t5.renderRoot?.querySelector(e6) ?? null;
+    const o7 = (t5) => t5.renderRoot?.querySelector(e7) ?? null;
     if (r6) {
-      const { get: e7, set: r7 } = "object" == typeof s5 ? n6 : i7 ?? (() => {
+      const { get: e8, set: r7 } = "object" == typeof s5 ? n6 : i7 ?? (() => {
         const t5 = Symbol();
         return { get() {
           return this[t5];
-        }, set(e8) {
-          this[t5] = e8;
+        }, set(e9) {
+          this[t5] = e9;
         } };
       })();
       return e3(n6, s5, { get() {
-        let t5 = e7.call(this);
+        let t5 = e8.call(this);
         return void 0 === t5 && (t5 = o7(this), (null !== t5 || this.hasUpdated) && r7.call(this, t5)), t5;
       } });
     }
@@ -1467,8 +1467,8 @@ var OkInlineFeedback = class extends i3 {
     this.hidden = false;
     this.labels = {};
     this.hasActions = false;
-    this.onActionsSlotChange = (e6) => {
-      const slot = e6.target;
+    this.onActionsSlotChange = (e7) => {
+      const slot = e7.target;
       this.hasActions = slot.assignedNodes({ flatten: true }).length > 0;
     };
   }
@@ -1665,21 +1665,21 @@ define("ok-inline-feedback", OkInlineFeedback);
 
 // lit-html/directive.js
 var t3 = { ATTRIBUTE: 1, CHILD: 2, PROPERTY: 3, BOOLEAN_ATTRIBUTE: 4, EVENT: 5, ELEMENT: 6 };
-var e5 = (t5) => (...e6) => ({ _$litDirective$: t5, values: e6 });
+var e5 = (t5) => (...e7) => ({ _$litDirective$: t5, values: e7 });
 var i4 = class {
   constructor(t5) {
   }
   get _$AU() {
     return this._$AM._$AU;
   }
-  _$AT(t5, e6, i7) {
-    this._$Ct = t5, this._$AM = e6, this._$Ci = i7;
+  _$AT(t5, e7, i7) {
+    this._$Ct = t5, this._$AM = e7, this._$Ci = i7;
   }
-  _$AS(t5, e6) {
-    return this.update(t5, e6);
+  _$AS(t5, e7) {
+    return this.update(t5, e7);
   }
-  update(t5, e6) {
-    return this.render(...e6);
+  update(t5, e7) {
+    return this.render(...e7);
   }
 };
 
@@ -1687,26 +1687,26 @@ var i4 = class {
 var { I: t4 } = j;
 var i5 = (o7) => o7;
 var s4 = () => document.createComment("");
-var v2 = (o7, n6, e6) => {
+var v2 = (o7, n6, e7) => {
   const l3 = o7._$AA.parentNode, d3 = void 0 === n6 ? o7._$AB : n6._$AA;
-  if (void 0 === e6) {
+  if (void 0 === e7) {
     const i7 = l3.insertBefore(s4(), d3), n7 = l3.insertBefore(s4(), d3);
-    e6 = new t4(i7, n7, o7, o7.options);
+    e7 = new t4(i7, n7, o7, o7.options);
   } else {
-    const t5 = e6._$AB.nextSibling, n7 = e6._$AM, c5 = n7 !== o7;
+    const t5 = e7._$AB.nextSibling, n7 = e7._$AM, c5 = n7 !== o7;
     if (c5) {
       let t6;
-      e6._$AQ?.(o7), e6._$AM = o7, void 0 !== e6._$AP && (t6 = o7._$AU) !== n7._$AU && e6._$AP(t6);
+      e7._$AQ?.(o7), e7._$AM = o7, void 0 !== e7._$AP && (t6 = o7._$AU) !== n7._$AU && e7._$AP(t6);
     }
     if (t5 !== d3 || c5) {
-      let o8 = e6._$AA;
+      let o8 = e7._$AA;
       for (; o8 !== t5; ) {
         const t6 = i5(o8).nextSibling;
         i5(l3).insertBefore(o8, d3), o8 = t6;
       }
     }
   }
-  return e6;
+  return e7;
 };
 var u3 = (o7, t5, i7 = o7) => (o7._$AI(t5, i7), o7);
 var m3 = {};
@@ -1717,25 +1717,25 @@ var h3 = (o7) => {
 };
 
 // lit-html/directives/repeat.js
-var u4 = (e6, s5, t5) => {
+var u4 = (e7, s5, t5) => {
   const r6 = /* @__PURE__ */ new Map();
-  for (let l3 = s5; l3 <= t5; l3++) r6.set(e6[l3], l3);
+  for (let l3 = s5; l3 <= t5; l3++) r6.set(e7[l3], l3);
   return r6;
 };
 var c4 = e5(class extends i4 {
-  constructor(e6) {
-    if (super(e6), e6.type !== t3.CHILD) throw Error("repeat() can only be used in text expressions");
+  constructor(e7) {
+    if (super(e7), e7.type !== t3.CHILD) throw Error("repeat() can only be used in text expressions");
   }
-  dt(e6, s5, t5) {
+  dt(e7, s5, t5) {
     let r6;
     void 0 === t5 ? t5 = s5 : void 0 !== s5 && (r6 = s5);
     const l3 = [], o7 = [];
     let i7 = 0;
-    for (const s6 of e6) l3[i7] = r6 ? r6(s6, i7) : i7, o7[i7] = t5(s6, i7), i7++;
+    for (const s6 of e7) l3[i7] = r6 ? r6(s6, i7) : i7, o7[i7] = t5(s6, i7), i7++;
     return { values: o7, keys: l3 };
   }
-  render(e6, s5, t5) {
-    return this.dt(e6, s5, t5).values;
+  render(e7, s5, t5) {
+    return this.dt(e7, s5, t5).values;
   }
   update(s5, [t5, r6, c5]) {
     const d3 = M2(s5), { values: p4, keys: a3 } = this.dt(t5, r6, c5);
@@ -1749,21 +1749,21 @@ var c4 = e5(class extends i4 {
     else if (h4[x2] === a3[w2]) v3[w2] = u3(d3[x2], p4[w2]), v2(s5, v3[w2 + 1], d3[x2]), x2++, w2--;
     else if (h4[j2] === a3[k2]) v3[k2] = u3(d3[j2], p4[k2]), v2(s5, d3[x2], d3[j2]), j2--, k2++;
     else if (void 0 === m4 && (m4 = u4(a3, k2, w2), y3 = u4(h4, x2, j2)), m4.has(h4[x2])) if (m4.has(h4[j2])) {
-      const e6 = y3.get(a3[k2]), t6 = void 0 !== e6 ? d3[e6] : null;
+      const e7 = y3.get(a3[k2]), t6 = void 0 !== e7 ? d3[e7] : null;
       if (null === t6) {
-        const e7 = v2(s5, d3[x2]);
-        u3(e7, p4[k2]), v3[k2] = e7;
-      } else v3[k2] = u3(t6, p4[k2]), v2(s5, d3[x2], t6), d3[e6] = null;
+        const e8 = v2(s5, d3[x2]);
+        u3(e8, p4[k2]), v3[k2] = e8;
+      } else v3[k2] = u3(t6, p4[k2]), v2(s5, d3[x2], t6), d3[e7] = null;
       k2++;
     } else h3(d3[j2]), j2--;
     else h3(d3[x2]), x2++;
     for (; k2 <= w2; ) {
-      const e6 = v2(s5, v3[w2 + 1]);
-      u3(e6, p4[k2]), v3[k2++] = e6;
+      const e7 = v2(s5, v3[w2 + 1]);
+      u3(e7, p4[k2]), v3[k2++] = e7;
     }
     for (; x2 <= j2; ) {
-      const e6 = d3[x2++];
-      null !== e6 && h3(e6);
+      const e7 = d3[x2++];
+      null !== e7 && h3(e7);
     }
     return this.ut = a3, p3(s5, v3), E;
   }
@@ -1777,21 +1777,21 @@ var o6 = e5(class extends i4 {
     if (super(t5), t5.type !== t3.ATTRIBUTE || "style" !== t5.name || t5.strings?.length > 2) throw Error("The `styleMap` directive must be used in the `style` attribute and must be the only part in the attribute.");
   }
   render(t5) {
-    return Object.keys(t5).reduce((e6, r6) => {
+    return Object.keys(t5).reduce((e7, r6) => {
       const s5 = t5[r6];
-      return null == s5 ? e6 : e6 + `${r6 = r6.includes("-") ? r6 : r6.replace(/(?:^(webkit|moz|ms|o)|)(?=[A-Z])/g, "-$&").toLowerCase()}:${s5};`;
+      return null == s5 ? e7 : e7 + `${r6 = r6.includes("-") ? r6 : r6.replace(/(?:^(webkit|moz|ms|o)|)(?=[A-Z])/g, "-$&").toLowerCase()}:${s5};`;
     }, "");
   }
-  update(e6, [r6]) {
-    const { style: s5 } = e6.element;
+  update(e7, [r6]) {
+    const { style: s5 } = e7.element;
     if (void 0 === this.ft) return this.ft = new Set(Object.keys(r6)), this.render(r6);
     for (const t5 of this.ft) null == r6[t5] && (this.ft.delete(t5), t5.includes("-") ? s5.removeProperty(t5) : s5[t5] = null);
     for (const t5 in r6) {
-      const e7 = r6[t5];
-      if (null != e7) {
+      const e8 = r6[t5];
+      if (null != e8) {
         this.ft.add(t5);
-        const r7 = "string" == typeof e7 && e7.endsWith(i6);
-        t5.includes("-") || r7 ? s5.setProperty(t5, r7 ? e7.slice(0, -11) : e7, r7 ? n5 : "") : s5[t5] = e7;
+        const r7 = "string" == typeof e8 && e8.endsWith(i6);
+        t5.includes("-") || r7 ? s5.setProperty(t5, r7 ? e8.slice(0, -11) : e8, r7 ? n5 : "") : s5[t5] = e8;
       }
     }
     return E;
@@ -2364,8 +2364,8 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
     if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
       this.mq = window.matchMedia(`(max-width: ${_OkDataTable2.MOBILE_BREAKPOINT}px)`);
       this.isMobile = this.mq.matches;
-      const handler = (e6) => {
-        const matches = "matches" in e6 ? e6.matches : this.mq?.matches ?? false;
+      const handler = (e7) => {
+        const matches = "matches" in e7 ? e7.matches : this.mq?.matches ?? false;
         if (this.isMobile === matches) return;
         this.isMobile = matches;
         if (matches && this.cardViewEnabled) this.viewMode = "cards";
@@ -3004,7 +3004,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           .interfaceOptions=${{ cssClass: "ok-overlay" }}
           placeholder=${this.t.select}
           .value=${current}
-          @ionChange=${(e6) => this.onFilterSelect(col, e6.detail.value, multi)}
+          @ionChange=${(e7) => this.onFilterSelect(col, e7.detail.value, multi)}
         >
           ${multi ? A : b2`<ion-select-option value="">${this.t.select}</ion-select-option>`}
           ${opts.map((o7) => b2`<ion-select-option value=${o7.value}>${o7.label}</ion-select-option>`)}
@@ -3020,10 +3020,10 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           <div class="frange">
             <ion-input type=${t5} fill="outline" mode="md" placeholder=${type === "daterange" ? this.t.from : this.t.gte}
               .value=${f3?.from ?? ""}
-              @ionInput=${(e6) => onEdge(col, "from", e6)}></ion-input>
+              @ionInput=${(e7) => onEdge(col, "from", e7)}></ion-input>
             <ion-input type=${t5} fill="outline" mode="md" placeholder=${type === "daterange" ? this.t.to : this.t.lte}
               .value=${f3?.to ?? ""}
-              @ionInput=${(e6) => onEdge(col, "to", e6)}></ion-input>
+              @ionInput=${(e7) => onEdge(col, "to", e7)}></ion-input>
           </div>
         </div>
       `;
@@ -3037,7 +3037,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
         label-placement="stacked"
         placeholder=${this.t.filterPlaceholder}
         .value=${this.selectValue(f3, false)}
-        @ionInput=${(e6) => this.onFilterInput(col, e6)}
+        @ionInput=${(e7) => this.onFilterInput(col, e7)}
       ></ion-input>
     `;
   }
@@ -3075,7 +3075,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           aria-label=${col.header}
           placeholder=${col.header}
           .value=${current}
-          @ionChange=${(e6) => this.onFilterSelect(col, e6.detail.value, multi)}
+          @ionChange=${(e7) => this.onFilterSelect(col, e7.detail.value, multi)}
         >
           ${multi ? A : b2`<ion-select-option value="">${col.header}</ion-select-option>`}
           ${opts.map((o7) => b2`<ion-select-option value=${o7.value}>${o7.label}</ion-select-option>`)}
@@ -3085,9 +3085,9 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
     return b2`
       <span class="tk-daterange" role="group" aria-label=${col.header}>
         <ion-icon .icon=${iconCalendarOutline}></ion-icon>
-        <ion-input type="date" aria-label=${this.t.fromOf.replace("{label}", col.header)} .value=${f3?.from ?? ""} @ionChange=${(e6) => this.onInlineRange(col, "from", e6)}></ion-input>
+        <ion-input type="date" aria-label=${this.t.fromOf.replace("{label}", col.header)} .value=${f3?.from ?? ""} @ionChange=${(e7) => this.onInlineRange(col, "from", e7)}></ion-input>
         <span class="arr">→</span>
-        <ion-input type="date" aria-label=${this.t.toOf.replace("{label}", col.header)} .value=${f3?.to ?? ""} @ionChange=${(e6) => this.onInlineRange(col, "to", e6)}></ion-input>
+        <ion-input type="date" aria-label=${this.t.toOf.replace("{label}", col.header)} .value=${f3?.to ?? ""} @ionChange=${(e7) => this.onInlineRange(col, "to", e7)}></ion-input>
       </span>
     `;
   }
@@ -3095,7 +3095,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   renderOverflowMenu() {
     if (!this.menuActions.length) return A;
     return b2`
-      <ion-button class="toolbtn" fill="clear" aria-label=${this.t.moreActions} @click=${(e6) => this.openMenu(e6)}>
+      <ion-button class="toolbtn" fill="clear" aria-label=${this.t.moreActions} @click=${(e7) => this.openMenu(e7)}>
         <ion-icon slot="icon-only" .icon=${iconEllipsisVertical}></ion-icon>
       </ion-button>
       <ion-popover
@@ -3147,7 +3147,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
             aria-label=${this.t.moreActions}
             title=${this.t.moreActions}
             aria-haspopup="menu"
-            @click=${(e6) => this.openRowMenu(e6, row)}
+            @click=${(e7) => this.openRowMenu(e7, row)}
           >
             <ion-icon slot="icon-only" .icon=${okIcon(iconEllipsisVertical)}></ion-icon>
           </ion-button>
@@ -3286,7 +3286,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                             aria-label=${this.t.columnsVisible}
                             .value=${this.visibleColumns.map((c5) => c5.key)}
                             .selectedText=${this.t.columns}
-                            @ionChange=${(e6) => this.setVisibleColumns(e6.detail.value)}
+                            @ionChange=${(e7) => this.setVisibleColumns(e7.detail.value)}
                           >
                             ${this.columns.map((c5) => b2`<ion-select-option value=${c5.key}>${c5.header}</ion-select-option>`)}
                           </ion-select>
@@ -3297,7 +3297,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                             interface="popover"
                             aria-label=${this.t.rowsPerPage}
                             .value=${ps}
-                            @ionChange=${(e6) => setPageSize(Number(e6.detail.value))}
+                            @ionChange=${(e7) => setPageSize(Number(e7.detail.value))}
                           >
                             ${this.effPageSizes.map((n6) => b2`<ion-select-option .value=${n6}>${n6}</ion-select-option>`)}
                           </ion-select>
@@ -3316,7 +3316,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                                the button's native dialog from a test. Same criterion as
                                «GrantFilePicker.vue» in the Hub (the hook goes on the control, not
                                on its disguise). -->
-                          <input class="tk-file" data-testid=${this.tid("csv-import")} type="file" accept=".csv,text/csv" hidden @change=${(e6) => this.onImportFile(e6)} />
+                          <input class="tk-file" data-testid=${this.tid("csv-import")} type="file" accept=".csv,text/csv" hidden @change=${(e7) => this.onImportFile(e7)} />
                         ` : A}
                     ${this.effExport ? this.toolButton("download-outline", false, () => this.exportCsv(), this.t.exportCsv, void 0, this.tid("csv-export")) : A}
                     <!-- #113 — Mismo botón en los dos viewports: la acción principal de la pantalla
@@ -3362,7 +3362,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                     <span class="strong">${count}</span> ${count === 1 ? this.t.recordSingular : this.t.recordPlural}
                   </span>
                   ${!showTopbar && this.effPageSizes.length ? b2`
-                        <select class="psize" @change=${(e6) => setPageSize(Number(e6.target.value))}>
+                        <select class="psize" @change=${(e7) => setPageSize(Number(e7.target.value))}>
                           ${this.effPageSizes.map((n6) => b2`<option value=${n6} ?selected=${n6 === ps}>${this.t.perPageShort.replace("{n}", String(n6))}</option>`)}
                         </select>
                       ` : A}
@@ -3415,8 +3415,8 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
         <div class="fblock">
           <span class="flabel">${label}</span>
           <div class="daterange">
-            <ion-input type="date" label=${this.t.from} label-placement="stacked" fill="outline" mode="md" .value=${f3.from ?? ""} @ionChange=${(e6) => this.setFilterRange(col.key, "from", e6.detail.value ?? "")}></ion-input>
-            <ion-input type="date" label=${this.t.to} label-placement="stacked" fill="outline" mode="md" .value=${f3.to ?? ""} @ionChange=${(e6) => this.setFilterRange(col.key, "to", e6.detail.value ?? "")}></ion-input>
+            <ion-input type="date" label=${this.t.from} label-placement="stacked" fill="outline" mode="md" .value=${f3.from ?? ""} @ionChange=${(e7) => this.setFilterRange(col.key, "from", e7.detail.value ?? "")}></ion-input>
+            <ion-input type="date" label=${this.t.to} label-placement="stacked" fill="outline" mode="md" .value=${f3.to ?? ""} @ionChange=${(e7) => this.setFilterRange(col.key, "to", e7.detail.value ?? "")}></ion-input>
           </div>
         </div>
       `;
@@ -3434,7 +3434,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           .interfaceOptions=${{ cssClass: "ok-overlay" }}
           placeholder=${this.t.select}
           .value=${selected}
-          @ionChange=${(e6) => this.setFilterValues(col.key, e6.detail.value ?? [])}
+          @ionChange=${(e7) => this.setFilterValues(col.key, e7.detail.value ?? [])}
         >
           ${opts.length === 0 ? b2`<ion-select-option .disabled=${true} value="">${this.t.noValues}</ion-select-option>` : opts.map((o7) => b2`<ion-select-option value=${o7.value}>${o7.label}</ion-select-option>`)}
         </ion-select>
@@ -3443,9 +3443,9 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
   }
   /** #67 — Enter/Espacio activan la fila clicable (y, desde #74, la tarjeta): si se llega con el
    *  tabulador, el ratón no puede ser el único camino. Espacio además NO debe desplazar la página. */
-  onRowKeydown(e6, row) {
-    if (e6.key !== "Enter" && e6.key !== " " && e6.key !== "Spacebar") return;
-    e6.preventDefault();
+  onRowKeydown(e7, row) {
+    if (e7.key !== "Enter" && e7.key !== " " && e7.key !== "Spacebar") return;
+    e7.preventDefault();
     this.emit("rowClick", { row });
   }
   emptyState() {
@@ -3505,13 +3505,13 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                   style=${o6(tpl)}
                   tabindex=${this.rowClickable ? "0" : A}
                   @click=${this.rowClickable ? () => this.emit("rowClick", { row }) : A}
-                  @keydown=${this.rowClickable ? (e6) => this.onRowKeydown(e6, row) : A}
+                  @keydown=${this.rowClickable ? (e7) => this.onRowKeydown(e7, row) : A}
                 >
-                  ${this.selectable ? b2`<span class="selcb" @click=${(e6) => e6.stopPropagation()}><ion-checkbox .checked=${selected} aria-label=${this.t.selectRow} @ionChange=${() => this.toggleRow(key)}></ion-checkbox></span>` : A}
+                  ${this.selectable ? b2`<span class="selcb" @click=${(e7) => e7.stopPropagation()}><ion-checkbox .checked=${selected} aria-label=${this.t.selectRow} @ionChange=${() => this.toggleRow(key)}></ion-checkbox></span>` : A}
                   ${cols.map(
           (c5) => b2`<div class=${`gcell ${alignCls(c5.align)}${c5.pinned === "end" ? " actions-col" : ""}`} role="cell">${c5.render ? c5.render(row) : b2`<span>${this.cell(c5, row)}</span>`}</div>`
         )}
-                  ${this.actions.length ? b2`<div class="gcell right actions-col" role="cell" @click=${(e6) => e6.stopPropagation()}>${this.actionButtons(row, true)}</div>` : A}
+                  ${this.actions.length ? b2`<div class="gcell right actions-col" role="cell" @click=${(e7) => e7.stopPropagation()}>${this.actionButtons(row, true)}</div>` : A}
                 </div>
               `;
       }
@@ -3540,13 +3540,13 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
                 role=${this.rowClickable ? "button" : A}
                 tabindex=${this.rowClickable ? "0" : A}
                 @click=${this.rowClickable ? () => this.emit("rowClick", { row }) : A}
-                @keydown=${this.rowClickable ? (e6) => this.onRowKeydown(e6, row) : A}
+                @keydown=${this.rowClickable ? (e7) => this.onRowKeydown(e7, row) : A}
               >
                 ${hasHead ? b2`
                       <ion-card-header class="rcard-head">
                         ${icon != null && icon !== "" ? b2`<span class="rc-icon">${typeof icon === "string" ? b2`<ion-icon .icon=${okIcon(icon)}></ion-icon>` : icon}</span>` : A}
                         <span class="rc-title">${this.cardTitle ? this.cardTitle(row) : A}</span>
-                        ${this.selectable ? b2`<ion-checkbox .checked=${selected} aria-label=${this.t.select} @click=${(e6) => e6.stopPropagation()} @ionChange=${() => this.toggleRow(key)}></ion-checkbox>` : A}
+                        ${this.selectable ? b2`<ion-checkbox .checked=${selected} aria-label=${this.t.select} @click=${(e7) => e7.stopPropagation()} @ionChange=${() => this.toggleRow(key)}></ion-checkbox>` : A}
                       </ion-card-header>
                     ` : A}
                 <ion-card-content class="rcard-body">
@@ -3554,7 +3554,7 @@ var _OkDataTable = class _OkDataTable2 extends i3 {
           (c5) => b2`<div class="rrow"><span class="rk">${c5.header}</span><span class="rv">${c5.render ? c5.render(row) : this.cell(c5, row)}</span></div>`
         )}
                 </ion-card-content>
-                ${this.actions.length ? b2`<div class="ractions" @click=${(e6) => e6.stopPropagation()}>${this.actionButtons(row)}</div>` : A}
+                ${this.actions.length ? b2`<div class="ractions" @click=${(e7) => e7.stopPropagation()}>${this.actionButtons(row)}</div>` : A}
               </ion-card>
             `;
       }
@@ -3871,11 +3871,11 @@ var ListController = class {
       if (mySeq !== this.seq) return;
       this.rows = page.rows ?? [];
       this.total = page.total ?? this.rows.length;
-    } catch (e6) {
+    } catch (e7) {
       if (mySeq !== this.seq) return;
       this.rows = [];
       this.total = 0;
-      this.error = e6 instanceof Error ? e6.message : "Error cargando datos";
+      this.error = e7 instanceof Error ? e7.message : "Error cargando datos";
     } finally {
       if (mySeq === this.seq) {
         this.loading = false;
@@ -4417,12 +4417,12 @@ function textFor(catalog, lang, code) {
   const text = dict?.errors?.[code];
   return typeof text === "string" && text.trim() ? text : "";
 }
-function domainErrorText(catalog, locale, e6) {
-  const code = e6?.code;
+function domainErrorText(catalog, locale, e7) {
+  const code = e7?.code;
   if (typeof code !== "string" || !code) return "";
   const text = textFor(catalog, locale, code) || textFor(catalog, SOURCE_LANG, code);
   if (!text.includes(PLACEHOLDER)) return text;
-  const message = e6 instanceof Error ? e6.message : "";
+  const message = e7 instanceof Error ? e7.message : "";
   if (alreadySpoken(catalog, code, message)) return message;
   return text.replaceAll(PLACEHOLDER, message);
 }
@@ -4451,10 +4451,10 @@ function erplora() {
 function can(permission) {
   return erplora().hasPermission?.(permission) ?? true;
 }
-function domainErrorText2(e6, fallbackKey) {
-  const declared = domainErrorText(CATALOG, erplora().locale, e6);
+function domainErrorText2(e7, fallbackKey) {
+  const declared = domainErrorText(CATALOG, erplora().locale, e7);
   if (declared) return declared;
-  return (e6 instanceof Error ? e6.message : "") || erplora().t(CATALOG, fallbackKey);
+  return (e7 instanceof Error ? e7.message : "") || erplora().t(CATALOG, fallbackKey);
 }
 var TYPE_KEY = {
   text: "ui.typeText",
@@ -4641,8 +4641,8 @@ var ErpCustomersFields = class extends i3 {
       this.resetForm();
       this.dataTable()?.close();
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora().t(CATALOG, "ui.errSaveField");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora().t(CATALOG, "ui.errSaveField");
     } finally {
       this.saving = false;
     }
@@ -4656,8 +4656,8 @@ var ErpCustomersFields = class extends i3 {
       this.formMsg = erplora().t(CATALOG, "ui.fieldDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = domainErrorText2(e6, "ui.errDeleteField");
+    } catch (e7) {
+      this.formError = domainErrorText2(e7, "ui.errDeleteField");
     } finally {
       this.saving = false;
     }
@@ -4667,16 +4667,16 @@ var ErpCustomersFields = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
+    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-select mode="md" fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e6) => this.fType = e6.target.value}>
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-select mode="md" fill="outline" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e7) => this.fType = e7.target.value}>
         ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
       </ion-select>
-      ${this.fType === "select" ? b2`<ion-input mode="md" fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e6) => this.fOptions = e6.target.value}></ion-input>` : A}
-      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
-      <ion-checkbox .checked=${this.fRequired} @ionChange=${(e6) => this.fRequired = e6.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      ${this.fType === "select" ? b2`<ion-input mode="md" fill="outline" label=${t5("ui.fieldOptions")} label-placement="floating" .value=${this.fOptions} @ionInput=${(e7) => this.fOptions = e7.target.value}></ion-input>` : A}
+      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
+      <ion-checkbox .checked=${this.fRequired} @ionChange=${(e7) => this.fRequired = e7.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -4700,9 +4700,9 @@ var ErpCustomersFields = class extends i3 {
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e6) => this.onRowAction(e6)} @rowClick=${(e6) => {
-      if (can("customers.manage_custom_fields")) this.startEdit(e6.detail.row);
-    }} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      if (can("customers.manage_custom_fields")) this.startEdit(e7.detail.row);
+    }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -4753,10 +4753,10 @@ function erplora2() {
 function can2(permission) {
   return erplora2().hasPermission?.(permission) ?? true;
 }
-function domainErrorText3(e6, fallbackKey) {
-  const declared = domainErrorText(CATALOG2, erplora2().locale, e6);
+function domainErrorText3(e7, fallbackKey) {
+  const declared = domainErrorText(CATALOG2, erplora2().locale, e7);
   if (declared) return declared;
-  return (e6 instanceof Error ? e6.message : "") || erplora2().t(CATALOG2, fallbackKey);
+  return (e7 instanceof Error ? e7.message : "") || erplora2().t(CATALOG2, fallbackKey);
 }
 var ErpCustomersGroups = class extends i3 {
   constructor() {
@@ -4897,8 +4897,8 @@ var ErpCustomersGroups = class extends i3 {
       this.resetForm();
       this.dataTable()?.close();
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora2().t(CATALOG2, "ui.errSaveGroup");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora2().t(CATALOG2, "ui.errSaveGroup");
     } finally {
       this.saving = false;
     }
@@ -4912,8 +4912,8 @@ var ErpCustomersGroups = class extends i3 {
       this.formMsg = erplora2().t(CATALOG2, "ui.groupDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = domainErrorText3(e6, "ui.errDeleteGroup");
+    } catch (e7) {
+      this.formError = domainErrorText3(e7, "ui.errDeleteGroup");
     } finally {
       this.saving = false;
     }
@@ -4923,13 +4923,13 @@ var ErpCustomersGroups = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
+    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e6) => this.fDescription = e6.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
-      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e6) => this.fSortOrder = e6.target.value}></ion-input>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e7) => this.fDescription = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
+      <ion-input mode="md" type="number" fill="outline" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -4953,9 +4953,9 @@ var ErpCustomersGroups = class extends i3 {
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e6) => this.onRowAction(e6)} @rowClick=${(e6) => {
-      if (can2("customers.change_customergroup")) this.startEdit(e6.detail.row);
-    }} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      if (can2("customers.change_customergroup")) this.startEdit(e7.detail.row);
+    }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
@@ -5160,9 +5160,9 @@ var OkCombo = class extends i3 {
     this.query = "";
     this.open = false;
     this.activeIndex = -1;
-    this.onDocClick = (e6) => {
+    this.onDocClick = (e7) => {
       if (!this.open) return;
-      if (!e6.composedPath().includes(this)) this.close();
+      if (!e7.composedPath().includes(this)) this.close();
     };
   }
   static {
@@ -5307,8 +5307,8 @@ var OkCombo = class extends i3 {
     this.activeIndex = -1;
   }
   // Maneja la escritura en el ion-input: actualiza query, abre dropdown y emite `ok-input`.
-  handleInput(e6) {
-    const detail = e6.detail;
+  handleInput(e7) {
+    const detail = e7.detail;
     const value = detail?.value ?? "";
     this.query = value;
     this.open = true;
@@ -5335,29 +5335,29 @@ var OkCombo = class extends i3 {
     );
   }
   // Navegación por teclado sobre la lista filtrada.
-  handleKeydown(e6) {
+  handleKeydown(e7) {
     const items = this.filtered;
-    switch (e6.key) {
+    switch (e7.key) {
       case "ArrowDown":
-        e6.preventDefault();
+        e7.preventDefault();
         if (!this.open) this.open = true;
         if (items.length) this.activeIndex = (this.activeIndex + 1) % items.length;
         break;
       case "ArrowUp":
-        e6.preventDefault();
+        e7.preventDefault();
         if (!this.open) this.open = true;
         if (items.length)
           this.activeIndex = (this.activeIndex - 1 + items.length) % items.length;
         break;
       case "Enter":
         if (this.open && this.activeIndex >= 0 && items[this.activeIndex]) {
-          e6.preventDefault();
+          e7.preventDefault();
           this.choose(items[this.activeIndex]);
         }
         break;
       case "Escape":
         if (this.open) {
-          e6.preventDefault();
+          e7.preventDefault();
           this.close();
         }
         break;
@@ -5373,11 +5373,11 @@ var OkCombo = class extends i3 {
         fill="outline" mode="md"
         .value=${this.displayText}
         placeholder=${this.effectivePlaceholder}
-        @ionInput=${(e6) => this.handleInput(e6)}
+        @ionInput=${(e7) => this.handleInput(e7)}
         @ionFocus=${() => {
       this.open = true;
     }}
-        @keydown=${(e6) => this.handleKeydown(e6)}
+        @keydown=${(e7) => this.handleKeydown(e7)}
       ></ion-input>
       <span class="chevron">
         <ion-icon .icon=${iconChevronDownOutline}></ion-icon>
@@ -5532,10 +5532,10 @@ function erplora3() {
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
   return c5;
 }
-function domainErrorText4(e6, fallbackKey) {
-  const declared = domainErrorText(CATALOG3, erplora3().locale, e6);
+function domainErrorText4(e7, fallbackKey) {
+  const declared = domainErrorText(CATALOG3, erplora3().locale, e7);
   if (declared) return declared;
-  return (e6 instanceof Error ? e6.message : "") || erplora3().t(CATALOG3, fallbackKey);
+  return (e7 instanceof Error ? e7.message : "") || erplora3().t(CATALOG3, fallbackKey);
 }
 function can3(permission) {
   const client = erplora3();
@@ -5908,8 +5908,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         try {
           await erplora3().command("customers.bulk_create", { items: batch.map((b3) => b3.item) });
           report.created += batch.length;
-        } catch (e6) {
-          report.failed.push({ rows: range, reason: e6 instanceof Error && e6.message ? e6.message : erplora3().t(CATALOG3, "ui.errCreate") });
+        } catch (e7) {
+          report.failed.push({ rows: range, reason: e7 instanceof Error && e7.message ? e7.message : erplora3().t(CATALOG3, "ui.errCreate") });
         }
       }
     } finally {
@@ -5973,8 +5973,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.newForm = { ...EMPTY_FORM };
       this.dataTable()?.close();
       await Promise.all([this.ctrl.load(), this.loadStats()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errCreate");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errCreate");
     } finally {
       this.saving = false;
     }
@@ -5995,8 +5995,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.detail = customer;
       this.consentAsking = "";
       await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
   }
   async loadFieldValues(id) {
@@ -6049,8 +6049,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.consentAsking = "";
       this.formMsg = erplora3().t(CATALOG3, "ui.consentRecorded");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errConsent");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -6073,8 +6073,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       });
       this.formMsg = erplora3().t(CATALOG3, "ui.consentWithdrawnMsg");
       await Promise.all([this.loadConsent(this.detail.id), this.ctrl.load()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errConsent");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errConsent");
     } finally {
       this.saving = false;
     }
@@ -6213,8 +6213,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.editing = false;
       this.formMsg = erplora3().t(CATALOG3, "ui.customerUpdated");
       await Promise.all([this.openDetail(this.detail.id), this.ctrl.load()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errUpdate");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errUpdate");
     } finally {
       this.saving = false;
     }
@@ -6231,8 +6231,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       if (this.detail?.id === target.id) this.closeDetail();
       this.formMsg = erplora3().t(CATALOG3, "ui.customerDeleted", { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errDelete");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errDelete");
     } finally {
       this.saving = false;
     }
@@ -6253,8 +6253,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       }
       this.formMsg = erplora3().t(CATALOG3, kind === "groups" ? "ui.groupsAssigned" : "ui.tagsAssigned");
       await this.loadMemberships(this.detail.id);
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errSaveMembership");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora3().t(CATALOG3, "ui.errSaveMembership");
     } finally {
       this.saving = false;
     }
@@ -6277,8 +6277,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.newNote = "";
       this.formMsg = erplora3().t(CATALOG3, "ui.noteAdded");
       await this.loadActivities(this.detail.id);
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora3().t(CATALOG3, "ui.errAddNote");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora3().t(CATALOG3, "ui.errAddNote");
     } finally {
       this.saving = false;
     }
@@ -6309,8 +6309,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.closeDetail();
       this.formMsg = erplora3().t(CATALOG3, "ui.customerErased");
       await Promise.all([this.ctrl.load(), this.loadStats()]);
-    } catch (e6) {
-      this.formError = domainErrorText4(e6, "ui.errErase");
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errErase");
     } finally {
       this.saving = false;
     }
@@ -6322,7 +6322,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <h3>${t5("ui.eraseDataTitle")}</h3>
       <p>${t5("ui.eraseDataConfirm", { name: this.detail.name })}</p>
       <ion-input mode="md" fill="outline" label=${t5("ui.eraseReason")} label-placement="floating" .value=${this.eraseReason}
-        @ionInput=${(e6) => this.eraseReason = String(e6.target.value ?? "")}></ion-input>
+        @ionInput=${(e7) => this.eraseReason = String(e7.target.value ?? "")}></ion-input>
       <footer class="actions">
         <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
@@ -6346,7 +6346,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   renderCustomFields() {
     if (!this.fieldValues.length) return A;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
-    const set = (id) => (e6) => this.setFieldValue(id, String(e6.target.value ?? ""));
+    const set = (id) => (e7) => this.setFieldValue(id, String(e7.target.value ?? ""));
     return b2`<section class="custom-fields">
       <h3>${t5("ui.customFields")}</h3>
       <div class="grid2">
@@ -6370,7 +6370,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       }
       if (f3.field_type === "boolean") {
         return b2`<ion-checkbox data-field=${f3.id} .checked=${f3.value === "1"}
-              @ionChange=${(e6) => this.setFieldValue(f3.id, e6.target.checked ? "1" : "")}>
+              @ionChange=${(e7) => this.setFieldValue(f3.id, e7.target.checked ? "1" : "")}>
               ${label}
             </ion-checkbox>`;
       }
@@ -6406,7 +6406,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       const label_ = key === "lifecycle_stage" ? stageLabel : channelLabel;
       return b2`<ion-select mode="md" data-sheet-field=${key} fill="outline" label=${label}
         label-placement="floating" .value=${value}
-        @ionChange=${(e6) => patch({ [key]: e6.target.value })}>
+        @ionChange=${(e7) => patch({ [key]: e7.target.value })}>
         ${Object.keys(options).map((v3) => b2`<ion-select-option value=${v3}>${label_(v3)}</ion-select-option>`)}
       </ion-select>`;
     }
@@ -6414,12 +6414,12 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     if (key === "notes") {
       return b2`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
         label-placement="floating" auto-grow .value=${value}
-        @ionInput=${(e6) => patch({ notes: e6.target.value })}></ion-textarea>`;
+        @ionInput=${(e7) => patch({ notes: e7.target.value })}></ion-textarea>`;
     }
     const type = key === "email" ? "email" : key === "birthday" || key === "anniversary" ? "date" : "text";
     return b2`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
       label-placement="floating" .value=${value}
-      @ionInput=${(e6) => patch({ [key]: e6.target.value })}></ion-input>`;
+      @ionInput=${(e7) => patch({ [key]: e7.target.value })}></ion-input>`;
   }
   /**
    * The country is PICKED from a searchable list and stored as its ISO code (customers#72): typed by
@@ -6437,13 +6437,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       .options=${[{ value: "", label: t5("ui.countryNone") }, ...legacy, ...countries]}
       .value=${value}
       .labels=${{ placeholder: t5("ui.countrySearch"), empty: t5("ui.countryNoMatch") }}
-      @ok-change=${(e6) => patch({ country: e6.detail.value })}></ok-combo>`;
+      @ok-change=${(e7) => patch({ country: e7.detail.value })}></ok-combo>`;
   }
   renderEditForm() {
     const f3 = this.form;
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const field = (key) => this.sheetField(key, f3, (part) => this.form = { ...this.form, ...part });
-    return b2`<form @submit=${(e6) => this.saveEdit(e6)}>
+    return b2`<form @submit=${(e7) => this.saveEdit(e7)}>
       <div class="grid2">
         ${[...SHEET_ESSENTIALS, ...SHEET_MORE].filter((k2) => k2 !== "notes").map(field)}
       </div>
@@ -6456,7 +6456,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
            — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
            decision lives in its own panel below, as an action with its evidence. -->
       <label class="check"><ion-checkbox .checked=${f3.is_active}
-        @ionChange=${(e6) => this.form = { ...this.form, is_active: e6.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
+        @ionChange=${(e7) => this.form = { ...this.form, is_active: e7.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
       <footer class="actions">
         <ion-button type="submit" size="small" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
         <ion-button size="small" fill="outline" @click=${() => this.editing = false}>${t5("ui.cancel")}</ion-button>
@@ -6600,9 +6600,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       ${this.renderConsent()}
       ${can3("customers.add_note") || can3("customers.view_activity") ? b2`<section class="panel">
             ${can3("customers.add_note") ? b2`<h3>${t5("ui.addNote")}</h3>
-                  <form class="form" @submit=${(e6) => this.addNote(e6)}>
+                  <form class="form" @submit=${(e7) => this.addNote(e7)}>
                     <ion-textarea mode="md" fill="outline" label=${t5("ui.noteLabel")} label-placement="floating" auto-grow .value=${this.newNote}
-                      @ionInput=${(e6) => this.newNote = e6.target.value}></ion-textarea>
+                      @ionInput=${(e7) => this.newNote = e7.target.value}></ion-textarea>
                     <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t5("ui.add")}</ion-button>
                   </form>` : A}
             ${can3("customers.view_activity") ? b2`<h3>${t5("ui.activityHeading")}</h3>
@@ -6632,7 +6632,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   renderCreateForm() {
     const t5 = (k2) => erplora3().t(CATALOG3, k2);
     const field = (key) => this.sheetField(key, this.newForm, (part) => this.newForm = { ...this.newForm, ...part });
-    return b2`<form slot="create" class="create-form" @submit=${(e6) => this.create(e6)}>
+    return b2`<form slot="create" class="create-form" @submit=${(e7) => this.create(e7)}>
       ${SHEET_ESSENTIALS.map(field)}
       <details class="more">
         <summary>${t5("ui.moreDetails")}</summary>
@@ -6654,7 +6654,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e6) => this.onRowAction(e6)} @rowClick=${(e6) => this.openDetail(String(e6.detail.row.id))} @csvImport=${(e6) => this.onCsvImport(e6)} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
@@ -6731,6 +6731,30 @@ __decorateClass([
 ], _ErpCustomersList.prototype, "importReport", 2);
 var ErpCustomersList = _ErpCustomersList;
 define("erp-customers-list", ErpCustomersList);
+
+// lit-html/directives/class-map.js
+var e6 = e5(class extends i4 {
+  constructor(t5) {
+    if (super(t5), t5.type !== t3.ATTRIBUTE || "class" !== t5.name || t5.strings?.length > 2) throw Error("`classMap()` can only be used in the `class` attribute and must be the only part in the attribute.");
+  }
+  render(t5) {
+    return " " + Object.keys(t5).filter((s5) => t5[s5]).join(" ") + " ";
+  }
+  update(s5, [i7]) {
+    if (void 0 === this.st) {
+      this.st = /* @__PURE__ */ new Set(), void 0 !== s5.strings && (this.nt = new Set(s5.strings.join(" ").split(/\s/).filter((t5) => "" !== t5)));
+      for (const t5 in i7) i7[t5] && !this.nt?.has(t5) && this.st.add(t5);
+      return this.render(i7);
+    }
+    const r6 = s5.element.classList;
+    for (const t5 of this.st) t5 in i7 || (r6.remove(t5), this.st.delete(t5));
+    for (const t5 in i7) {
+      const s6 = !!i7[t5];
+      s6 === this.st.has(t5) || this.nt?.has(t5) || (s6 ? (r6.add(t5), this.st.add(t5)) : (r6.remove(t5), this.st.delete(t5)));
+    }
+    return E;
+  }
+});
 
 // @erplora/outfitkit/dist/ok-spotlight-search.js
 var __defProp6 = Object.defineProperty;
@@ -6869,8 +6893,8 @@ var OkSpotlightSearch = class extends i3 {
   emitOpen(open) {
     this.dispatchEvent(new CustomEvent("ok-open", { detail: { open }, bubbles: true, composed: true }));
   }
-  onInput(e6) {
-    this.value = e6.target.value;
+  onInput(e7) {
+    this.value = e7.target.value;
     this.dispatchEvent(new CustomEvent("ok-input", { detail: { value: this.value }, bubbles: true, composed: true }));
   }
   // Sincroniza `open` ↔ el <dialog> nativo (top layer). try/catch porque happy-dom (tests) no
@@ -6902,14 +6926,14 @@ var OkSpotlightSearch = class extends i3 {
         this.emitOpen(false);
       }
     }}
-        @click=${(e6) => {
-      if (e6.target === e6.currentTarget) this.close();
+        @click=${(e7) => {
+      if (e7.target === e7.currentTarget) this.close();
     }}>
         <div class="top">
           <ion-icon class="lupa" .icon=${iconSearchOutline}></ion-icon>
           <input type="text" .value=${this.value} placeholder=${this.placeholder}
             aria-label=${this.placeholder} autocomplete="off" spellcheck="false"
-            @input=${(e6) => this.onInput(e6)} />
+            @input=${(e7) => this.onInput(e7)} />
           <button class="close" aria-label="Cerrar" @click=${() => this.close()}>
             <ion-icon .icon=${iconCloseOutline}></ion-icon>
           </button>
@@ -7067,13 +7091,13 @@ function can4(permission) {
   const c5 = erplora4();
   return typeof c5.hasPermission === "function" ? c5.hasPermission(permission) : true;
 }
-var isForbidden = (e6) => e6?.code === "permission_denied";
+var isForbidden = (e7) => e7?.code === "permission_denied";
 var looksLikePhone = (v3) => /^[+\d][\d\s().-]{5,}$/.test(v3.trim());
 var LINK_MESSAGES = {
   permission_denied: "ui.errLinkOrderNoPermission"
 };
-function linkFailureMessage(e6) {
-  const code = e6?.code;
+function linkFailureMessage(e7) {
+  const code = e7?.code;
   const key = (typeof code === "string" ? LINK_MESSAGES[code] : void 0) ?? "ui.errLinkOrder";
   return erplora4().t(CATALOG4, key);
 }
@@ -7110,8 +7134,8 @@ var ErpCustomersPosSearch = class extends i3 {
     /** El POS abrió un pedido → `customers` escribe SU junction cliente↔pedido (ADR-0141).
      *  Simétrico a lo que hace `tables`: el dueño de la asociación es quien la escribe; el pedido
      *  no guarda `customer_id` y `sales` no llama a este módulo. */
-    this.onOrderLinked = async (e6) => {
-      const d3 = e6.detail;
+    this.onOrderLinked = async (e7) => {
+      const d3 = e7.detail;
       if (!d3?.order_id || !this.selectedId) return;
       try {
         await erplora4().command("customers.orders.link", { customer_id: this.selectedId, order_id: d3.order_id });
@@ -7179,15 +7203,15 @@ var ErpCustomersPosSearch = class extends i3 {
       if (seq !== this.searchSeq) return;
       this.results = rows(r6);
       this.state = this.results.length ? "idle" : "empty";
-    } catch (e6) {
+    } catch (e7) {
       if (seq !== this.searchSeq) return;
       this.results = [];
-      if (isForbidden(e6)) {
+      if (isForbidden(e7)) {
         this.state = "forbidden";
         this.error = erplora4().t(CATALOG4, "ui.posNoPermission");
       } else {
         this.state = "error";
-        this.error = e6 instanceof Error && e6.message ? e6.message : erplora4().t(CATALOG4, "ui.errLoadCustomers");
+        this.error = e7 instanceof Error && e7.message ? e7.message : erplora4().t(CATALOG4, "ui.errLoadCustomers");
       }
     } finally {
       if (seq === this.searchSeq) this.loading = false;
@@ -7217,9 +7241,9 @@ var ErpCustomersPosSearch = class extends i3 {
     let ficha;
     try {
       ficha = rows(await erplora4().query("customers.get", { customer_id: c5.id }))[0];
-    } catch (e6) {
-      this.state = isForbidden(e6) ? "forbidden" : "error";
-      this.error = isForbidden(e6) ? erplora4().t(CATALOG4, "ui.posNoPermission") : erplora4().t(CATALOG4, "ui.errCustomerSnapshot", { name: c5.name });
+    } catch (e7) {
+      this.state = isForbidden(e7) ? "forbidden" : "error";
+      this.error = isForbidden(e7) ? erplora4().t(CATALOG4, "ui.posNoPermission") : erplora4().t(CATALOG4, "ui.errCustomerSnapshot", { name: c5.name });
       return;
     }
     if (!ficha) {
@@ -7272,8 +7296,8 @@ var ErpCustomersPosSearch = class extends i3 {
       if (!id) throw new Error(erplora4().t(CATALOG4, "ui.errCreate"));
       this.quickOpen = false;
       await this.pick({ id, name, phone });
-    } catch (e6) {
-      this.quickError = e6 instanceof Error && e6.message ? e6.message : erplora4().t(CATALOG4, "ui.errCreate");
+    } catch (e7) {
+      this.quickError = e7 instanceof Error && e7.message ? e7.message : erplora4().t(CATALOG4, "ui.errCreate");
     } finally {
       this.creating = false;
     }
@@ -7293,13 +7317,13 @@ var ErpCustomersPosSearch = class extends i3 {
         placeholder=${t5("ui.searchPosCustomer")}
         .open=${this.open}
         .value=${this.q}
-        @ok-open=${(e6) => this.onOkOpen(e6.detail.open)}
-        @ok-input=${(e6) => this.onInput(e6.detail.value)}>
+        @ok-open=${(e7) => this.onOkOpen(e7.detail.open)}
+        @ok-input=${(e7) => this.onInput(e7.detail.value)}>
         ${this.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : A}
         ${this.state === "error" ? b2`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t5("ui.retry")}</ion-button>` : A}
         <ion-list class="list" lines="none">
           ${this.results.map((c5) => b2`
-            <ion-item button detail="false" class=${this.selectedId === c5.id ? "sel" : ""} @click=${() => void this.pick(c5)}>
+            <ion-item button detail="false" class=${e6({ sel: this.selectedId === c5.id })} @click=${() => void this.pick(c5)}>
               <ion-label>
                 <h3>${c5.name}</h3>
                 ${c5.phone || c5.email ? b2`<p>${c5.phone || c5.email}</p>` : A}
@@ -7312,13 +7336,13 @@ var ErpCustomersPosSearch = class extends i3 {
         ${this.q.trim() && can4("customers.add_customer") && this.state !== "forbidden" && this.state !== "searching" && !this.quickOpen ? b2`<ion-button class="quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
               <ion-icon slot="start" name="person-add-outline"></ion-icon>${erplora4().t(CATALOG4, "ui.quickAddCustomer", { term: this.q.trim() })}
             </ion-button>` : A}
-        ${this.quickOpen ? b2`<form class="quick" @submit=${(e6) => {
-      e6.preventDefault();
+        ${this.quickOpen ? b2`<form class="quick" @submit=${(e7) => {
+      e7.preventDefault();
       void this.quickCreate();
     }}>
             <div class="row">
-              <ion-input mode="md" fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e6) => this.quickName = String(e6.target.value ?? "")}></ion-input>
-              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e6) => this.quickPhone = String(e6.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" label=${t5("ui.quickName")} label-placement="floating" .value=${this.quickName} @ionInput=${(e7) => this.quickName = String(e7.target.value ?? "")}></ion-input>
+              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t5("ui.quickPhone")} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e7) => this.quickPhone = String(e7.target.value ?? "")}></ion-input>
             </div>
             ${this.quickError ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : A}
             <div class="row">
@@ -7382,10 +7406,10 @@ function erplora5() {
 function can5(permission) {
   return erplora5().hasPermission?.(permission) ?? true;
 }
-function domainErrorText5(e6, fallbackKey) {
-  const declared = domainErrorText(CATALOG5, erplora5().locale, e6);
+function domainErrorText5(e7, fallbackKey) {
+  const declared = domainErrorText(CATALOG5, erplora5().locale, e7);
   if (declared) return declared;
-  return (e6 instanceof Error ? e6.message : "") || erplora5().t(CATALOG5, fallbackKey);
+  return (e7 instanceof Error ? e7.message : "") || erplora5().t(CATALOG5, fallbackKey);
 }
 var ErpCustomersTags = class extends i3 {
   constructor() {
@@ -7514,8 +7538,8 @@ var ErpCustomersTags = class extends i3 {
       this.resetForm();
       this.dataTable()?.close();
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = e6 instanceof Error ? e6.message : erplora5().t(CATALOG5, "ui.errSaveTag");
+    } catch (e7) {
+      this.formError = e7 instanceof Error ? e7.message : erplora5().t(CATALOG5, "ui.errSaveTag");
     } finally {
       this.saving = false;
     }
@@ -7529,8 +7553,8 @@ var ErpCustomersTags = class extends i3 {
       this.formMsg = erplora5().t(CATALOG5, "ui.tagDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
-    } catch (e6) {
-      this.formError = domainErrorText5(e6, "ui.errDeleteTag");
+    } catch (e7) {
+      this.formError = domainErrorText5(e7, "ui.errDeleteTag");
     } finally {
       this.saving = false;
     }
@@ -7540,11 +7564,11 @@ var ErpCustomersTags = class extends i3 {
   renderForm() {
     const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
     const editing = this.editing;
-    return b2`<form slot="create" class="form" @submit=${(e6) => this.save(e6)}>
+    return b2`<form slot="create" class="form" @submit=${(e7) => this.save(e7)}>
       ${editing ? b2`<h3>${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e6) => this.fName = e6.target.value}></ion-input>
-      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e6) => this.fColor = e6.target.value}></ion-input>
-      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e6) => this.fActive = e6.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
+      <ion-input mode="md" fill="outline" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
+      ${editing ? b2`<ion-checkbox .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
       <ion-button type="submit" size="small" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -7568,9 +7592,9 @@ var ErpCustomersTags = class extends i3 {
       ${this.ctrl?.error ? b2`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e6) => this.onRowAction(e6)} @rowClick=${(e6) => {
-      if (can5("customers.change_customertag")) this.startEdit(e6.detail.row);
-    }} @pageChange=${(e6) => this.ctrl.setPage(e6.detail)} @pageSizeChange=${(e6) => this.ctrl.setPageSize(e6.detail)} @sortChange=${(e6) => this.ctrl.setSort(e6.detail.sort, e6.detail.dir)} @searchChange=${(e6) => this.ctrl.setSearch(e6.detail)} @filterChange=${(e6) => this.ctrl.setFilter(e6.detail.col, e6.detail.value)}>
+      <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
+      if (can5("customers.change_customertag")) this.startEdit(e7.detail.row);
+    }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;

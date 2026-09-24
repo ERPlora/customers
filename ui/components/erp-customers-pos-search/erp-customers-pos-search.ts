@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-spotlight-search';
@@ -356,7 +357,7 @@ export class ErpCustomersPosSearch extends LitElement {
         ${this.state === 'error' ? html`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t('ui.retry')}</ion-button>` : nothing}
         <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
-            <ion-item button detail="false" class=${this.selectedId === c.id ? 'sel' : ''} @click=${() => void this.pick(c)}>
+            <ion-item button detail="false" class=${classMap({ sel: this.selectedId === c.id })} @click=${() => void this.pick(c)}>
               <ion-label>
                 <h3>${c.name}</h3>
                 ${c.phone || c.email ? html`<p>${c.phone || c.email}</p>` : nothing}
