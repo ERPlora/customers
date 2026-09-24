@@ -183,6 +183,14 @@
         "description": "Lists all customers for the tenant"
       }
     },
+    "customers.by_phone": {
+      "permission": "customers.view_customer",
+      "sql": "queries/by_phone.sql",
+      "schema": "schemas/by_phone.json",
+      "ai": {
+        "description": "Finds the customers whose phone is the same number as `phone`, however either side was typed (spaces, dashes, +, 00, with or without the country code)"
+      }
+    },
     "customers.get": {
       "permission": "customers.view_customer",
       "sql": "queries/get.sql",

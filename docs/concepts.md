@@ -125,3 +125,12 @@ get `import`, and a lifecycle stage of `customer` is normalised to `active`.
 ## Every amount is an integer number of cents
 
 `total_spent` and the revenue widget are **cents** (ADR-0123). `1250` is 12,50 €.
+
+## Finding a customer by phone number
+
+Other modules find a customer by the number she writes or calls from (WhatsApp gives it as
+`34600111222`). The card is found however its phone was typed: with spaces or dashes, with `+` or
+`00`, and also **without the country code** (`600 111 222`), as long as the number has 7 digits or
+more. A longer number that merely contains it is somebody else. When two cards carry the same
+number, both are returned and the module asking decides (the WhatsApp inbox, for instance, then
+links the conversation to nobody and leaves it to a person).
