@@ -76,3 +76,23 @@ describe('countryName', () => {
     expect(countryName(null, 'es')).toBe('');
   });
 });
+
+// Canarias and Ceuta y Melilla are Spain. CLDR names them as regions (IC, EA), but the AEAT's
+// `CountryType2` has no such country and `taxes`/`sales` leave them out: a Spanish picker that lists
+// «Canarias» as a country is a trap a customer from Las Palmas walks straight into.
+describe('Spanish regions are Spain', () => {
+  it('does not offer Canarias or Ceuta y Melilla as countries', () => {
+    const values = countryOptions('es').map((o) => o.value);
+    expect(values).not.toContain('IC');
+    expect(values).not.toContain('EA');
+  });
+
+  it('reads a legacy «Canarias», «Ceuta y Melilla» or their codes as Spain', () => {
+    expect(countryCode('Canarias')).toBe('ES');
+    expect(countryCode('Canary Islands')).toBe('ES');
+    expect(countryCode('Ceuta y Melilla')).toBe('ES');
+    expect(countryCode('IC')).toBe('ES');
+    expect(countryCode('ea')).toBe('ES');
+    expect(countryName('Canarias', 'es')).toBe('España');
+  });
+});

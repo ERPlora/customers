@@ -8,6 +8,14 @@
 /** Region codes CLDR names that are not a country: groupings and pseudo-regions. */
 const NOT_A_COUNTRY = new Set(['EU', 'EZ', 'QO', 'UN', 'XA', 'XB', 'ZZ']);
 
+/** The till's own country: first in the picker, where most customers are from. */
+const HOME_COUNTRY = 'ES';
+
+/** Spanish regions CLDR names as if they were countries — Canarias (IC), Ceuta y Melilla (EA). They
+ *  are Spain: the AEAT's `CountryType2` has no such country and `taxes`/`sales` leave them out, so
+ *  the picker does not offer them and a file that names one reads as Spain. */
+const SPANISH_REGIONS = new Set(['IC', 'EA']);
+
 /** The code a region goes by today: CLDR still names retired aliases (FX, UK, DD…) exactly like
  *  the country that replaced them, so «France» would otherwise resolve to FX. */
 function canonical(code: string): string {
@@ -26,7 +34,7 @@ const REGION_CODES: readonly string[] = (() => {
     for (let b = 65; b <= 90; b++) {
       const code = String.fromCharCode(a, b);
       const name = names.of(code);
-      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code)) out.push(code);
+      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code) && !SPANISH_REGIONS.has(code)) out.push(code);
     }
   }
   return out;
@@ -52,6 +60,10 @@ function namesIn(lang: string): Map<string, string> {
         const name = names.of(code);
         if (name) index.set(normalize(name), code);
       }
+      for (const code of SPANISH_REGIONS) {
+        const name = names.of(code);
+        if (name) index.set(normalize(name), HOME_COUNTRY);
+      }
     } catch {
       // An invalid language tag names nothing: the other languages still resolve.
     }
@@ -67,6 +79,7 @@ export function countryCode(raw: string | null | undefined, lang?: string): stri
   if (!text) return '';
   if (/^[a-z]{2}$/i.test(text)) {
     const code = canonical(text.toUpperCase());
+    if (SPANISH_REGIONS.has(code)) return HOME_COUNTRY;
     return CODES.has(code) ? code : '';
   }
   const key = normalize(text);
@@ -76,9 +89,6 @@ export function countryCode(raw: string | null | undefined, lang?: string): stri
   }
   return '';
 }
-
-/** The till's own country: first in the picker, where most customers are from. */
-const HOME_COUNTRY = 'ES';
 
 /** One entry of the country picker, shaped for `ok-combo`. */
 export interface CountryOption {

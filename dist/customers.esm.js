@@ -5428,6 +5428,8 @@ define("ok-combo", OkCombo);
 
 // ui/lib/country.ts
 var NOT_A_COUNTRY = /* @__PURE__ */ new Set(["EU", "EZ", "QO", "UN", "XA", "XB", "ZZ"]);
+var HOME_COUNTRY = "ES";
+var SPANISH_REGIONS = /* @__PURE__ */ new Set(["IC", "EA"]);
 function canonical(code) {
   try {
     return Intl.getCanonicalLocales(`und-${code}`)[0].slice(4);
@@ -5442,7 +5444,7 @@ var REGION_CODES = (() => {
     for (let b3 = 65; b3 <= 90; b3++) {
       const code = String.fromCharCode(a3, b3);
       const name = names.of(code);
-      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code)) out.push(code);
+      if (name && name !== code && canonical(code) === code && !NOT_A_COUNTRY.has(code) && !SPANISH_REGIONS.has(code)) out.push(code);
     }
   }
   return out;
@@ -5462,6 +5464,10 @@ function namesIn(lang) {
         const name = names.of(code);
         if (name) index.set(normalize(name), code);
       }
+      for (const code of SPANISH_REGIONS) {
+        const name = names.of(code);
+        if (name) index.set(normalize(name), HOME_COUNTRY);
+      }
     } catch {
     }
     byLanguage.set(lang, index);
@@ -5473,6 +5479,7 @@ function countryCode(raw, lang) {
   if (!text) return "";
   if (/^[a-z]{2}$/i.test(text)) {
     const code = canonical(text.toUpperCase());
+    if (SPANISH_REGIONS.has(code)) return HOME_COUNTRY;
     return CODES.has(code) ? code : "";
   }
   const key = normalize(text);
@@ -5482,7 +5489,6 @@ function countryCode(raw, lang) {
   }
   return "";
 }
-var HOME_COUNTRY = "ES";
 var optionsByLanguage = /* @__PURE__ */ new Map();
 function countryOptions(lang) {
   const cached = optionsByLanguage.get(lang);
