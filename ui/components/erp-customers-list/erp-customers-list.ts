@@ -556,14 +556,14 @@ export class ErpCustomersList extends LitElement {
     if (!r) return nothing;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     const tone = r.failed.length ? 'danger' : r.skipped.length || r.warnings.length ? 'warning' : 'success';
-    return html`<ok-inline-feedback class="import-report" tone=${tone} icon=${r.failed.length ? 'alert-circle-outline' : 'checkmark-outline'}>
+    return html`<ok-inline-feedback class="import-report" data-testid="customers-list-import-report" tone=${tone} icon=${r.failed.length ? 'alert-circle-outline' : 'checkmark-outline'}>
       <strong>${t('ui.importSummary', { total: r.total, created: r.created, skipped: r.skipped.length, failed: r.failed.reduce((n, f) => n + (Number(f.rows.split('-')[1] ?? f.rows) - Number(f.rows.split('-')[0]) + 1), 0) })}</strong>
       ${r.skipped.length ? html`<ul class="import-list">${r.skipped.slice(0, 20).map((s) => html`<li>${t('ui.importRow', { row: s.row })}: ${t(s.reason)}</li>`)}
         ${r.skipped.length > 20 ? html`<li>…</li>` : nothing}</ul>` : nothing}
       ${r.warnings.length ? html`<ul class="import-list import-warnings">${r.warnings.slice(0, 20).map((w) => html`<li>${t('ui.importRow', { row: w.row })}: ${t(w.reason)}</li>`)}
         ${r.warnings.length > 20 ? html`<li>…</li>` : nothing}</ul>` : nothing}
       ${r.failed.length ? html`<ul class="import-list">${r.failed.map((f) => html`<li>${t('ui.importRows', { rows: f.rows })}: ${f.reason}</li>`)}</ul>` : nothing}
-      <ion-button size="small" fill="clear" @click=${() => (this.importReport = null)}>${t('ui.close')}</ion-button>
+      <ion-button size="small" fill="clear" data-testid="customers-list-import-report-close" @click=${() => (this.importReport = null)}>${t('ui.close')}</ion-button>
     </ok-inline-feedback>`;
   }
 
@@ -923,10 +923,10 @@ export class ErpCustomersList extends LitElement {
     const s = this.stats;
     const t = (k: string): string => erplora().t(CATALOG, k);
     return html`<div class="kpis">
-      <ok-kpi label=${t('ui.customers')} value=${String(s.total ?? 0)}></ok-kpi>
-      <ok-kpi label=${t('ui.active')} value=${String(s.active ?? 0)}></ok-kpi>
-      <ok-kpi label=${t('ui.vip')} value=${String(s.vip ?? 0)}></ok-kpi>
-      <ok-kpi label=${t('ui.revenue')} value=${this.fmt(s.total_revenue)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-total" label=${t('ui.customers')} value=${String(s.total ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-active" label=${t('ui.active')} value=${String(s.active ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-vip" label=${t('ui.vip')} value=${String(s.vip ?? 0)}></ok-kpi>
+      <ok-kpi data-testid="customers-list-kpi-revenue" label=${t('ui.revenue')} value=${this.fmt(s.total_revenue)}></ok-kpi>
     </div>`;
   }
 
@@ -957,11 +957,11 @@ export class ErpCustomersList extends LitElement {
     return html`<section class="panel">
       <h3>${t('ui.eraseDataTitle')}</h3>
       <p>${t('ui.eraseDataConfirm', { name: this.detail.name })}</p>
-      <ion-input mode="md" fill="outline" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
+      <ion-input mode="md" fill="outline" data-testid="customers-list-erase-reason" label=${t('ui.eraseReason')} label-placement="floating" .value=${this.eraseReason}
         @ionInput=${(e: Event) => (this.eraseReason = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
       <footer class="actions">
-        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => (this.pendingErase = false)}>${t('ui.cancel')}</ion-button>
+        <ion-button size="small" class="tone-danger" data-testid="customers-list-erase-submit" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-erase-cancel" @click=${() => (this.pendingErase = false)}>${t('ui.cancel')}</ion-button>
       </footer>
     </section>`;
   }
@@ -973,8 +973,8 @@ export class ErpCustomersList extends LitElement {
       <h3>${t('ui.deleteCustomerTitle')}</h3>
       <p>${t('ui.deleteCustomerConfirm', { name: this.pendingDelete.name })}</p>
       <footer class="actions">
-        <ion-button size="small" class="tone-danger" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
+        <ion-button size="small" class="tone-danger" data-testid="customers-list-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-delete-cancel" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
       </footer>
     </section>`;
   }
@@ -994,23 +994,23 @@ export class ErpCustomersList extends LitElement {
           if (f.field_type === 'select') {
             let opts: string[] = [];
             try { opts = JSON.parse(f.options || '[]') as string[]; } catch { opts = []; }
-            return html`<ion-select mode="md" data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+            return html`<ion-select mode="md" data-field=${f.id} data-testid=${`customers-list-field-${f.id}`} fill="outline" label=${label} label-placement="floating"
               .value=${f.value} @ionChange=${set(f.id)}>
               ${opts.map((o) => html`<ion-select-option value=${o}>${o}</ion-select-option>`)}
             </ion-select>`;
           }
           if (f.field_type === 'textarea') {
-            return html`<ion-textarea mode="md" data-field=${f.id} fill="outline" label=${label} label-placement="floating"
+            return html`<ion-textarea mode="md" data-field=${f.id} data-testid=${`customers-list-field-${f.id}`} fill="outline" label=${label} label-placement="floating"
               auto-grow .value=${f.value} @ionInput=${set(f.id)}></ion-textarea>`;
           }
           if (f.field_type === 'boolean') {
-            return html`<ion-checkbox data-field=${f.id} .checked=${f.value === '1'}
+            return html`<ion-checkbox data-field=${f.id} data-testid=${`customers-list-field-${f.id}`} .checked=${f.value === '1'}
               @ionChange=${(e: Event) => this.setFieldValue(f.id, (e.target as HTMLInputElement).checked ? '1' : '')}>
               ${label}
             </ion-checkbox>`;
           }
           const type = f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text';
-          return html`<ion-input mode="md" data-field=${f.id} type=${type} fill="outline" label=${label}
+          return html`<ion-input mode="md" data-field=${f.id} data-testid=${`customers-list-field-${f.id}`} type=${type} fill="outline" label=${label}
             label-placement="floating" .value=${f.value} @ionInput=${set(f.id)}></ion-input>`;
         })}
       </div>
@@ -1032,28 +1032,37 @@ export class ErpCustomersList extends LitElement {
    * edit form (customers#51). Before this, the add panel had a hand-written form of its own with two
    * inputs in it, which is how the two screens drifted apart in the first place: adding a field to
    * the sheet only ever reached one of them.
+   *
+   * `scope` is only there for the `data-testid` (customers#70): the two screens never share the
+   * DOM, but a spec that fills `customers-list-sheet-create-name` says which flow it is driving,
+   * and a failure names the screen instead of «the name field».
    */
-  private sheetField(key: keyof EditForm, form: EditForm, patch: (part: Partial<EditForm>) => void) {
+  private sheetField(
+    key: keyof EditForm,
+    form: EditForm,
+    patch: (part: Partial<EditForm>) => void,
+    scope: 'create' | 'edit',
+  ) {
     const t = (k: string): string => erplora().t(CATALOG, k);
     const label = t(SHEET_FIELD_LABEL[key]);
     const value = String(form[key] ?? '');
     if (key === 'lifecycle_stage' || key === 'preferred_channel') {
       const options = key === 'lifecycle_stage' ? STAGE_KEY : CHANNEL_KEY;
       const label_ = key === 'lifecycle_stage' ? stageLabel : channelLabel;
-      return html`<ion-select mode="md" data-sheet-field=${key} fill="outline" label=${label}
+      return html`<ion-select mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
         label-placement="floating" .value=${value}
         @ionChange=${(e: any) => patch({ [key]: e.target.value } as Partial<EditForm>)}>
         ${Object.keys(options).map((v) => html`<ion-select-option value=${v}>${label_(v)}</ion-select-option>`)}
       </ion-select>`;
     }
-    if (key === 'country') return this.countryField(form, label, patch);
+    if (key === 'country') return this.countryField(form, label, patch, scope);
     if (key === 'notes') {
-      return html`<ion-textarea mode="md" data-sheet-field=${key} fill="outline" label=${label}
+      return html`<ion-textarea mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
         label-placement="floating" auto-grow .value=${value}
         @ionInput=${(e: any) => patch({ notes: e.target.value })}></ion-textarea>`;
     }
     const type = key === 'email' ? 'email' : key === 'birthday' || key === 'anniversary' ? 'date' : 'text';
-    return html`<ion-input mode="md" data-sheet-field=${key} type=${type} fill="outline" label=${label}
+    return html`<ion-input mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} type=${type} fill="outline" label=${label}
       label-placement="floating" .value=${value}
       @ionInput=${(e: any) => patch({ [key]: e.target.value } as Partial<EditForm>)}></ion-input>`;
   }
@@ -1065,12 +1074,17 @@ export class ErpCustomersList extends LitElement {
    * before whose text cannot be read keeps it as an option of its own, so it stays visible and an
    * unrelated edit never erases it; «No country» is how it is cleared.
    */
-  private countryField(form: EditForm, label: string, patch: (part: Partial<EditForm>) => void) {
+  private countryField(
+    form: EditForm,
+    label: string,
+    patch: (part: Partial<EditForm>) => void,
+    scope: 'create' | 'edit',
+  ) {
     const t = (k: string): string => erplora().t(CATALOG, k);
     const countries = countryOptions(erplora().locale);
     const value = form.country;
     const legacy = value && !countries.some((o) => o.value === value) ? [{ value, label: value }] : [];
-    return html`<ok-combo data-sheet-field="country" label=${label}
+    return html`<ok-combo data-sheet-field="country" data-testid=${`customers-list-sheet-${scope}-country`} label=${label}
       .options=${[{ value: '', label: t('ui.countryNone') }, ...legacy, ...countries]}
       .value=${value}
       .labels=${{ placeholder: t('ui.countrySearch'), empty: t('ui.countryNoMatch') }}
@@ -1081,8 +1095,8 @@ export class ErpCustomersList extends LitElement {
     const f = this.form;
     const t = (k: string): string => erplora().t(CATALOG, k);
     const field = (key: keyof EditForm) =>
-      this.sheetField(key, f, (part) => (this.form = { ...this.form, ...part }));
-    return html`<form @submit=${(e: Event) => this.saveEdit(e)}>
+      this.sheetField(key, f, (part) => (this.form = { ...this.form, ...part }), 'edit');
+    return html`<form data-testid="customers-list-edit-form" @submit=${(e: Event) => this.saveEdit(e)}>
       <div class="grid2">
         ${[...SHEET_ESSENTIALS, ...SHEET_MORE].filter((k) => k !== 'notes').map(field)}
       </div>
@@ -1094,11 +1108,11 @@ export class ErpCustomersList extends LitElement {
            consent with no purpose, no channel, no record of what the person was shown and no author
            — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
            decision lives in its own panel below, as an action with its evidence. -->
-      <label class="check"><ion-checkbox .checked=${f.is_active}
+      <label class="check"><ion-checkbox data-testid="customers-list-edit-active" .checked=${f.is_active}
         @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> ${t('ui.fieldActive')}</label>
       <footer class="actions">
-        <ion-button type="submit" size="small" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
-        <ion-button size="small" fill="outline" @click=${() => (this.editing = false)}>${t('ui.cancel')}</ion-button>
+        <ion-button type="submit" size="small" data-testid="customers-list-edit-submit" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-edit-cancel" @click=${() => (this.editing = false)}>${t('ui.cancel')}</ion-button>
       </footer>
     </form>`;
   }
@@ -1109,11 +1123,13 @@ export class ErpCustomersList extends LitElement {
     const selected = isGroups ? this.groupIds : this.tagIds;
     const editable = can('customers.change_customer');
     const t = (k: string): string => erplora().t(CATALOG, k);
-    if (!items.length) return html`<p>${t(isGroups ? 'ui.noGroupsDefined' : 'ui.noTagsDefined')}</p>`;
+    if (!items.length) {
+      return html`<p data-testid=${`customers-list-membership-${kind}-empty`}>${t(isGroups ? 'ui.noGroupsDefined' : 'ui.noTagsDefined')}</p>`;
+    }
     return html`<div>
       <div class="chips">
         ${items.map((it) => html`<label class="check">
-          <ion-checkbox .checked=${selected.includes(String(it.id))}
+          <ion-checkbox data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
             ?disabled=${!editable}
             @ionChange=${() => {
               if (!editable) return;
@@ -1124,7 +1140,7 @@ export class ErpCustomersList extends LitElement {
         </label>`)}
       </div>
       ${editable
-        ? html`<ion-button size="small" ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>`
+        ? html`<ion-button size="small" data-testid=${`customers-list-membership-${kind}-save`} ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>`
         : nothing}
     </div>`;
   }
@@ -1157,7 +1173,7 @@ export class ErpCustomersList extends LitElement {
         const row = byChannel.get(channel);
         const state = row?.state ?? 'never_asked';
         const asking = this.consentAsking === channel;
-        return html`<div class="consent-row" data-consent=${channel}>
+        return html`<div class="consent-row" data-consent=${channel} data-testid=${`customers-list-consent-${channel}-row`}>
           <div class="consent-what">
             <strong>${channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(channel)}</strong>
             <span class="muted">${t(CONSENT_STATE_KEY[state] ?? 'ui.consentNeverAsked')}</span>
@@ -1169,26 +1185,31 @@ export class ErpCustomersList extends LitElement {
             ? nothing
             : state === 'granted'
               ? html`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
+                  data-testid=${`customers-list-consent-${channel}-withdraw`}
                   ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                   >${t('ui.consentWithdraw')}</ion-button>`
               : channel === 'any'
                 ? html`<ion-button size="small" fill="outline" class="tone-danger" data-act="withdraw"
+                  data-testid=${`customers-list-consent-${channel}-withdraw`}
                     ?disabled=${this.saving} @click=${() => this.withdrawConsent(channel)}
                     >${t('ui.consentClose')}</ion-button>`
                 : asking
                   ? nothing
-                  : html`<ion-button size="small" data-act="grant" ?disabled=${this.saving}
+                  : html`<ion-button size="small" data-act="grant"
+                      data-testid=${`customers-list-consent-${channel}-grant`} ?disabled=${this.saving}
                       @click=${() => { this.consentAsking = channel; this.formError = ''; }}
                       >${t('ui.consentRecord')}</ion-button>`}
           ${asking
-            ? html`<div class="consent-ask">
+            ? html`<div class="consent-ask" data-testid=${`customers-list-consent-${channel}-ask`}>
                 <!-- Shown, then stored word for word: this is the evidence, so the operator reads
                      to the customer exactly what will end up in the record. -->
                 <p>${t('ui.consentNotice')}</p>
                 <p class="muted">${t('ui.consentAskHint')}</p>
-                <ion-button size="small" data-act="grant-confirm" ?disabled=${this.saving}
+                <ion-button size="small" data-act="grant-confirm"
+                  data-testid=${`customers-list-consent-${channel}-grant-confirm`} ?disabled=${this.saving}
                   @click=${() => this.recordConsent(channel)}>${t('ui.consentConfirm')}</ion-button>
                 <ion-button size="small" fill="outline" data-act="grant-cancel"
+                  data-testid=${`customers-list-consent-${channel}-grant-cancel`}
                   @click=${() => { this.consentAsking = ''; }}>${t('ui.cancel')}</ion-button>
               </div>`
             : nothing}
@@ -1197,7 +1218,7 @@ export class ErpCustomersList extends LitElement {
       <h4>${t('ui.consentHistoryHeading')}</h4>
       ${this.consentHistory.length
         ? html`<ul class="timeline">
-            ${this.consentHistory.map((f) => html`<li data-consent-fact=${f.id}>
+            ${this.consentHistory.map((f) => html`<li data-consent-fact=${f.id} data-testid=${`customers-list-consent-fact-${f.id}`}>
               <div class="t">
                 ${t(CONSENT_STATE_KEY[f.state] ?? 'ui.consentNeverAsked')} —
                 ${f.channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(f.channel)}
@@ -1208,7 +1229,7 @@ export class ErpCustomersList extends LitElement {
               <div class="when">${formatTimestamp(f.occurred_at)}${f.recorded_by ? ` · ${f.recorded_by}` : ''}</div>
             </li>`)}
           </ul>`
-        : html`<p class="muted">${t('ui.consentNoHistory')}</p>`}
+        : html`<p class="muted" data-testid="customers-list-consent-history-empty">${t('ui.consentNoHistory')}</p>`}
     </section>`;
   }
 
@@ -1220,19 +1241,19 @@ export class ErpCustomersList extends LitElement {
     return html`<div class="detail-page">
       <header>
         <h2>${d.name}</h2>
-        <ion-button size="small" fill="outline" @click=${() => this.closeDetail()}>${t('ui.back')}</ion-button>
+        <ion-button size="small" fill="outline" data-testid="customers-list-back" @click=${() => this.closeDetail()}>${t('ui.back')}</ion-button>
         ${this.editing || !can('customers.change_customer')
           ? nothing
-          : html`<ion-button size="small" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
+          : html`<ion-button size="small" data-testid="customers-list-edit" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
         ${can('customers.delete_customer')
-          ? html`<ion-button size="small" class="tone-danger" fill="outline" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
+          ? html`<ion-button size="small" class="tone-danger" fill="outline" data-testid="customers-list-delete" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
           : nothing}
         ${can('customers.erase_customer')
-          ? html`<ion-button class="erase tone-danger" size="small" fill="clear" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
+          ? html`<ion-button class="erase tone-danger" size="small" fill="clear" data-testid="customers-list-erase" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
           : nothing}
       </header>
-      ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
-      ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
+      ${this.formError ? html`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
+      ${this.formMsg ? html`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
       <section class="panel">
@@ -1266,25 +1287,25 @@ export class ErpCustomersList extends LitElement {
         ? html`<section class="panel">
             ${can('customers.add_note')
               ? html`<h3>${t('ui.addNote')}</h3>
-                  <form class="form" @submit=${(e: Event) => this.addNote(e)}>
-                    <ion-textarea mode="md" fill="outline" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
+                  <form class="form" data-testid="customers-list-note-form" @submit=${(e: Event) => this.addNote(e)}>
+                    <ion-textarea mode="md" fill="outline" data-testid="customers-list-note-text" label=${t('ui.noteLabel')} label-placement="floating" auto-grow .value=${this.newNote}
                       @ionInput=${(e: any) => (this.newNote = e.target.value)}></ion-textarea>
-                    <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
+                    <ion-button type="submit" size="small" data-testid="customers-list-note-submit" ?disabled=${this.saving || !this.newNote.trim()}>${t('ui.add')}</ion-button>
                   </form>`
               : nothing}
             ${can('customers.view_activity')
               ? html`<h3>${t('ui.activityHeading')}</h3>
                   ${this.activities.length ? html`<ul class="timeline">
-                    ${this.activities.map((a) => html`<li>
+                    ${this.activities.map((a) => html`<li data-testid=${`customers-list-activity-item-${a.id}`}>
                       <div class="t">${activityTitle(a.title)} <small>· ${activityTypeLabel(a.activity_type)}</small></div>
                       ${a.description ? html`<div class="d">${a.description}</div>` : nothing}
                       <div class="when">${formatTimestamp(a.created_at)}</div>
                     </li>`)}
-                  </ul>` : html`<p>${t('ui.noActivity')}</p>`}`
+                  </ul>` : html`<p data-testid="customers-list-activity-empty">${t('ui.noActivity')}</p>`}`
               : nothing}
           </section>`
         : nothing}
-      ${this.detailFillers.length ? html`<section class="panel detail-slot"></section>` : nothing}
+      ${this.detailFillers.length ? html`<section class="panel detail-slot" data-testid="customers-list-detail-slot"></section>` : nothing}
     </div>`;
   }
 
@@ -1303,14 +1324,14 @@ export class ErpCustomersList extends LitElement {
   private renderCreateForm() {
     const t = (k: string): string => erplora().t(CATALOG, k);
     const field = (key: keyof EditForm) =>
-      this.sheetField(key, this.newForm, (part) => (this.newForm = { ...this.newForm, ...part }));
-    return html`<form slot="create" class="create-form" @submit=${(e: Event) => this.create(e)}>
+      this.sheetField(key, this.newForm, (part) => (this.newForm = { ...this.newForm, ...part }), 'create');
+    return html`<form slot="create" class="create-form" data-testid="customers-list-create-form" @submit=${(e: Event) => this.create(e)}>
       ${SHEET_ESSENTIALS.map(field)}
       <details class="more">
-        <summary>${t('ui.moreDetails')}</summary>
+        <summary data-testid="customers-list-more-details">${t('ui.moreDetails')}</summary>
         <div class="create-form">${SHEET_MORE.map(field)}</div>
       </details>
-      <ion-button type="submit" size="small" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
+      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
     </form>`;
   }
 
@@ -1320,15 +1341,15 @@ export class ErpCustomersList extends LitElement {
     // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
     return html`<div class="page">
         ${this.renderStats()}
-        ${this.formError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
-        ${this.formMsg ? html`<p class="ok">${this.formMsg}</p>` : nothing}
-        ${this.importing ? html`<p class="ok">${t('ui.importing')}</p>` : nothing}
+        ${this.formError ? html`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
+        ${this.formMsg ? html`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : nothing}
+        ${this.importing ? html`<p class="ok" data-testid="customers-list-importing">${t('ui.importing')}</p>` : nothing}
         ${this.renderImportReport()}
         ${this.renderDeleteConfirm()}
-        ${this.ctrl?.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
+        ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-        <ok-data-table .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${can('customers.add_customer')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .rowClickable=${true} .importable=${can('customers.add_customer')} .exportable=${can('customers.export_customer')} .csvName=${'customers.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => this.openDetail(String(e.detail.row.id))} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+        <ok-data-table testid="customers-list-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'person-outline'} .addable=${can('customers.add_customer')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchCustomers')} .actions=${this.rowActions} .rowClickable=${true} .importable=${can('customers.add_customer')} .exportable=${can('customers.export_customer')} .csvName=${'customers.csv'} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyCustomers')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => this.openDetail(String(e.detail.row.id))} @csvImport=${(e: CustomEvent<{ rows: Record<string, string>[] }>) => this.onCsvImport(e)} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;

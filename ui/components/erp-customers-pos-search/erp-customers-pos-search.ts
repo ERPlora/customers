@@ -353,38 +353,38 @@ export class ErpCustomersPosSearch extends LitElement {
         .value=${this.q}
         @ok-open=${(e: CustomEvent) => this.onOkOpen(e.detail.open)}
         @ok-input=${(e: CustomEvent) => this.onInput(e.detail.value)}>
-        ${this.error ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : nothing}
-        ${this.state === 'error' ? html`<ion-button class="retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t('ui.retry')}</ion-button>` : nothing}
+        ${this.error ? html`<ok-inline-feedback data-testid="customers-pos-error" tone="danger" icon="alert-circle-outline">${this.error}</ok-inline-feedback>` : nothing}
+        ${this.state === 'error' ? html`<ion-button class="retry" data-testid="customers-pos-retry" expand="block" fill="outline" size="small" @click=${() => this.retry()}>${t('ui.retry')}</ion-button>` : nothing}
         <ion-list class="list" lines="none">
           ${this.results.map((c) => html`
-            <ion-item button detail="false" class=${classMap({ sel: this.selectedId === c.id })} @click=${() => void this.pick(c)}>
+            <ion-item button detail="false" data-testid=${`customers-pos-result-${c.id}`} class=${classMap({ sel: this.selectedId === c.id })} @click=${() => void this.pick(c)}>
               <ion-label>
                 <h3>${c.name}</h3>
                 ${c.phone || c.email ? html`<p>${c.phone || c.email}</p>` : nothing}
               </ion-label>
               ${this.selectedId === c.id ? html`<ion-icon slot="end" name="checkmark-outline" class="selected-mark"></ion-icon>` : nothing}
             </ion-item>`)}
-          ${this.state === 'empty' ? html`<ok-empty-state icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
-          ${this.state === 'searching' ? html`<div class="empty">${t('ui.loading')}</div>` : nothing}
+          ${this.state === 'empty' ? html`<ok-empty-state data-testid="customers-pos-empty" icon=${this.q ? 'search-outline' : 'people-outline'} message=${this.q ? t('ui.noResults') : t('ui.noCustomers')}></ok-empty-state>` : nothing}
+          ${this.state === 'searching' ? html`<div class="empty" data-testid="customers-pos-searching">${t('ui.loading')}</div>` : nothing}
         </ion-list>
         ${this.q.trim() && can('customers.add_customer') && this.state !== 'forbidden' && this.state !== 'searching' && !this.quickOpen
-          ? html`<ion-button class="quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
+          ? html`<ion-button class="quick-add" data-testid="customers-pos-quick-add" expand="block" fill="clear" @click=${() => this.openQuickAdd()}>
               <ion-icon slot="start" name="person-add-outline"></ion-icon>${erplora().t(CATALOG, 'ui.quickAddCustomer', { term: this.q.trim() })}
             </ion-button>`
           : nothing}
-        ${this.quickOpen ? html`<form class="quick" @submit=${(e: Event) => { e.preventDefault(); void this.quickCreate(); }}>
+        ${this.quickOpen ? html`<form class="quick" data-testid="customers-pos-quick-form" @submit=${(e: Event) => { e.preventDefault(); void this.quickCreate(); }}>
             <div class="row">
-              <ion-input mode="md" fill="outline" label=${t('ui.quickName')} label-placement="floating" .value=${this.quickName} @ionInput=${(e: Event) => (this.quickName = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
-              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" label=${t('ui.quickPhone')} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e: Event) => (this.quickPhone = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+              <ion-input mode="md" fill="outline" data-testid="customers-pos-quick-name" label=${t('ui.quickName')} label-placement="floating" .value=${this.quickName} @ionInput=${(e: Event) => (this.quickName = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
+              <ion-input mode="md" fill="outline" type="tel" inputmode="tel" data-testid="customers-pos-quick-phone" label=${t('ui.quickPhone')} label-placement="floating" .value=${this.quickPhone} @ionInput=${(e: Event) => (this.quickPhone = String((e.target as HTMLInputElement).value ?? ''))}></ion-input>
             </div>
-            ${this.quickError ? html`<ok-inline-feedback tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : nothing}
+            ${this.quickError ? html`<ok-inline-feedback data-testid="customers-pos-quick-error" tone="danger" icon="alert-circle-outline">${this.quickError}</ok-inline-feedback>` : nothing}
             <div class="row">
-              <ion-button type="submit" size="small" ?disabled=${this.creating}>${this.creating ? t('ui.saving') : t('ui.quickCreate')}</ion-button>
-              <ion-button size="small" fill="clear" @click=${() => (this.quickOpen = false)}>${t('ui.cancel')}</ion-button>
+              <ion-button type="submit" size="small" data-testid="customers-pos-quick-submit" ?disabled=${this.creating}>${this.creating ? t('ui.saving') : t('ui.quickCreate')}</ion-button>
+              <ion-button size="small" fill="clear" data-testid="customers-pos-quick-cancel" @click=${() => (this.quickOpen = false)}>${t('ui.cancel')}</ion-button>
             </div>
           </form>` : nothing}
         ${this.selectedId
-          ? html`<ion-button slot="footer" class="clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>`
+          ? html`<ion-button slot="footer" class="clear" data-testid="customers-pos-clear" fill="clear" size="small" @click=${() => this.clear()}>${t('ui.removeCustomer')}</ion-button>`
           : nothing}
       </ok-spotlight-search>
     `;
