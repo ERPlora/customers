@@ -188,7 +188,7 @@
       "sql": "queries/by_phone.sql",
       "schema": "schemas/by_phone.json",
       "ai": {
-        "description": "Finds the customers whose phone is the same number as `phone`, however either side was typed (spaces, dashes, +, 00, with or without the country code)"
+        "description": "Finds the customers whose phone is the same number as `phone`, however either side was typed (spaces, dashes, +, 00, with or without the business's country code; another country's code in front is somebody else)"
       }
     },
     "customers.get": {
