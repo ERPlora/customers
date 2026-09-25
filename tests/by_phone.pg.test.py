@@ -22,7 +22,9 @@ What is checked here, against a real Postgres and bound the way the runtime bind
 2. a longer number that merely CONTAINS it, a short fragment and a card with no phone do not;
 3. the same national digits behind ANOTHER country's code are somebody else;
 4. the other hub's card and a deleted card are never returned;
-5. an empty or absent phone answers NOTHING — never the whole customer list.
+5. in a country whose national numbers keep their leading 0 behind the calling code (Italian
+   landlines, whatsapp_inbox#201), the card keeps it too — and only that form is her;
+6. an empty or absent phone answers NOTHING — never the whole customer list.
 
 Usage: tests/by_phone.pg.test.py   (exit 0 = green)
   Uses the `erplora-test-pg-5433` container by default (override: ERPLORA_TEST_PG_CONTAINER).
@@ -45,6 +47,9 @@ HUB_B = "hub-b"
 HUB_FR = "hub-fr"
 HUB_GB = "hub-gb"
 HUB_NOCODE = "hub-nocode"
+HUB_IT = "hub-it"
+HUB_CI = "hub-ci"
+HUB_RW = "hub-rw"
 
 # The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4). HUB_A has
 # NO row on purpose: a fresh hub that never saved its settings is `ES`, the runtime's default.
@@ -60,6 +65,9 @@ SETTINGS = [
     (HUB_FR, " fr "),
     (HUB_GB, "GB"),
     (HUB_NOCODE, "ZZ"),
+    (HUB_IT, "IT"),
+    (HUB_CI, " ci "),
+    (HUB_RW, "RW"),
 ]
 
 
@@ -94,6 +102,11 @@ CARDS = [
     ("c-uk-trunk", HUB_GB, "07700 900123", 0),
     ("c-nocode-national", HUB_NOCODE, "600111333", 0),
     ("c-nocode-intl", HUB_NOCODE, "+34 600 111 444", 0),
+    ("c-it-landline", HUB_IT, "06 1234567", 0),
+    ("c-it-mobile", HUB_IT, "333 123 4567", 0),
+    ("c-it-intl-landline", HUB_IT, "+39 06 7654321", 0),
+    ("c-ci-national", HUB_CI, "07 07 12 34 56", 0),
+    ("c-rw-trunk", HUB_RW, "078 123 4567", 0),
 ]
 
 
@@ -262,6 +275,43 @@ def main() -> int:
             "a country with no known calling code: the exact number still finds her",
             ["c-nocode-intl"],
             found(HUB_NOCODE, "0034 600 111 444"),
+        )
+
+        print("· a country that keeps the leading 0 in the international number (customers#82)")
+        check(
+            "Italian hub: the landline card «06 …» → the +39 06 … number",
+            ["c-it-landline"],
+            found(HUB_IT, "39061234567"),
+        )
+        check(
+            "Italian hub: the landline without its 0 behind +39 is another number",
+            [],
+            found(HUB_IT, "3961234567"),
+        )
+        check(
+            "Italian hub: a national search «06 …» → the card typed with +39 06",
+            ["c-it-intl-landline"],
+            found(HUB_IT, "06 7654321"),
+        )
+        check(
+            "Italian hub: a mobile (no leading 0) still matches behind +39",
+            ["c-it-mobile"],
+            found(HUB_IT, "393331234567"),
+        )
+        check(
+            "Ivorian hub (lower-case, padded setting): the national card keeps its 0 behind +225",
+            ["c-ci-national"],
+            found(HUB_CI, "2250707123456"),
+        )
+        check(
+            "Rwandan hub: the 0 IS a trunk prefix, dropped behind +250",
+            ["c-rw-trunk"],
+            found(HUB_RW, "250781234567"),
+        )
+        check(
+            "Rwandan hub: the 0 is not kept behind +250",
+            [],
+            found(HUB_RW, "2500781234567"),
         )
 
         print("· containing is not being")
