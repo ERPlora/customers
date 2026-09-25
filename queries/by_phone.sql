@@ -18,11 +18,18 @@
 -- matches the exact number only: any doubt is «nobody». The ISO 3166 → E.164 table is the same one
 -- the whatsapp_inbox handler uses (`calling_code`); a country added there is added here.
 --
+-- In a country with no trunk prefix whose numbers may begin with `0` (`keeps_zero`: IT, VA, SM,
+-- CI, CG, BF, GA, NE, TJ — the handler's `keeps_leading_zero`, whatsapp_inbox#201) that `0` is part
+-- of the international number: an Italian landline «06 1234567» is +39 06 1234567, not +39 6 …
+-- (customers#82). There the national side goes behind the calling code with its digits as typed;
+-- everywhere else its leading zeros (a trunk `0`, as in UK `07700…` or Rwanda `078…`) are dropped.
+--
 -- An empty or absent :phone answers NO rows, never the whole list: a caller that lost the number
 -- must not be handed everybody. Deciding between two matching cards is the caller's job (the
 -- WhatsApp link links nobody then); this query only answers who carries the number.
 WITH wanted AS (
-  SELECT ltrim(regexp_replace(COALESCE(:phone, ''), '[^0-9]', '', 'g'), '0') AS d
+  SELECT ltrim(r, '0') AS d, r
+  FROM (SELECT regexp_replace(COALESCE(:phone, ''), '[^0-9]', '', 'g') AS r) p
 ),
 home_country AS (
   SELECT COALESCE(
@@ -73,21 +80,26 @@ calling_codes (iso, code) AS (VALUES
     ('BT', '975'), ('MN', '976'), ('NP', '977'), ('TJ', '992'), ('TM', '993'), ('AZ', '994'),
     ('GE', '995'), ('KG', '996'), ('UZ', '998')
 ),
+keeps_zero (iso) AS (VALUES
+    ('IT'), ('VA'), ('SM'), ('CI'), ('CG'), ('BF'), ('GA'), ('NE'), ('TJ')
+),
 home AS (
-  SELECT cc.code FROM home_country h JOIN calling_codes cc ON cc.iso = h.iso
+  SELECT cc.code, EXISTS (SELECT 1 FROM keeps_zero z WHERE z.iso = h.iso) AS keeps_zero
+  FROM home_country h JOIN calling_codes cc ON cc.iso = h.iso
 )
 SELECT c.id, c.name, c.email, c.phone
 FROM customers_customer c
 CROSS JOIN wanted w
 CROSS JOIN LATERAL (
-  SELECT ltrim(regexp_replace(c.phone, '[^0-9]', '', 'g'), '0') AS n
+  SELECT ltrim(r, '0') AS n, r
+  FROM (SELECT regexp_replace(c.phone, '[^0-9]', '', 'g') AS r) p
 ) k
 LEFT JOIN home ON TRUE
 WHERE c.hub_id = :hub_id AND c.is_deleted = 0
   AND length(w.d) >= 7 AND length(k.n) >= 7
   AND (
     k.n = w.d
-    OR w.d = home.code || k.n
-    OR k.n = home.code || w.d
+    OR w.d = home.code || CASE WHEN home.keeps_zero THEN k.r ELSE k.n END
+    OR k.n = home.code || CASE WHEN home.keeps_zero THEN w.r ELSE w.d END
   )
 ORDER BY c.name, c.id
