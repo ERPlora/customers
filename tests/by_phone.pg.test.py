@@ -9,14 +9,20 @@ conversation was, and the «from WhatsApp» recipes treated a regular customer a
 
 `customers.by_phone` compares NUMBERS: both sides reduced to digits, leading zeros (the `00`
 international prefix, a national trunk `0`) dropped, and a card written without the country code
-matches when the other side is that number plus a 1-3 digit country code (and the other way
-round). Seven digits at least: a short number is an extension, not an identity.
+matches when the other side is that number plus the calling code of the BUSINESS's country (and
+the other way round). Seven digits at least: a short number is an extension, not an identity.
+
+A card without a prefix is a number of the business's own country (whatsapp_inbox#199, the same
+rule the inbox applies since #167): a French `33 600 111 222` writing to a Spanish salon is NOT
+the local card `600 111 222`. The country is the hub's `hub_settings.country_code`, `ES` when the
+row is absent (the runtime's default); a country with no known calling code matches exact only.
 
 What is checked here, against a real Postgres and bound the way the runtime binds it:
 1. every usual way of typing the same number finds the card;
 2. a longer number that merely CONTAINS it, a short fragment and a card with no phone do not;
-3. the other hub's card and a deleted card are never returned;
-4. an empty or absent phone answers NOTHING — never the whole customer list.
+3. the same national digits behind ANOTHER country's code are somebody else;
+4. the other hub's card and a deleted card are never returned;
+5. an empty or absent phone answers NOTHING — never the whole customer list.
 
 Usage: tests/by_phone.pg.test.py   (exit 0 = green)
   Uses the `erplora-test-pg-5433` container by default (override: ERPLORA_TEST_PG_CONTAINER).
@@ -36,6 +42,25 @@ MANIFEST = json.loads((MODULE_DIR / "module.json").read_text())
 QUERY = "customers.by_phone"
 HUB_A = "hub-a"
 HUB_B = "hub-b"
+HUB_FR = "hub-fr"
+HUB_GB = "hub-gb"
+HUB_NOCODE = "hub-nocode"
+
+# The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4). HUB_A has
+# NO row on purpose: a fresh hub that never saved its settings is `ES`, the runtime's default.
+CORE_TABLES = """
+CREATE TABLE hub_settings (
+  hub_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,
+  updated_at TEXT NOT NULL, updated_by TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (hub_id, key));
+"""
+SETTINGS = [
+    # hub, country_code as stored
+    (HUB_B, "ES"),
+    (HUB_FR, " fr "),
+    (HUB_GB, "GB"),
+    (HUB_NOCODE, "ZZ"),
+]
 
 
 def load(name):
@@ -58,17 +83,31 @@ CARDS = [
     ("c-national", HUB_A, "600111333", 0),
     ("c-double-zero", HUB_A, "0034 600-111-444", 0),
     ("c-with-prefix", HUB_A, "+34600111555", 0),
-    ("c-uk-trunk", HUB_A, "07700 900123", 0),
+    ("c-foreign", HUB_A, "+33 600 111 999", 0),
     ("c-longer", HUB_A, "+346001112229", 0),
     ("c-four-digit-prefix", HUB_A, "+1234 600 111 777", 0),
     ("c-fragment", HUB_A, "111222", 0),
     ("c-empty", HUB_A, "", 0),
     ("c-deleted", HUB_A, "+34600111666", 1),
     ("c-other-hub", HUB_B, "+34600111222", 0),
+    ("c-fr-national", HUB_FR, "06 00 11 18 88", 0),
+    ("c-uk-trunk", HUB_GB, "07700 900123", 0),
+    ("c-nocode-national", HUB_NOCODE, "600111333", 0),
+    ("c-nocode-intl", HUB_NOCODE, "+34 600 111 444", 0),
 ]
 
 
 def seed():
+    S.psql([], db=S.DB, stdin=CORE_TABLES)
+    settings = ",".join(
+        f"('{hub}', 'country_code', '{code}', '{S.NOW}', 'system')" for hub, code in SETTINGS
+    )
+    S.psql(
+        [],
+        db=S.DB,
+        stdin="INSERT INTO hub_settings (hub_id, key, value, updated_at, updated_by)"
+        f" VALUES {settings};",
+    )
     values = ",".join(
         f"('{cid}', '{hub}', 'Customer {cid}', '{phone}', {deleted}, '{S.NOW}', '{S.NOW}')"
         for cid, hub, phone, deleted in CARDS
@@ -163,9 +202,66 @@ def main() -> int:
             found(HUB_A, "600 111 555"),
         )
         check(
-            "UK: card with the trunk 0 → the +44 number",
+            "UK hub: card with the trunk 0 → the +44 number",
             ["c-uk-trunk"],
+            found(HUB_GB, "447700900123"),
+        )
+        check(
+            "French hub: national card with the trunk 0 → the +33 number",
+            ["c-fr-national"],
+            found(HUB_FR, "33600111888"),
+        )
+
+        print("· another country's code in front is somebody else (whatsapp_inbox#199)")
+        check(
+            "Spanish hub (no settings row = ES): a French number is not the national card",
+            [],
+            found(HUB_A, "33600111333"),
+        )
+        check(
+            "Spanish hub: a UK number is not the national card either",
+            [],
+            found(HUB_A, "44600111333"),
+        )
+        check(
+            "Spanish hub: a card typed WITH a foreign code answers that number exactly",
+            ["c-foreign"],
+            found(HUB_A, "33600111999"),
+        )
+        check(
+            "Spanish hub: the national digits of a foreign card are a Spanish number, not her",
+            [],
+            found(HUB_A, "600111999"),
+        )
+        check(
+            "Spanish hub: the foreign card is not the same digits behind +34",
+            [],
+            found(HUB_A, "34600111999"),
+        )
+        check(
+            "French hub: the Spanish number is not the French national card",
+            [],
+            found(HUB_FR, "34600111888"),
+        )
+        check(
+            "UK hub: the UK card is not found from a Spanish hub's point of view",
+            [],
             found(HUB_A, "447700900123"),
+        )
+        check(
+            "a country with no known calling code: exact number only",
+            [],
+            found(HUB_NOCODE, "34600111333"),
+        )
+        check(
+            "a country with no known calling code: the national search misses the +34 card",
+            [],
+            found(HUB_NOCODE, "600111444"),
+        )
+        check(
+            "a country with no known calling code: the exact number still finds her",
+            ["c-nocode-intl"],
+            found(HUB_NOCODE, "0034 600 111 444"),
         )
 
         print("· containing is not being")
