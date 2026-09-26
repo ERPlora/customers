@@ -3985,7 +3985,6 @@ var es_default = {
     channelPhone: "Tel\xE9fono",
     placeholderName: "Nombre",
     placeholderEmail: "Email",
-    addCustomer: "A\xF1adir",
     moreDetails: "M\xE1s datos",
     saving: "Guardando\u2026",
     searchCustomers: "Buscar nombre o email\u2026",
@@ -4235,7 +4234,6 @@ var en_default = {
     channelPhone: "Phone",
     placeholderName: "Name",
     placeholderEmail: "Email",
-    addCustomer: "Add",
     moreDetails: "More details",
     saving: "Saving\u2026",
     searchCustomers: "Search name or email\u2026",
@@ -6936,7 +6934,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
            and a banner on the page underneath it is never seen. -->
       ${this.createError ? b2`<ok-inline-feedback data-testid="customers-list-create-error" tone="danger" icon="alert-circle-outline">${this.createError}</ok-inline-feedback>` : A}
-      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
+      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
     </form>`;
   }
   render() {
