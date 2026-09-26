@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from 'lit';
+import type { PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
@@ -91,6 +92,10 @@ export class ErpCustomersFields extends LitElement {
   @state() saving = false;
 
   @state() formError = '';
+
+  /** What went wrong in a ROW action (delete, confirmed on the page): no panel is open then, so it
+   *  is painted on the page. `formError` is only what the panel's form was refused (pm#478). */
+  @state() pageError = '';
 
   @state() formMsg = '';
 
@@ -251,7 +256,7 @@ export class ErpCustomersFields extends LitElement {
     if (!can('customers.manage_custom_fields')) return;
     const f = ev.detail.row as unknown as Field;
     if (ev.detail.actionId === 'edit') void this.startEdit(f);
-    if (ev.detail.actionId === 'delete') { this.pendingDelete = f; this.formMsg = ''; this.formError = ''; }
+    if (ev.detail.actionId === 'delete') { this.pendingDelete = f; this.formMsg = ''; this.pageError = ''; }
   }
 
   private async save(ev: Event) {
@@ -261,6 +266,7 @@ export class ErpCustomersFields extends LitElement {
     const editing = this.editing;
     this.saving = true;
     this.formError = '';
+    this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
         await erplora().command('customers.fields.update', {
@@ -290,14 +296,14 @@ export class ErpCustomersFields extends LitElement {
   private async confirmDelete() {
     if (!this.pendingDelete || !can('customers.manage_custom_fields')) return;
     this.saving = true;
-    this.formError = '';
+    this.pageError = '';
     try {
       await erplora().command('customers.fields.delete', { field_id: this.pendingDelete.id });
       this.formMsg = erplora().t(CATALOG, 'ui.fieldDeleted', { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e) {
-      this.formError = domainErrorText(e, 'ui.errDeleteField');
+      this.pageError = domainErrorText(e, 'ui.errDeleteField');
     } finally {
       this.saving = false;
     }
@@ -318,6 +324,9 @@ export class ErpCustomersFields extends LitElement {
       <ion-input mode="md" type="number" fill="outline" data-testid="customers-fields-order" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
       <ion-checkbox data-testid="customers-fields-required" .checked=${this.fRequired} @ionChange=${(e: any) => (this.fRequired = e.target.checked)}>${t('ui.fieldRequired')}</ion-checkbox>
       ${editing ? html`<ion-checkbox data-testid="customers-fields-active" .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActive')}</ion-checkbox>` : nothing}
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.formError ? html`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
       <ion-button type="submit" size="small" data-testid="customers-fields-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
       ${editing ? html`<ion-button size="small" fill="outline" data-testid="customers-fields-cancel" @click=${() => this.resetForm()}>${t('ui.cancel')}</ion-button>` : nothing}
     </form>`;
@@ -334,11 +343,27 @@ export class ErpCustomersFields extends LitElement {
     </section>`;
   }
 
+  /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
+   *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
+   *  before, the banner still measures 0 px and ends up under the tab bar. */
+  updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (changed.has('formError') && this.formError) void this.revealFormError();
+  }
+
+  private async revealFormError(): Promise<void> {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-fields-form-error"]') as
+      | (HTMLElement & { updateComplete?: Promise<unknown> })
+      | null;
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: 'center' });
+  }
+
   render() {
     const t = (k: string): string => erplora().t(CATALOG, k);
     // Sin `<h2>`: el título de la vista lo pinta el topbar del shell.
     return html`<div class="page">
-      ${this.formError ? html`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
+      ${this.pageError ? html`<ok-inline-feedback data-testid="customers-fields-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok" data-testid="customers-fields-form-msg">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
