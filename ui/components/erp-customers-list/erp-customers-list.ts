@@ -294,7 +294,8 @@ export class ErpCustomersList extends LitElement {
     .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
     .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
     .import-list { margin:.25rem 0 0; padding-left:1.1rem; font-size:.85rem; max-height:9rem; overflow:auto; }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header h2 { flex:1 1 auto; min-width:0; margin:0; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
@@ -320,6 +321,8 @@ export class ErpCustomersList extends LitElement {
     .timeline .when { font-size:.75rem; opacity:.55; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    .muted { opacity:.6; }
+    .merge-candidates { max-height:18rem; overflow:auto; margin:.5rem 0; background:transparent; }
     footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
     /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
        \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
@@ -395,6 +398,16 @@ export class ErpCustomersList extends LitElement {
   @state() private importing = false;
   @state() private importReport: ImportReport | null = null;
 
+  // — Merge (customers#86): pick a duplicate of the OPEN sheet and fold it in. —
+  @state() private mergeOpen = false;
+  @state() private mergeTerm = '';
+  @state() private mergeCandidates: Customer[] = [];
+  @state() private mergeState: 'idle' | 'searching' | 'empty' | 'error' = 'idle';
+  @state() private mergeTarget: Customer | null = null;
+  /** Guards against a stale search answer painting over a newer one (same pattern as the till's search). */
+  private mergeSeq = 0;
+  private mergeTimer?: ReturnType<typeof setTimeout>;
+
   /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
    *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
    *  fillers are resolved by literal slot name through the SDK, mounted in `.detail-slot`, and told
@@ -456,7 +469,8 @@ export class ErpCustomersList extends LitElement {
       const a = erplora().on('customer.created', () => { this.ctrl.load(); this.loadStats(); });
       const b = erplora().on('customer.updated', () => { this.ctrl.load(); this.loadStats(); });
       const c = erplora().on('customer.deleted', () => { this.ctrl.load(); this.loadStats(); });
-      this.unsub = () => { a(); b(); c(); };
+      const d = erplora().on('customer.merged', () => { this.ctrl.load(); this.loadStats(); });
+      this.unsub = () => { a(); b(); c(); d(); };
     } catch { /* preview sin SDK */ }
   }
 
@@ -616,6 +630,7 @@ export class ErpCustomersList extends LitElement {
     this.formMsg = '';
     this.pendingDelete = null;
     this.editing = false;
+    this.closeMerge();
     try {
       const rows = await erplora().query<Customer[]>('customers.get', { customer_id: id });
       const customer = rows?.[0];
@@ -776,6 +791,7 @@ export class ErpCustomersList extends LitElement {
     this.pendingErase = false;
     this.editing = false;
     this.pendingDelete = null;
+    this.closeMerge();
     this.formError = '';
     this.formMsg = '';
   }
@@ -953,6 +969,83 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
+  // — Merge (customers#86/#87) → ONE transactional command `customers.merge`. The OPEN sheet is
+  // always the survivor: picking «which one survives» would be one more decision at the counter,
+  // and opening the other sheet and merging from there already covers that case.
+  private openMerge() {
+    if (!can('customers.merge_customer') || !this.detail) return;
+    this.formError = '';
+    this.formMsg = '';
+    this.pendingDelete = null;
+    this.pendingErase = false;
+    this.mergeOpen = true;
+    this.mergeTarget = null;
+    this.mergeTerm = '';
+    void this.searchMerge('');
+  }
+
+  private closeMerge() {
+    this.mergeOpen = false;
+    this.mergeTarget = null;
+    this.mergeCandidates = [];
+    this.mergeTerm = '';
+    this.mergeState = 'idle';
+    if (this.mergeTimer) {
+      clearTimeout(this.mergeTimer);
+      this.mergeTimer = undefined;
+    }
+  }
+
+  private onMergeSearchInput(e: Event) {
+    const value = (e as CustomEvent<{ value?: string }>).detail?.value ?? (e.target as HTMLInputElement).value;
+    this.mergeTerm = String(value ?? '');
+    if (this.mergeTimer) clearTimeout(this.mergeTimer);
+    const term = this.mergeTerm;
+    this.mergeTimer = setTimeout(() => { void this.searchMerge(term); }, 250);
+  }
+
+  /** Same shape as the till's search (customers-pos): a stale answer is dropped by SEQUENCE, not
+   *  by time — the debounce above already keeps the request count low. */
+  private async searchMerge(q: string) {
+    const seq = ++this.mergeSeq;
+    this.mergeState = 'searching';
+    try {
+      const r = await erplora().query<{ rows: Customer[] } | Customer[]>('customers.list', {
+        search: q, limit: 20, sort: 'name', dir: 'asc',
+      });
+      if (seq !== this.mergeSeq) return; // a newer search already answered
+      const rows = Array.isArray(r) ? r : (r?.rows ?? []);
+      // The open sheet can never be its own duplicate.
+      this.mergeCandidates = rows.filter((c) => String(c.id) !== String(this.detail?.id));
+      this.mergeState = this.mergeCandidates.length ? 'idle' : 'empty';
+    } catch {
+      if (seq !== this.mergeSeq) return;
+      this.mergeCandidates = [];
+      this.mergeState = 'error';
+    }
+  }
+
+  private async confirmMerge() {
+    if (!can('customers.merge_customer') || !this.detail || !this.mergeTarget || this.saving) return;
+    const survivingId = this.detail.id;
+    const target = this.mergeTarget;
+    this.saving = true;
+    this.formError = '';
+    try {
+      await erplora().command('customers.merge', { surviving_id: survivingId, absorbed_id: target.id });
+      // openDetail re-reads the survivor (it gained fields and history) and closes this panel.
+      await Promise.all([this.openDetail(survivingId), this.ctrl.load(), this.loadStats()]);
+      // AFTER openDetail: it clears formMsg on its way in.
+      this.formMsg = erplora().t(CATALOG, 'ui.customerMerged', { name: target.name });
+    } catch (e) {
+      // `customers.customer_unavailable`: the merge's row guard refused it (one of the two sheets
+      // is gone, or both are the same). The panel stays open — pick another duplicate or cancel.
+      this.formError = domainErrorText(e, 'ui.errMerge');
+    } finally {
+      this.saving = false;
+    }
+  }
+
   private renderEraseConfirm() {
     if (!this.pendingErase || !this.detail || !can('customers.erase_customer')) return nothing;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
@@ -965,6 +1058,48 @@ export class ErpCustomersList extends LitElement {
         <ion-button size="small" class="tone-danger" data-testid="customers-list-erase-submit" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t('ui.deleting') : t('ui.eraseData')}</ion-button>
         <ion-button size="small" fill="outline" data-testid="customers-list-erase-cancel" @click=${() => (this.pendingErase = false)}>${t('ui.cancel')}</ion-button>
       </footer>
+    </section>`;
+  }
+
+  /**
+   * **The merge panel** (customers#86) — one screen, two steps: pick the duplicate, then read what
+   * is going to happen to it before it disappears. The survivor is always the sheet already open.
+   */
+  private renderMergePanel() {
+    if (!this.mergeOpen || !this.detail || !can('customers.merge_customer')) return nothing;
+    const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
+    const detail = this.detail;
+    const target = this.mergeTarget;
+    return html`<section class="panel" data-testid="customers-list-merge-panel">
+      <h3>${t('ui.mergeTitle')}</h3>
+      ${target
+        ? html`<div data-testid="customers-list-merge-confirm">
+            <p>${t('ui.mergeConfirm', { absorbed: target.name, surviving: detail.name })}</p>
+            <footer class="actions">
+              <ion-button size="small" class="tone-danger" data-testid="customers-list-merge-submit" ?disabled=${this.saving} @click=${() => this.confirmMerge()}>${this.saving ? t('ui.merging') : t('ui.mergeSubmit')}</ion-button>
+              <ion-button size="small" fill="outline" data-testid="customers-list-merge-change" @click=${() => (this.mergeTarget = null)}>${t('ui.mergeChange')}</ion-button>
+              <ion-button size="small" fill="clear" data-testid="customers-list-merge-cancel" @click=${() => this.closeMerge()}>${t('ui.cancel')}</ion-button>
+            </footer>
+          </div>`
+        : html`<p>${t('ui.mergeHint', { name: detail.name })}</p>
+            <ion-input mode="md" fill="outline" data-testid="customers-list-merge-search" label=${t('ui.mergeSearch')} label-placement="floating" .value=${this.mergeTerm}
+              @ionInput=${(e: Event) => this.onMergeSearchInput(e)}></ion-input>
+            ${this.mergeState === 'searching'
+              ? html`<p class="muted" data-testid="customers-list-merge-searching">${t('ui.mergeSearching')}</p>`
+              : this.mergeState === 'error'
+                ? html`<ok-inline-feedback data-testid="customers-list-merge-error" tone="danger" icon="alert-circle-outline">${t('ui.errMergeSearch')}</ok-inline-feedback>
+                    <ion-button size="small" fill="outline" data-testid="customers-list-merge-retry" @click=${() => this.searchMerge(this.mergeTerm)}>${t('ui.retry')}</ion-button>`
+                : this.mergeState === 'empty'
+                  ? html`<p class="muted" data-testid="customers-list-merge-empty">${t('ui.mergeNoCandidates')}</p>`
+                  : html`<ion-list class="merge-candidates">
+                      ${this.mergeCandidates.map((c) => html`<ion-item button detail="false" data-testid=${`customers-list-merge-candidate-${c.id}`}
+                        @click=${() => { this.mergeTarget = c; this.formError = ''; }}>
+                        <ion-label><h3>${c.name}</h3><p>${[c.email, c.phone].filter(Boolean).join(' · ')}</p></ion-label>
+                      </ion-item>`)}
+                    </ion-list>`}
+            <footer class="actions">
+              <ion-button size="small" fill="outline" data-testid="customers-list-merge-cancel" @click=${() => this.closeMerge()}>${t('ui.cancel')}</ion-button>
+            </footer>`}
     </section>`;
   }
 
@@ -1248,16 +1383,20 @@ export class ErpCustomersList extends LitElement {
           ? nothing
           : html`<ion-button size="small" data-testid="customers-list-edit" @click=${() => this.startEdit()}>${t('ui.edit')}</ion-button>`}
         ${can('customers.delete_customer')
-          ? html`<ion-button size="small" class="tone-danger" fill="outline" data-testid="customers-list-delete" @click=${() => { this.pendingDelete = d; }}>${t('ui.delete')}</ion-button>`
+          ? html`<ion-button size="small" class="tone-danger" fill="outline" data-testid="customers-list-delete" @click=${() => { this.pendingDelete = d; this.closeMerge(); }}>${t('ui.delete')}</ion-button>`
+          : nothing}
+        ${can('customers.merge_customer')
+          ? html`<ion-button size="small" fill="outline" data-testid="customers-list-merge" @click=${() => this.openMerge()}>${t('ui.mergeWith')}</ion-button>`
           : nothing}
         ${can('customers.erase_customer')
-          ? html`<ion-button class="erase tone-danger" size="small" fill="clear" data-testid="customers-list-erase" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; }}>${t('ui.eraseData')}</ion-button>`
+          ? html`<ion-button class="erase tone-danger" size="small" fill="clear" data-testid="customers-list-erase" @click=${() => { this.pendingErase = true; this.eraseReason = ''; this.formError = ''; this.closeMerge(); }}>${t('ui.eraseData')}</ion-button>`
           : nothing}
       </header>
       ${this.formError ? html`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : nothing}
       ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
+      ${this.renderMergePanel()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : html`<dl class="meta">
           <div><dt>${t('ui.colEmail')}</dt><dd>${d.email || '—'}</dd></div>
