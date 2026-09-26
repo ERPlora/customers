@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 const ANA = { id: 'c1', name: 'Ana García', is_active: 1 };
 const LUIS = { id: 'c3', name: 'Luis Pérez', is_active: 1 };
 
-type Deferred = { resolve: (v: unknown) => void };
+type Deferred = { resolve: (v: unknown) => void; reject: (e: unknown) => void };
 let held: Record<string, Deferred>;
 let holdGet: boolean;
 let holdLoadsOf: string | null;
@@ -20,7 +20,7 @@ beforeEach(() => {
   held = {};
   holdGet = true;
   holdLoadsOf = null;
-  const hold = (key: string) => new Promise((resolve) => { held[key] = { resolve }; });
+  const hold = (key: string) => new Promise((resolve, reject) => { held[key] = { resolve, reject }; });
   (globalThis as Record<string, unknown>).erplora = {
     query: (name: string, params: Record<string, unknown> = {}) => {
       const id = String(params.customer_id ?? '');
@@ -62,6 +62,7 @@ type Sheet = HTMLElement & {
   consentHistory: Array<{ id: string }>;
   groupIds: string[];
   tagIds: string[];
+  formError: string;
 };
 
 const settle = async (el: Sheet) => {
@@ -126,6 +127,43 @@ describe('two customers tapped in a row: the last one wins (pm#459)', () => {
       groupIds: ['g-c3'],
       tagIds: ['t-c3'],
     });
+  });
+
+  it("the first customer's loads FAILING late do not wipe the next sheet", async () => {
+    holdGet = false;
+    holdLoadsOf = 'c1';
+    const el = await mount();
+    view(el, ANA);
+    await settle(el);
+    (el as unknown as { closeDetail(): void }).closeDetail();
+    await settle(el);
+    view(el, LUIS);
+    await settle(el);
+    for (const name of LOADS) held[`${name}:c1`].reject(new Error('network'));
+    await settle(el);
+    expect({
+      fieldValues: el.fieldValues.map((f) => f.value),
+      activities: el.activities.map((a) => a.id),
+      consentState: el.consentState.map((c) => c.status),
+      consentHistory: el.consentHistory.map((c) => c.id),
+    }, '«Save» would blank Luis\'s custom fields').toEqual({
+      fieldValues: ['value of c3'],
+      activities: ['a-c3'],
+      consentState: ['state of c3'],
+      consentHistory: ['h-c3'],
+    });
+  });
+
+  it("the first customer's lookup FAILING late puts no error on the next sheet", async () => {
+    const el = await mount();
+    view(el, ANA);
+    view(el, LUIS);
+    held['get:c3'].resolve([LUIS]);
+    await settle(el);
+    held['get:c1'].reject(new Error('network'));
+    await settle(el);
+    expect(el.detail?.id).toBe('c3');
+    expect(el.formError).toBe('');
   });
 
   it('«Close» while the sheet is still loading keeps it closed', async () => {

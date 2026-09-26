@@ -393,6 +393,9 @@ export class ErpCustomersList extends LitElement {
   private ctrl!: ListController<Customer>;
 
   private unsub?: () => void;
+  /** Each sheet opening takes a number; an answer that comes back after a newer opening (or
+   *  «Close») is dropped (pm#459). */
+  private detailSeq = 0;
   @state() private pendingErase = false;
   @state() private eraseReason = '';
   @state() private importing = false;
@@ -624,8 +627,15 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
-  // — Detalle —
+  // — Detail —
+  /** True when the sheet now shows ANOTHER customer: an answer for `id` must not land on it. With
+   *  no sheet open the answer is kept (callers that load before opening rely on it). */
+  private sheetMovedOn(id: string): boolean {
+    return this.detail !== null && this.detail.id !== id;
+  }
+
   private async openDetail(id: string) {
+    const seq = ++this.detailSeq;
     this.formError = '';
     this.formMsg = '';
     this.pendingDelete = null;
@@ -633,20 +643,27 @@ export class ErpCustomersList extends LitElement {
     this.closeMerge();
     try {
       const rows = await erplora().query<Customer[]>('customers.get', { customer_id: id });
+      if (seq !== this.detailSeq) return;
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
       this.detail = customer;
       this.consentAsking = '';
       await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
     } catch (e) {
+      if (seq !== this.detailSeq) return;
       this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errLoadCustomer');
     }
   }
 
   private async loadFieldValues(id: string) {
     try {
-      this.fieldValues = (await erplora().query<FieldValue[]>('customers.fields.values', { customer_id: id })) ?? [];
-    } catch { this.fieldValues = []; }
+      const rows = await erplora().query<FieldValue[]>('customers.fields.values', { customer_id: id });
+      if (this.sheetMovedOn(id)) return;
+      this.fieldValues = rows ?? [];
+    } catch {
+      if (this.sheetMovedOn(id)) return;
+      this.fieldValues = [];
+    }
   }
 
   /** The consent panel reads the LEDGER, never `d.marketing_consent`: that column is a derived
@@ -659,9 +676,11 @@ export class ErpCustomersList extends LitElement {
         client.query<ConsentState[]>('customers.consent.state', { customer_id: id }),
         client.query<ConsentFact[]>('customers.consent.history', { customer_id: id }),
       ]);
+      if (this.sheetMovedOn(id)) return;
       this.consentState = state ?? [];
       this.consentHistory = history ?? [];
     } catch {
+      if (this.sheetMovedOn(id)) return;
       // A hub whose `customers` is older than this ledger has no such query. Emptying is right:
       // the panel then says nothing has been recorded, which is exactly true of that hub.
       this.consentState = [];
@@ -735,8 +754,13 @@ export class ErpCustomersList extends LitElement {
 
   private async loadActivities(id: string) {
     try {
-      this.activities = (await erplora().query<Activity[]>('customers.activities', { customer_id: id })) ?? [];
-    } catch { this.activities = []; }
+      const rows = await erplora().query<Activity[]>('customers.activities', { customer_id: id });
+      if (this.sheetMovedOn(id)) return;
+      this.activities = rows ?? [];
+    } catch {
+      if (this.sheetMovedOn(id)) return;
+      this.activities = [];
+    }
   }
 
   private async loadMemberships(id: string) {
@@ -747,6 +771,7 @@ export class ErpCustomersList extends LitElement {
         erplora().query<Array<{ id: string }>>('customers.group_ids', { customer_id: id }),
         erplora().query<Array<{ id: string }>>('customers.tag_ids', { customer_id: id }),
       ]);
+      if (this.sheetMovedOn(id)) return;
       // `queryAll` devuelve EL ARRAY, no el sobre `{rows,total}`. Leer `.rows` aquí daba `undefined`
       // → la ficha decía «no hay grupos/etiquetas» aunque los hubiera, y asignarlos era imposible.
       // `Array.isArray` y no `?? []`: una respuesta rara degrada a vacío en vez de reventar.
@@ -787,6 +812,7 @@ export class ErpCustomersList extends LitElement {
   }
 
   private closeDetail() {
+    this.detailSeq++;
     this.detail = null;
     this.pendingErase = false;
     this.editing = false;
