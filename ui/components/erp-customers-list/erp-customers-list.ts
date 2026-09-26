@@ -153,6 +153,7 @@ const ACTIVITY_TITLE_KEY: Record<string, string> = {
   'activity.consent_granted': 'ui.activityConsentGranted',
   'activity.consent_withdrawn': 'ui.activityConsentWithdrawn',
   'activity.customer_erased': 'ui.activityCustomerErased',
+  'activity.customer_merged': 'ui.activityCustomerMerged',
 };
 
 const LEGACY_TITLE: Record<string, string> = {
@@ -168,6 +169,7 @@ const ACTIVITY_TYPE_KEY: Record<string, string> = {
   note: 'ui.activityTypeNote', purchase: 'ui.activityTypePurchase',
   purchase_voided: 'ui.activityTypePurchaseVoided', consent_granted: 'ui.activityTypeConsentGranted',
   consent_withdrawn: 'ui.activityTypeConsentWithdrawn', erased: 'ui.activityTypeErased',
+  merged: 'ui.activityTypeMerged',
 };
 
 const activityTitle = (title: string): string => {

@@ -1,0 +1,8 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "customers.merge payload", "type": "object", "additionalProperties": true,
+  "required": ["surviving_id", "absorbed_id"],
+  "properties": {
+    "surviving_id": { "type": "string", "minLength": 1,
+      "description": "The sheet that survives the merge and keeps its own id: it fills only its EMPTY fields from the absorbed sheet." },
+    "absorbed_id": { "type": "string", "minLength": 1,
+      "description": "The duplicate sheet being merged away. Retired (soft-deleted), never physically removed; must be a different, existing, non-deleted sheet of the same hub or the merge is refused." } } }
