@@ -4145,6 +4145,19 @@ var es_default = {
     eraseReason: "Motivo (queda en la auditor\xEDa)",
     customerErased: "Datos personales borrados.",
     errErase: "No se pudieron borrar los datos personales",
+    mergeWith: "Fusionar con\u2026",
+    mergeTitle: "Fusionar una ficha duplicada",
+    mergeHint: "Elige la ficha duplicada de {name}. Se queda {name}; la que elijas se fusiona en ella.",
+    mergeSearch: "Buscar la ficha duplicada",
+    mergeSearching: "Buscando\u2026",
+    mergeNoCandidates: "No hay otra ficha que coincida.",
+    errMergeSearch: "No se pudieron buscar las fichas. Vuelve a intentarlo.",
+    mergeConfirm: "{absorbed} se fusionar\xE1 en {surviving}: sus citas, ventas, reservas, conversaciones, bonos, notas y consentimientos pasan a {surviving}, los datos que falten se completan con los suyos y {absorbed} desaparece de la lista. No se puede deshacer.",
+    mergeSubmit: "Fusionar",
+    merging: "Fusionando\u2026",
+    mergeChange: "Elegir otra",
+    customerMerged: "{name} se ha fusionado en esta ficha.",
+    errMerge: "No se pudieron fusionar las fichas.",
     consentHeading: "Consentimiento de marketing",
     consentIntro: "Una decisi\xF3n por canal, con la fecha, de d\xF3nde vino y la frase que se le ense\xF1\xF3 al cliente. Aqu\xED no se rellena nada editando la ficha.",
     consentNotice: "Quiero recibir ofertas y novedades de este negocio por este canal. Puedo darme de baja cuando quiera.",
@@ -4382,6 +4395,19 @@ var en_default = {
     eraseReason: "Reason (kept in the audit)",
     customerErased: "Personal data erased.",
     errErase: "Could not erase the personal data",
+    mergeWith: "Merge with\u2026",
+    mergeTitle: "Merge a duplicate customer",
+    mergeHint: "Pick the duplicate of {name}. {name} stays; the one you pick is merged into it.",
+    mergeSearch: "Search the duplicate",
+    mergeSearching: "Searching\u2026",
+    mergeNoCandidates: "No other customer matches.",
+    errMergeSearch: "Could not search the customers. Try again.",
+    mergeConfirm: "{absorbed} will be merged into {surviving}: its appointments, sales, bookings, conversations, prepaid packages, notes and consents move to {surviving}, empty fields are filled from it, and {absorbed} disappears from the list. This cannot be undone.",
+    mergeSubmit: "Merge",
+    merging: "Merging\u2026",
+    mergeChange: "Pick another",
+    customerMerged: "{name} was merged into this customer.",
+    errMerge: "Could not merge the customers.",
     consentHeading: "Marketing consent",
     consentIntro: "One decision per channel, with the date, where it came from and the words the customer was shown. Nothing here is filled in by editing the sheet.",
     consentNotice: "I want to receive offers and news from this business through this channel. I can unsubscribe whenever I want.",
@@ -5689,6 +5715,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.eraseReason = "";
     this.importing = false;
     this.importReport = null;
+    this.mergeOpen = false;
+    this.mergeTerm = "";
+    this.mergeCandidates = [];
+    this.mergeState = "idle";
+    this.mergeTarget = null;
+    /** Guards against a stale search answer painting over a newer one (same pattern as the till's search). */
+    this.mergeSeq = 0;
     /** HOST of the `customers.detail` slot (ADR-0043 §3bis). Other modules hang their block on the
      *  customer sheet here (appointments: the visit history) without `customers` knowing them: the
      *  fillers are resolved by literal slot name through the SDK, mounted in `.detail-slot`, and told
@@ -5707,7 +5740,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
     .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
     .import-list { margin:.25rem 0 0; padding-left:1.1rem; font-size:.85rem; max-height:9rem; overflow:auto; }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header h2 { flex:1 1 auto; min-width:0; margin:0; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
@@ -5733,6 +5767,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     .timeline .when { font-size:.75rem; opacity:.55; }
     .err { color:#d9480f; font-weight:600; }
     .ok { color:#2b8a3e; font-weight:600; }
+    .muted { opacity:.6; }
+    .merge-candidates { max-height:18rem; overflow:auto; margin:.5rem 0; background:transparent; }
     footer.actions { display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
     /* pm#392 — a danger button paints from HERE, never from \`color="danger"\`: Ionic resolves
        \`color=\` through a GLOBAL \`.ion-color-danger\` rule that does not reach inside this shadow
@@ -5810,10 +5846,15 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         this.ctrl.load();
         this.loadStats();
       });
+      const d3 = erplora3().on("customer.merged", () => {
+        this.ctrl.load();
+        this.loadStats();
+      });
       this.unsub = () => {
         a3();
         b3();
         c5();
+        d3();
       };
     } catch {
     }
@@ -5991,6 +6032,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.formMsg = "";
     this.pendingDelete = null;
     this.editing = false;
+    this.closeMerge();
     try {
       const rows2 = await erplora3().query("customers.get", { customer_id: id });
       const customer = rows2?.[0];
@@ -6145,6 +6187,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.pendingErase = false;
     this.editing = false;
     this.pendingDelete = null;
+    this.closeMerge();
     this.formError = "";
     this.formMsg = "";
   }
@@ -6321,6 +6364,78 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.saving = false;
     }
   }
+  // — Merge (customers#86/#87) → ONE transactional command `customers.merge`. The OPEN sheet is
+  // always the survivor: picking «which one survives» would be one more decision at the counter,
+  // and opening the other sheet and merging from there already covers that case.
+  openMerge() {
+    if (!can3("customers.merge_customer") || !this.detail) return;
+    this.formError = "";
+    this.formMsg = "";
+    this.pendingDelete = null;
+    this.pendingErase = false;
+    this.mergeOpen = true;
+    this.mergeTarget = null;
+    this.mergeTerm = "";
+    void this.searchMerge("");
+  }
+  closeMerge() {
+    this.mergeOpen = false;
+    this.mergeTarget = null;
+    this.mergeCandidates = [];
+    this.mergeTerm = "";
+    this.mergeState = "idle";
+    if (this.mergeTimer) {
+      clearTimeout(this.mergeTimer);
+      this.mergeTimer = void 0;
+    }
+  }
+  onMergeSearchInput(e7) {
+    const value = e7.detail?.value ?? e7.target.value;
+    this.mergeTerm = String(value ?? "");
+    if (this.mergeTimer) clearTimeout(this.mergeTimer);
+    const term = this.mergeTerm;
+    this.mergeTimer = setTimeout(() => {
+      void this.searchMerge(term);
+    }, 250);
+  }
+  /** Same shape as the till's search (customers-pos): a stale answer is dropped by SEQUENCE, not
+   *  by time — the debounce above already keeps the request count low. */
+  async searchMerge(q) {
+    const seq = ++this.mergeSeq;
+    this.mergeState = "searching";
+    try {
+      const r6 = await erplora3().query("customers.list", {
+        search: q,
+        limit: 20,
+        sort: "name",
+        dir: "asc"
+      });
+      if (seq !== this.mergeSeq) return;
+      const rows2 = Array.isArray(r6) ? r6 : r6?.rows ?? [];
+      this.mergeCandidates = rows2.filter((c5) => String(c5.id) !== String(this.detail?.id));
+      this.mergeState = this.mergeCandidates.length ? "idle" : "empty";
+    } catch {
+      if (seq !== this.mergeSeq) return;
+      this.mergeCandidates = [];
+      this.mergeState = "error";
+    }
+  }
+  async confirmMerge() {
+    if (!can3("customers.merge_customer") || !this.detail || !this.mergeTarget || this.saving) return;
+    const survivingId = this.detail.id;
+    const target = this.mergeTarget;
+    this.saving = true;
+    this.formError = "";
+    try {
+      await erplora3().command("customers.merge", { surviving_id: survivingId, absorbed_id: target.id });
+      await Promise.all([this.openDetail(survivingId), this.ctrl.load(), this.loadStats()]);
+      this.formMsg = erplora3().t(CATALOG3, "ui.customerMerged", { name: target.name });
+    } catch (e7) {
+      this.formError = domainErrorText4(e7, "ui.errMerge");
+    } finally {
+      this.saving = false;
+    }
+  }
   renderEraseConfirm() {
     if (!this.pendingErase || !this.detail || !can3("customers.erase_customer")) return A;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
@@ -6333,6 +6448,42 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         <ion-button size="small" class="tone-danger" data-testid="customers-list-erase-submit" ?disabled=${this.saving} @click=${() => this.confirmErase()}>${this.saving ? t5("ui.deleting") : t5("ui.eraseData")}</ion-button>
         <ion-button size="small" fill="outline" data-testid="customers-list-erase-cancel" @click=${() => this.pendingErase = false}>${t5("ui.cancel")}</ion-button>
       </footer>
+    </section>`;
+  }
+  /**
+   * **The merge panel** (customers#86) — one screen, two steps: pick the duplicate, then read what
+   * is going to happen to it before it disappears. The survivor is always the sheet already open.
+   */
+  renderMergePanel() {
+    if (!this.mergeOpen || !this.detail || !can3("customers.merge_customer")) return A;
+    const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
+    const detail = this.detail;
+    const target = this.mergeTarget;
+    return b2`<section class="panel" data-testid="customers-list-merge-panel">
+      <h3>${t5("ui.mergeTitle")}</h3>
+      ${target ? b2`<div data-testid="customers-list-merge-confirm">
+            <p>${t5("ui.mergeConfirm", { absorbed: target.name, surviving: detail.name })}</p>
+            <footer class="actions">
+              <ion-button size="small" class="tone-danger" data-testid="customers-list-merge-submit" ?disabled=${this.saving} @click=${() => this.confirmMerge()}>${this.saving ? t5("ui.merging") : t5("ui.mergeSubmit")}</ion-button>
+              <ion-button size="small" fill="outline" data-testid="customers-list-merge-change" @click=${() => this.mergeTarget = null}>${t5("ui.mergeChange")}</ion-button>
+              <ion-button size="small" fill="clear" data-testid="customers-list-merge-cancel" @click=${() => this.closeMerge()}>${t5("ui.cancel")}</ion-button>
+            </footer>
+          </div>` : b2`<p>${t5("ui.mergeHint", { name: detail.name })}</p>
+            <ion-input mode="md" fill="outline" data-testid="customers-list-merge-search" label=${t5("ui.mergeSearch")} label-placement="floating" .value=${this.mergeTerm}
+              @ionInput=${(e7) => this.onMergeSearchInput(e7)}></ion-input>
+            ${this.mergeState === "searching" ? b2`<p class="muted" data-testid="customers-list-merge-searching">${t5("ui.mergeSearching")}</p>` : this.mergeState === "error" ? b2`<ok-inline-feedback data-testid="customers-list-merge-error" tone="danger" icon="alert-circle-outline">${t5("ui.errMergeSearch")}</ok-inline-feedback>
+                    <ion-button size="small" fill="outline" data-testid="customers-list-merge-retry" @click=${() => this.searchMerge(this.mergeTerm)}>${t5("ui.retry")}</ion-button>` : this.mergeState === "empty" ? b2`<p class="muted" data-testid="customers-list-merge-empty">${t5("ui.mergeNoCandidates")}</p>` : b2`<ion-list class="merge-candidates">
+                      ${this.mergeCandidates.map((c5) => b2`<ion-item button detail="false" data-testid=${`customers-list-merge-candidate-${c5.id}`}
+                        @click=${() => {
+      this.mergeTarget = c5;
+      this.formError = "";
+    }}>
+                        <ion-label><h3>${c5.name}</h3><p>${[c5.email, c5.phone].filter(Boolean).join(" \xB7 ")}</p></ion-label>
+                      </ion-item>`)}
+                    </ion-list>`}
+            <footer class="actions">
+              <ion-button size="small" fill="outline" data-testid="customers-list-merge-cancel" @click=${() => this.closeMerge()}>${t5("ui.cancel")}</ion-button>
+            </footer>`}
     </section>`;
   }
   renderDeleteConfirm() {
@@ -6583,17 +6734,21 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${this.editing || !can3("customers.change_customer") ? A : b2`<ion-button size="small" data-testid="customers-list-edit" @click=${() => this.startEdit()}>${t5("ui.edit")}</ion-button>`}
         ${can3("customers.delete_customer") ? b2`<ion-button size="small" class="tone-danger" fill="outline" data-testid="customers-list-delete" @click=${() => {
       this.pendingDelete = d3;
+      this.closeMerge();
     }}>${t5("ui.delete")}</ion-button>` : A}
+        ${can3("customers.merge_customer") ? b2`<ion-button size="small" fill="outline" data-testid="customers-list-merge" @click=${() => this.openMerge()}>${t5("ui.mergeWith")}</ion-button>` : A}
         ${can3("customers.erase_customer") ? b2`<ion-button class="erase tone-danger" size="small" fill="clear" data-testid="customers-list-erase" @click=${() => {
       this.pendingErase = true;
       this.eraseReason = "";
       this.formError = "";
+      this.closeMerge();
     }}>${t5("ui.eraseData")}</ion-button>` : A}
       </header>
       ${this.formError ? b2`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
+      ${this.renderMergePanel()}
       <section class="panel">
         ${this.editing ? this.renderEditForm() : b2`<dl class="meta">
           <div><dt>${t5("ui.colEmail")}</dt><dd>${d3.email || "\u2014"}</dd></div>
@@ -6746,6 +6901,21 @@ __decorateClass([
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "importReport", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "mergeOpen", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "mergeTerm", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "mergeCandidates", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "mergeState", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "mergeTarget", 2);
 var ErpCustomersList = _ErpCustomersList;
 define("erp-customers-list", ErpCustomersList);
 

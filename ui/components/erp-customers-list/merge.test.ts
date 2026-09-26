@@ -244,3 +244,15 @@ describe('every sentence of the merge exists in English and in Spanish (ADR-0055
     expect(keys.filter((k) => en[k] === es[k])).toEqual([]);
   });
 });
+
+describe('the sheet header fits a phone (customers#86)', () => {
+  // «Merge with…» is the fifth action on the sheet header. On a 390 px phone the row did not wrap:
+  // the customer name was cut and «Erase personal data» fell off the screen (seen on the bench,
+  // hub:stable, 2026-09-26). The actions must wrap under the name instead.
+  const src = readFileSync(join(import.meta.dirname, 'erp-customers-list.ts'), 'utf8');
+
+  it('the header row wraps its actions', () => {
+    const rule = src.match(/\n\s*header \{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toMatch(/flex-wrap:\s*wrap/);
+  });
+});

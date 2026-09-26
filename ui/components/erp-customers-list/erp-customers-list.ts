@@ -294,7 +294,8 @@ export class ErpCustomersList extends LitElement {
     .page > .kpis, .page > .panel, .page > p { flex:0 0 auto; }
     .detail-page { flex:1 1 auto; min-height:0; overflow:auto; }
     .import-list { margin:.25rem 0 0; padding-left:1.1rem; font-size:.85rem; max-height:9rem; overflow:auto; }
-    header { display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    header h2 { flex:1 1 auto; min-width:0; margin:0; }
     h2 { margin:0; font-size:1.15rem; flex:1; }
     h3 { margin:.25rem 0 .5rem; font-size:1rem; }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:.5rem; margin:0 0 1rem; }
