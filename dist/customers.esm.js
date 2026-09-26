@@ -5753,6 +5753,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.consentState = [];
     this.consentHistory = [];
     this.consentAsking = "";
+    /** Each sheet opening takes a number; an answer that comes back after a newer opening (or
+     *  «Close») is dropped (pm#459). */
+    this.detailSeq = 0;
     this.pendingErase = false;
     this.eraseReason = "";
     this.importing = false;
@@ -6068,8 +6071,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.saving = false;
     }
   }
-  // — Detalle —
+  // — Detail —
+  /** True when the sheet now shows ANOTHER customer: an answer for `id` must not land on it. With
+   *  no sheet open the answer is kept (callers that load before opening rely on it). */
+  sheetMovedOn(id) {
+    return this.detail !== null && this.detail.id !== id;
+  }
   async openDetail(id) {
+    const seq = ++this.detailSeq;
     this.formError = "";
     this.formMsg = "";
     this.pendingDelete = null;
@@ -6077,22 +6086,35 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.closeMerge();
     try {
       const rows2 = await erplora3().query("customers.get", { customer_id: id });
+      if (seq !== this.detailSeq) return;
       const customer = rows2?.[0];
       if (!customer) {
         this.formError = erplora3().t(CATALOG3, "ui.errCustomerNotFound");
         return;
       }
+      if (this.detail?.id !== customer.id) {
+        this.activities = [];
+        this.fieldValues = [];
+        this.groupIds = [];
+        this.tagIds = [];
+        this.consentState = [];
+        this.consentHistory = [];
+      }
       this.detail = customer;
       this.consentAsking = "";
       await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
     } catch (e7) {
+      if (seq !== this.detailSeq) return;
       this.formError = e7 instanceof Error ? e7.message : erplora3().t(CATALOG3, "ui.errLoadCustomer");
     }
   }
   async loadFieldValues(id) {
     try {
-      this.fieldValues = await erplora3().query("customers.fields.values", { customer_id: id }) ?? [];
+      const rows2 = await erplora3().query("customers.fields.values", { customer_id: id });
+      if (this.sheetMovedOn(id)) return;
+      this.fieldValues = rows2 ?? [];
     } catch {
+      if (this.sheetMovedOn(id)) return;
       this.fieldValues = [];
     }
   }
@@ -6106,9 +6128,11 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         client.query("customers.consent.state", { customer_id: id }),
         client.query("customers.consent.history", { customer_id: id })
       ]);
+      if (this.sheetMovedOn(id)) return;
       this.consentState = state ?? [];
       this.consentHistory = history ?? [];
     } catch {
+      if (this.sheetMovedOn(id)) return;
       this.consentState = [];
       this.consentHistory = [];
     }
@@ -6175,8 +6199,11 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   }
   async loadActivities(id) {
     try {
-      this.activities = await erplora3().query("customers.activities", { customer_id: id }) ?? [];
+      const rows2 = await erplora3().query("customers.activities", { customer_id: id });
+      if (this.sheetMovedOn(id)) return;
+      this.activities = rows2 ?? [];
     } catch {
+      if (this.sheetMovedOn(id)) return;
       this.activities = [];
     }
   }
@@ -6188,6 +6215,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         erplora3().query("customers.group_ids", { customer_id: id }),
         erplora3().query("customers.tag_ids", { customer_id: id })
       ]);
+      if (this.sheetMovedOn(id)) return;
       this.groups = Array.isArray(groupsPage) ? groupsPage : [];
       this.tags = Array.isArray(tagsPage) ? tagsPage : [];
       this.groupIds = (gids ?? []).map((r6) => String(r6.id));
@@ -6225,6 +6253,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.ensureDetailSlotMounted();
   }
   closeDetail() {
+    this.detailSeq++;
     this.detail = null;
     this.pendingErase = false;
     this.editing = false;
