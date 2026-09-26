@@ -92,6 +92,19 @@ const COVERED: Record<
       'customers-list-kpi-total',
       'customers-list-kpi-vip',
       'customers-list-load-error',
+      // «Merge with…» (customers#86): open it, search the duplicate, confirm or cancel. The
+      // candidates are keyed by their customer id (`customers-list-merge-candidate-`, below).
+      'customers-list-merge',
+      'customers-list-merge-cancel',
+      'customers-list-merge-change',
+      'customers-list-merge-confirm',
+      'customers-list-merge-empty',
+      'customers-list-merge-error',
+      'customers-list-merge-panel',
+      'customers-list-merge-retry',
+      'customers-list-merge-search',
+      'customers-list-merge-searching',
+      'customers-list-merge-submit',
       'customers-list-more-details',
       'customers-list-note-form',
       'customers-list-note-submit',
@@ -113,6 +126,8 @@ const COVERED: Record<
       // Group and tag membership: `customers-list-membership-groups-item-<id>`, plus its `-save`
       // and its `-empty`. The kind travels in the name because both panels are on screen at once.
       'customers-list-membership-',
+      // The merge candidates: the spec searches a duplicate and picks THAT sheet by its id.
+      'customers-list-merge-candidate-',
       // The sheet fields, drawn by the SAME helper on the two screens they appear on
       // (customers#51), so the screen travels in the hook: `customers-list-sheet-create-name` is
       // unambiguously the add panel and `customers-list-sheet-edit-name` the open sheet. Both are
