@@ -646,6 +646,13 @@ export class ErpCustomersList extends LitElement {
       if (seq !== this.detailSeq) return;
       const customer = rows?.[0];
       if (!customer) { this.formError = erplora().t(CATALOG, 'ui.errCustomerNotFound'); return; }
+      // A sheet for ANOTHER customer starts empty: the previous one's fields, notes, consent and
+      // groups must never show (nor be saved by «Save») under the new name while this one's load.
+      // Re-opening the same customer (after «Save») keeps what is there and only refreshes it.
+      if (this.detail?.id !== customer.id) {
+        this.activities = []; this.fieldValues = []; this.groupIds = []; this.tagIds = [];
+        this.consentState = []; this.consentHistory = [];
+      }
       this.detail = customer;
       this.consentAsking = '';
       await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);

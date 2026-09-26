@@ -174,4 +174,34 @@ describe('two customers tapped in a row: the last one wins (pm#459)', () => {
     await settle(el);
     expect(el.detail, 'the closed sheet reopened by itself').toBeNull();
   });
+
+  it("the next sheet never shows the previous customer's fields, notes, consent or groups while its own are loading", async () => {
+    holdGet = false;
+    holdLoadsOf = 'c3';
+    const el = await mount();
+    view(el, ANA);
+    await settle(el);
+    (el as unknown as { closeDetail(): void }).closeDetail();
+    await settle(el);
+    view(el, LUIS);
+    await settle(el);
+    expect(el.detail?.id).toBe('c3');
+    const perCustomer = () => ({
+      fieldValues: el.fieldValues.map((f) => f.value),
+      activities: el.activities.map((a) => a.id),
+      consentState: el.consentState.map((c) => c.status),
+      consentHistory: el.consentHistory.map((c) => c.id),
+      groupIds: el.groupIds,
+      tagIds: el.tagIds,
+    });
+    expect(perCustomer(), "Luis's sheet shows Ana's data while his own is still loading — «Save» would write it onto Luis").toEqual({
+      fieldValues: [], activities: [], consentState: [], consentHistory: [], groupIds: [], tagIds: [],
+    });
+    for (const name of LOADS) held[`${name}:c3`].resolve(undefined);
+    await settle(el);
+    expect(perCustomer()).toEqual({
+      fieldValues: ['value of c3'], activities: ['a-c3'], consentState: ['state of c3'],
+      consentHistory: ['h-c3'], groupIds: ['g-c3'], tagIds: ['t-c3'],
+    });
+  });
 });

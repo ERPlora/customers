@@ -6092,6 +6092,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         this.formError = erplora3().t(CATALOG3, "ui.errCustomerNotFound");
         return;
       }
+      if (this.detail?.id !== customer.id) {
+        this.activities = [];
+        this.fieldValues = [];
+        this.groupIds = [];
+        this.tagIds = [];
+        this.consentState = [];
+        this.consentHistory = [];
+      }
       this.detail = customer;
       this.consentAsking = "";
       await Promise.all([this.loadActivities(id), this.loadMemberships(id), this.loadFieldValues(id), this.loadConsent(id), this.resolveDetailSlot()]);
