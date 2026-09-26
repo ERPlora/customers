@@ -107,7 +107,7 @@ describe('alta y edición comparten el panel de la tabla', () => {
     t.dispatchEvent(new CustomEvent('rowAction', { detail: { actionId: 'edit', row: ETIQUETA } }));
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
 
-    expect(abierto, 'editar no abre el panel de la tabla').toEqual(['create']);
+    expect(abierto, 'editar no abre el panel de la tabla en modo edición (pm#450)').toEqual(['edit']);
     expect((el as unknown as { fName: string }).fName, 'el panel no se abre con la fila cargada').toBe('Fiel');
 
     formulario(el)!.dispatchEvent(new Event('submit', { cancelable: true }));
@@ -143,5 +143,115 @@ describe('clicking the row opens the tag (pm#155)', () => {
     await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     const wc = el as unknown as { editing: unknown };
     expect(wc.editing, 'the row was clicked and the edit panel did not take the tag').toEqual(ETIQUETA);
+  });
+});
+
+// pm#450 (outfitkit#150): editing opened the table's panel in «create» mode, so its header said
+// «New» while the body said «Edit · <name>». The screen now opens it in «edit» mode with that title
+// and only keeps the body line when the shell's table cannot title the panel.
+describe('editing titles the panel header, not its body (pm#450)', () => {
+  type Table = HTMLElement & { open: (panel?: unknown, opts?: { title?: string }) => void; shadowRoot: ShadowRoot };
+  type Mounted = HTMLElement & { shadowRoot: ShadowRoot };
+  const table = (el: Mounted) => el.shadowRoot.querySelector('ok-data-table') as Table;
+  const TITLE = 'ui.editTagTitle · Fiel';
+  const line = (el: Mounted) => el.shadowRoot.querySelector('form[slot="create"] [data-testid="customers-tags-editing"]') as HTMLElement | null;
+  const settle = async (el: Mounted) => {
+    await new Promise((r) => setTimeout(r, 0));
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  };
+  const edit = async (el: Mounted) => {
+    table(el).dispatchEvent(new CustomEvent('rowAction', { detail: { actionId: 'edit', row: ETIQUETA } }));
+    await settle(el);
+  };
+
+  beforeEach(() => {
+    // Interpolate `{name}` so the title can be asserted whole.
+    ((globalThis as Record<string, any>).erplora).t = (_c: unknown, key: string, p?: Record<string, unknown>) =>
+      p && 'name' in p ? `${key} · ${String(p.name)}` : key;
+  });
+
+  it("opens the panel with open('edit', { title }) — the editing title in the header", async () => {
+    const el = await montar();
+    const calls: unknown[][] = [];
+    table(el).open = (panel?: unknown, opts?: { title?: string }) => void calls.push([panel, opts]);
+    await edit(el);
+    expect(calls).toEqual([['edit', { title: TITLE }]]);
+  });
+
+  // The header only carries the title with OutfitKit >= 0.1.94 (outfitkit#150); an older shell
+  // (hub:stable ships 0.1.73) ignores it and keeps «New». The body line only goes away when the
+  // table REALLY painted the title — its dialog is labelled with it — never on faith.
+  const shellTable = (el: Mounted, honoursTitle: boolean) => {
+    const t = table(el);
+    const dialog = document.createElement('aside');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-label', 'Form');
+    const root = document.createElement('div');
+    root.appendChild(dialog);
+    Object.defineProperty(t, 'shadowRoot', { value: root, configurable: true });
+    // Like the real Lit table, open() only schedules the render: the dialog is labelled on the next
+    // microtask and `updateComplete` resolves once it is. Reading the label before awaiting it sees
+    // the old «Form» and would keep the line even when the header carries the title.
+    let rendered: Promise<void> = Promise.resolve();
+    Object.defineProperty(t, 'updateComplete', { get: () => rendered, configurable: true });
+    t.open = (_panel?: unknown, opts?: { title?: string }) => {
+      rendered = Promise.resolve().then(() => {
+        if (honoursTitle && opts?.title) dialog.setAttribute('aria-label', opts.title);
+      });
+    };
+  };
+
+  it('the form body no longer repeats the editing title once the header carries it', async () => {
+    const el = await montar();
+    shellTable(el, true);
+    await edit(el);
+    expect(line(el)).toBeNull();
+    expect(formulario(el)!.textContent).not.toContain('ui.editTagTitle');
+  });
+
+  it('with a shell whose table ignores the title (OutfitKit < 0.1.94), the body keeps the editing line', async () => {
+    const el = await montar();
+    shellTable(el, false);
+    await edit(el);
+    expect(line(el), 'the header says «New»: without this line nothing says it is an edit').toBeTruthy();
+    expect(line(el)!.textContent).toContain(TITLE);
+  });
+
+  it('«Cancel» (back to a clean form) hides the fallback line again', async () => {
+    const el = await montar();
+    shellTable(el, false);
+    await edit(el);
+    (el.shadowRoot.querySelector('[data-testid="customers-tags-cancel"]') as HTMLElement).click();
+    await settle(el);
+    expect(line(el)).toBeNull();
+  });
+
+  it('«Add» after an edit opens a CLEAN create form', async () => {
+    const el = await montar();
+    await edit(el);
+    const add = table(el).shadowRoot.querySelector('[data-testid="customers-tags-table-add"]') as HTMLElement;
+    expect(add, 'the table paints its «Add» button').toBeTruthy();
+    add.click();
+    await settle(el);
+    const wc = el as unknown as { editing: unknown; fName: string };
+    expect(wc.editing, 'a submit here would UPDATE the edited row under a «New» header').toBeNull();
+    expect(wc.fName).toBe('');
+  });
+
+  it('a click INSIDE the edit form (a field, the table) does not drop the edit — only «Add» does', async () => {
+    const el = await montar();
+    await edit(el);
+    (el.shadowRoot.querySelector('[data-testid="customers-tags-name"]') as HTMLElement).click();
+    table(el).click();
+    await settle(el);
+    expect((el as unknown as { editing: unknown }).editing, 'the table host hears every click of the projected form').toEqual(ETIQUETA);
+  });
+
+  it('«Add» with no edit in progress keeps what was typed', async () => {
+    const el = await montar();
+    (el as unknown as { fName: string }).fName = 'Borrador';
+    (table(el).shadowRoot.querySelector('[data-testid="customers-tags-table-add"]') as HTMLElement).click();
+    await settle(el);
+    expect((el as unknown as { fName: string }).fName).toBe('Borrador');
   });
 });
