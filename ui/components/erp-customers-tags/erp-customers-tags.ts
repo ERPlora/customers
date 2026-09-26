@@ -213,6 +213,7 @@ export class ErpCustomersTags extends LitElement {
     if (!can(editing ? 'customers.change_customertag' : 'customers.add_customertag')) return;
     this.saving = true;
     this.formError = '';
+    this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
         await erplora().command('customers.tags.update', {

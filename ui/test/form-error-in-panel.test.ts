@@ -128,6 +128,18 @@ describe('pm#478 · customers: a refused «Add customer» is shown INSIDE the pa
     expect(inForm(el, 'customers-list-create-error')).toBeNull();
   });
 
+  it('the page error of a refused delete goes away once a later save succeeds', async () => {
+    const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
+    el.pendingDelete = CUSTOMER;
+    refusal = new DomainError('customers.customer_unavailable', 'unavailable');
+    await el.confirmDelete();
+    refusal = null;
+    el.newForm = { ...el.newForm, name: 'Grace Hopper' };
+    await el.create(submitEvent());
+    await settle(el);
+    expect(onPage(el, 'customers-list-form-error'), 'a stale refusal must not stay red after a save that worked').toBeNull();
+  });
+
   it('a new attempt clears the previous refusal of the form', async () => {
     const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
     el.newForm = { ...el.newForm, name: 'Ada Lovelace' };
@@ -178,6 +190,18 @@ describe.each(SCREENS)('pm#478 · $surface: save refusal in the form, delete ref
     await settle(el);
     expect(onPage(el, `${surface}-page-error`), 'no panel is open: inside the form it would be invisible').not.toBeNull();
     expect(inForm(el, `${surface}-form-error`)).toBeNull();
+  });
+
+  it('the page error of a refused delete goes away once a later save succeeds', async () => {
+    const el = await mount(tag, path);
+    el.onRowAction(new CustomEvent('rowAction', { detail: { actionId: 'delete', row } }));
+    refusal = new DomainError('customers.in_use', 'in use');
+    await el.confirmDelete();
+    refusal = null;
+    el.fName = 'New name';
+    await el.save(submitEvent());
+    await settle(el);
+    expect(onPage(el, `${surface}-page-error`), 'a stale refusal must not stay red after a save that worked').toBeNull();
   });
 
   it('opening the panel after a refused delete does not carry that page error into the form', async () => {

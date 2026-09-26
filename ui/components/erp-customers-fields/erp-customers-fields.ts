@@ -266,6 +266,7 @@ export class ErpCustomersFields extends LitElement {
     const editing = this.editing;
     this.saving = true;
     this.formError = '';
+    this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
         await erplora().command('customers.fields.update', {

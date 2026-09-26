@@ -227,6 +227,7 @@ export class ErpCustomersGroups extends LitElement {
     if (!can(editing ? 'customers.change_customergroup' : 'customers.add_customergroup')) return;
     this.saving = true;
     this.formError = '';
+    this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
         await erplora().command('customers.groups.update', {

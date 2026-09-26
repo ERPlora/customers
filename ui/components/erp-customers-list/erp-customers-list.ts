@@ -610,6 +610,7 @@ export class ErpCustomersList extends LitElement {
     if (!can('customers.add_customer') || !f.name.trim()) return;
     this.saving = true;
     this.createError = '';
+    this.formError = ''; // a save is the next thing the person did: an older page refusal is stale
     try {
       await erplora().command('customers.create', {
         name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), tax_id: f.tax_id.trim(),
