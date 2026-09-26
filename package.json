@@ -1,7 +1,7 @@
 {
   "name": "@erplora/module-customers",
   "private": true,
-  "version": "2.3.51",
+  "version": "2.3.52",
   "type": "module",
   "description": "Módulo customers (manifest declarativo + Web Component Lit).",
   "dependencies": {
