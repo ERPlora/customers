@@ -97,6 +97,12 @@ export class ErpCustomersFields extends LitElement {
   /** null = alta; Field = edición de esa fila. El MISMO panel (`slot="create"`) sirve para las dos. */
   @state() editing: Field | null = null;
 
+  /** pm#450: whether the table's panel HEADER already carries the editing title (OutfitKit
+   *  >= 0.1.94, outfitkit#150). Set only after checking the rendered dialog — never assumed — so
+   *  an older shell (hub:stable ships 0.1.73, which ignores the `title` and keeps «New») still
+   *  gets the fallback line in the form body. */
+  @state() editTitleInHeader = false;
+
   @state() pendingDelete: Field | null = null;
 
   @state() fName = '';
@@ -171,10 +177,35 @@ export class ErpCustomersFields extends LitElement {
   }
 
   /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
-  private dataTable(): { open(p?: 'filters' | 'create'): void; close(): void } | null {
+  private dataTable(): {
+    open(p?: 'filters' | 'create' | 'edit', opts?: { title?: string }): void;
+    close(): void;
+    updateComplete?: Promise<unknown>;
+    shadowRoot: ShadowRoot | null;
+  } | null {
     return this.renderRoot.querySelector('ok-data-table') as
-      | { open(p?: 'filters' | 'create'): void; close(): void }
+      | {
+          open(p?: 'filters' | 'create' | 'edit', opts?: { title?: string }): void;
+          close(): void;
+          updateComplete?: Promise<unknown>;
+          shadowRoot: ShadowRoot | null;
+        }
       | null;
+  }
+
+  /** pm#450: the table's «Add» emits no event and keeps our form state; after an edit it would
+   *  show the edited record under a «New» header, and the submit would UPDATE it. */
+  private onTableClick(e: Event): void {
+    if (!this.editing) return;
+    const addId = 'customers-fields-table-add';
+    if (e.composedPath().some((n) => n instanceof HTMLElement && n.dataset.testid === addId)) this.resetForm();
+  }
+
+  /** Wired natively, not with a Lit `@click` on the tag: `<ok-data-table>` carries `testid`, not
+   *  `data-testid` (outfitkit#143), and a template binding would read as an action element that
+   *  demands one. */
+  firstUpdated(): void {
+    this.renderRoot.querySelector('ok-data-table')?.addEventListener('click', (e) => this.onTableClick(e));
   }
 
   private resetForm() {
@@ -184,7 +215,7 @@ export class ErpCustomersFields extends LitElement {
     this.formError = '';
   }
 
-  private startEdit(f: Field) {
+  private async startEdit(f: Field) {
     if (!can('customers.manage_custom_fields')) return;
     this.editing = f;
     this.fName = f.name; this.fType = f.field_type || 'text';
@@ -193,7 +224,13 @@ export class ErpCustomersFields extends LitElement {
     this.fActive = Boolean(f.is_active);
     this.formError = '';
     this.formMsg = '';
-    this.dataTable()?.open('create'); // el panel de alta, ya relleno con la fila
+    const title = erplora().t(CATALOG, 'ui.editFieldTitle', { name: f.name });
+    const table = this.dataTable();
+    table?.open('edit', { title });
+    await table?.updateComplete;
+    // OutfitKit < 0.1.94 ignores the title and keeps «New»: only drop the in-form line when the
+    // header REALLY carries it (the dialog is labelled with it).
+    this.editTitleInHeader = table?.shadowRoot?.querySelector('[role="dialog"]')?.getAttribute('aria-label') === title;
   }
 
   /** options en BD = JSON array serializado; en el form se edita una opción por coma. */
@@ -213,7 +250,7 @@ export class ErpCustomersFields extends LitElement {
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
     if (!can('customers.manage_custom_fields')) return;
     const f = ev.detail.row as unknown as Field;
-    if (ev.detail.actionId === 'edit') this.startEdit(f);
+    if (ev.detail.actionId === 'edit') void this.startEdit(f);
     if (ev.detail.actionId === 'delete') { this.pendingDelete = f; this.formMsg = ''; this.formError = ''; }
   }
 
@@ -272,7 +309,7 @@ export class ErpCustomersFields extends LitElement {
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     const editing = this.editing;
     return html`<form slot="create" class="form" data-testid="customers-fields-form" @submit=${(e: Event) => this.save(e)}>
-      ${editing ? html`<h3>${t('ui.editFieldTitle', { name: editing.name })}</h3>` : nothing}
+      ${editing && !this.editTitleInHeader ? html`<h3 data-testid="customers-fields-editing">${t('ui.editFieldTitle', { name: editing.name })}</h3>` : nothing}
       <ion-input mode="md" fill="outline" data-testid="customers-fields-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
       <ion-select mode="md" fill="outline" data-testid="customers-fields-type" label=${t('ui.fieldType')} label-placement="floating" .value=${this.fType} @ionChange=${(e: any) => (this.fType = e.target.value)}>
         ${Object.keys(TYPE_KEY).map((v) => html`<ion-select-option value=${v}>${typeLabel(v)}</ion-select-option>`)}
@@ -307,7 +344,7 @@ export class ErpCustomersFields extends LitElement {
       ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table testid="customers-fields-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${can('customers.manage_custom_fields')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.manage_custom_fields')) this.startEdit(e.detail.row as unknown as Field); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table testid="customers-fields-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'layers-outline'} .addable=${can('customers.manage_custom_fields')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchField')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyFields')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.manage_custom_fields')) void this.startEdit(e.detail.row as unknown as Field); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
