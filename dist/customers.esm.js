@@ -4665,6 +4665,7 @@ var ErpCustomersFields = class extends i3 {
     const editing = this.editing;
     this.saving = true;
     this.formError = "";
+    this.pageError = "";
     try {
       if (editing) {
         await erplora().command("customers.fields.update", {
@@ -4963,6 +4964,7 @@ var ErpCustomersGroups = class extends i3 {
     if (!can2(editing ? "customers.change_customergroup" : "customers.add_customergroup")) return;
     this.saving = true;
     this.formError = "";
+    this.pageError = "";
     try {
       if (editing) {
         await erplora2().command("customers.groups.update", {
@@ -6080,6 +6082,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     if (!can3("customers.add_customer") || !f3.name.trim()) return;
     this.saving = true;
     this.createError = "";
+    this.formError = "";
     try {
       await erplora3().command("customers.create", {
         name: f3.name.trim(),
@@ -7851,6 +7854,7 @@ var ErpCustomersTags = class extends i3 {
     if (!can5(editing ? "customers.change_customertag" : "customers.add_customertag")) return;
     this.saving = true;
     this.formError = "";
+    this.pageError = "";
     try {
       if (editing) {
         await erplora5().command("customers.tags.update", {
