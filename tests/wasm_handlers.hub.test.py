@@ -19,14 +19,14 @@ Contract fixed here (the same one the deleted e2e fixed):
   * `customers.bulk_create` with 3 items answers `operations: 3`, every item becomes ONE customer
     (found by its name through `customers.list`), `lifecycle_stage: "customer"` is normalised to
     `active`, an absent stage defaults to `active`, and every row carries `source: import`.
+  * Each `new_ids[i]` of `bulk_create` is the id of the row item `i` created: `customers.get` by
+    that id answers the customer named `names[i]` (the guest hands out `context.new_ids` in item
+    order). Until ERPlora/hub#1357 (fixed by hub#2139) the kernel re-minted `new_id` for every
+    guest operation and reported ids that matched no row; against an image older than that fix
+    this check fails, on purpose.
   * `customers.set_groups` REPLACES membership: two groups → `operations: 3` (clear + 2 adds) and
     both report `customer_count` 1 for this customer; setting one group afterwards drops the other
     back to 0 — replaced, not added to.
-
-Deliberately NOT asserted yet: that each `new_ids[i]` of `bulk_create` is the id of the row it
-created. Today it is not — the kernel re-mints `new_id` for every guest operation and still reports
-the guest's batch ids (ERPlora/hub#1357). That is a kernel promise; the assertion joins this file
-the day the kernel keeps it, so this battery does not certify a lie meanwhile.
 
 Usage: `erplora test <dir> --against-hub [dev|stable|sha256:…]` (module-toolkit#110). Without a
 runtime it fails, it does not skip.
@@ -87,6 +87,20 @@ def test_bulk_create_runs_the_shipped_wasm_on_the_kernel(hub: Hub) -> None:
     )
     for i, row in enumerate(rows):
         hub.check(f"item {i} source is import", row.get("source"), "import")
+
+    new_ids = out.get("new_ids") or []
+    for i, new_id in enumerate(new_ids):
+        got = hub.query("customers.get", {"customer_id": new_id})
+        hub.check(
+            f"new_ids[{i}] opens the customer item {i} created",
+            [r.get("name") for r in got],
+            [names[i]],
+        )
+        hub.check(
+            f"new_ids[{i}] is the id of the row found by name",
+            new_id,
+            rows[i]["id"],
+        )
 
 
 def count_of(hub: Hub, group_id: str, group_name: str) -> int | None:
