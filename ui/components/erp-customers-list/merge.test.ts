@@ -225,6 +225,50 @@ describe('confirming the merge', () => {
   });
 });
 
+describe('the candidate list follows the LAST search, not the last answer (rv-88)', () => {
+  it('drops a stale answer that lands after a newer search', async () => {
+    // The first search (empty term) is slow; the operator types «ana» and that answer lands
+    // first. When the slow one finally arrives it must NOT paint over the newer, narrower list.
+    const pending: Array<(v: unknown) => void> = [];
+    candidates = () => new Promise((r) => { pending.push(r); });
+    const el = await openSheet();
+    await openMerge(el);
+    const input = $(el, 'customers-list-merge-search') as HTMLElement & { value: string };
+    input.value = 'ana';
+    input.dispatchEvent(new CustomEvent('ionInput', { detail: { value: 'ana' } }));
+    await new Promise((r) => setTimeout(r, 400));
+    await settle(el);
+    expect(pending.length, 'two searches in flight: the initial one and «ana»').toBe(2);
+    pending[1]({ rows: [ANA, ANA_WHATSAPP], total: 2 });
+    await settle(el);
+    expect($(el, 'customers-list-merge-candidate-c2')).toBeTruthy();
+    pending[0]({ rows: [ANA, ANA_WHATSAPP, LUIS], total: 3 });
+    await settle(el);
+    expect($(el, 'customers-list-merge-candidate-c3'), 'the stale (broader) answer painted over the newer search').toBeNull();
+    expect($(el, 'customers-list-merge-candidate-c2')).toBeTruthy();
+  });
+});
+
+describe('a merge done elsewhere reaches this screen (rv-88)', () => {
+  it('reloads the list and the KPIs when customer.merged is published', async () => {
+    const handlers: Record<string, () => void> = {};
+    const el = await openSheet();
+    (globalThis as Record<string, unknown> & { erplora: { on: unknown } }).erplora.on = (name: string, fn: () => void) => {
+      handlers[name] = fn;
+      return () => {};
+    };
+    // Re-attach so the subscriptions are taken with the recording `on`.
+    el.remove();
+    document.body.appendChild(el);
+    await settle(el);
+    expect(typeof handlers['customer.merged'], 'the screen must listen to customer.merged').toBe('function');
+    const statsBefore = queries.filter((q) => q.name === 'customers.stats').length;
+    handlers['customer.merged']();
+    await settle(el);
+    expect(queries.filter((q) => q.name === 'customers.stats').length, 'the KPIs were not re-read').toBeGreaterThan(statsBefore);
+  });
+});
+
 describe('every sentence of the merge exists in English and in Spanish (ADR-0055)', () => {
   const src = readFileSync(join(import.meta.dirname, 'erp-customers-list.ts'), 'utf8');
   const en = JSON.parse(readFileSync(join(import.meta.dirname, '../../../locales/en.json'), 'utf8')).ui;

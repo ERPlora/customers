@@ -30,6 +30,7 @@
       "customers.groups.create",
       "customers.groups.delete",
       "customers.groups.update",
+      "customers.merge",
       "customers.notes.add",
       "customers.orders.link",
       "customers.set_groups",
@@ -42,6 +43,7 @@
     "events": [
       "customer.created",
       "customer.deleted",
+      "customer.merged",
       "customer.updated"
     ],
     "slots": [
