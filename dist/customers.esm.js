@@ -4500,6 +4500,7 @@ var ErpCustomersFields = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.pageError = "";
     this.formMsg = "";
     this.editing = null;
     this.editTitleInHeader = false;
@@ -4654,7 +4655,7 @@ var ErpCustomersFields = class extends i3 {
     if (ev.detail.actionId === "delete") {
       this.pendingDelete = f3;
       this.formMsg = "";
-      this.formError = "";
+      this.pageError = "";
     }
   }
   async save(ev) {
@@ -4698,14 +4699,14 @@ var ErpCustomersFields = class extends i3 {
   async confirmDelete() {
     if (!this.pendingDelete || !can("customers.manage_custom_fields")) return;
     this.saving = true;
-    this.formError = "";
+    this.pageError = "";
     try {
       await erplora().command("customers.fields.delete", { field_id: this.pendingDelete.id });
       this.formMsg = erplora().t(CATALOG, "ui.fieldDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = domainErrorText2(e7, "ui.errDeleteField");
+      this.pageError = domainErrorText2(e7, "ui.errDeleteField");
     } finally {
       this.saving = false;
     }
@@ -4725,6 +4726,9 @@ var ErpCustomersFields = class extends i3 {
       <ion-input mode="md" type="number" fill="outline" data-testid="customers-fields-order" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
       <ion-checkbox data-testid="customers-fields-required" .checked=${this.fRequired} @ionChange=${(e7) => this.fRequired = e7.target.checked}>${t5("ui.fieldRequired")}</ion-checkbox>
       ${editing ? b2`<ion-checkbox data-testid="customers-fields-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       <ion-button type="submit" size="small" data-testid="customers-fields-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-fields-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -4739,10 +4743,22 @@ var ErpCustomersFields = class extends i3 {
       <ion-button size="small" fill="outline" data-testid="customers-fields-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
+  /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
+   *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
+   *  before, the banner still measures 0 px and ends up under the tab bar. */
+  updated(changed) {
+    super.updated(changed);
+    if (changed.has("formError") && this.formError) void this.revealFormError();
+  }
+  async revealFormError() {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-fields-form-error"]');
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: "center" });
+  }
   render() {
     const t5 = (k2) => erplora().t(CATALOG, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-fields-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-fields-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-fields-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
@@ -4762,6 +4778,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersFields.prototype, "pageError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "formMsg", 2);
@@ -4814,6 +4833,7 @@ var ErpCustomersGroups = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.pageError = "";
     this.formMsg = "";
     this.editing = null;
     this.editTitleInHeader = false;
@@ -4933,7 +4953,7 @@ var ErpCustomersGroups = class extends i3 {
     if (ev.detail.actionId === "delete" && can2("customers.delete_customergroup")) {
       this.pendingDelete = g3;
       this.formMsg = "";
-      this.formError = "";
+      this.pageError = "";
     }
   }
   async save(ev) {
@@ -4975,14 +4995,14 @@ var ErpCustomersGroups = class extends i3 {
   async confirmDelete() {
     if (!this.pendingDelete || !can2("customers.delete_customergroup")) return;
     this.saving = true;
-    this.formError = "";
+    this.pageError = "";
     try {
       await erplora2().command("customers.groups.delete", { group_id: this.pendingDelete.id });
       this.formMsg = erplora2().t(CATALOG2, "ui.groupDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = domainErrorText3(e7, "ui.errDeleteGroup");
+      this.pageError = domainErrorText3(e7, "ui.errDeleteGroup");
     } finally {
       this.saving = false;
     }
@@ -4999,6 +5019,9 @@ var ErpCustomersGroups = class extends i3 {
       <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
       <ion-input mode="md" type="number" fill="outline" data-testid="customers-groups-order" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox data-testid="customers-groups-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActive")}</ion-checkbox>` : A}
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-groups-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       <ion-button type="submit" size="small" data-testid="customers-groups-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-groups-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -5013,10 +5036,22 @@ var ErpCustomersGroups = class extends i3 {
       <ion-button size="small" fill="outline" data-testid="customers-groups-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
+  /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
+   *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
+   *  before, the banner still measures 0 px and ends up under the tab bar. */
+  updated(changed) {
+    super.updated(changed);
+    if (changed.has("formError") && this.formError) void this.revealFormError();
+  }
+  async revealFormError() {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-groups-form-error"]');
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: "center" });
+  }
   render() {
     const t5 = (k2) => erplora2().t(CATALOG2, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-groups-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-groups-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-groups-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-groups-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
@@ -5036,6 +5071,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersGroups.prototype, "pageError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "formMsg", 2);
@@ -5737,6 +5775,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.newForm = { ...EMPTY_FORM };
     this.saving = false;
     this.formError = "";
+    this.createError = "";
     this.formMsg = "";
     this.stats = null;
     this.pendingDelete = null;
@@ -6040,7 +6079,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     const f3 = this.newForm;
     if (!can3("customers.add_customer") || !f3.name.trim()) return;
     this.saving = true;
-    this.formError = "";
+    this.createError = "";
     try {
       await erplora3().command("customers.create", {
         name: f3.name.trim(),
@@ -6066,7 +6105,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.dataTable()?.close();
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e7) {
-      this.formError = domainErrorText4(e7, "ui.errCreate");
+      this.createError = domainErrorText4(e7, "ui.errCreate");
     } finally {
       this.saving = false;
     }
@@ -6249,8 +6288,18 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       }));
     }
   }
-  updated() {
+  updated(changed) {
+    super.updated(changed);
     this.ensureDetailSlotMounted();
+    if (changed.has("createError") && this.createError) void this.revealCreateError();
+  }
+  /** pm#478: the refusal appears ABOVE «Add customer», at the foot of a long form — on a phone that
+   *  can leave it off the sheet. Bring it into view once it has painted itself: scrolled before, the
+   *  banner still measures 0 px and ends up under the tab bar. */
+  async revealCreateError() {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-list-create-error"]');
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: "center" });
   }
   closeDetail() {
     this.detailSeq++;
@@ -6881,6 +6930,9 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         <summary data-testid="customers-list-more-details">${t5("ui.moreDetails")}</summary>
         <div class="create-form">${SHEET_MORE.map(field)}</div>
       </details>
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.createError ? b2`<ok-inline-feedback data-testid="customers-list-create-error" tone="danger" icon="alert-circle-outline">${this.createError}</ok-inline-feedback>` : A}
       <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.addCustomer")}</ion-button>
     </form>`;
   }
@@ -6912,6 +6964,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], _ErpCustomersList.prototype, "createError", 2);
 __decorateClass([
   r5()
 ], _ErpCustomersList.prototype, "formMsg", 2);
@@ -7674,6 +7729,7 @@ var ErpCustomersTags = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.pageError = "";
     this.formMsg = "";
     this.editing = null;
     this.editTitleInHeader = false;
@@ -7785,7 +7841,7 @@ var ErpCustomersTags = class extends i3 {
     if (ev.detail.actionId === "delete" && can5("customers.delete_customertag")) {
       this.pendingDelete = tag;
       this.formMsg = "";
-      this.formError = "";
+      this.pageError = "";
     }
   }
   async save(ev) {
@@ -7823,14 +7879,14 @@ var ErpCustomersTags = class extends i3 {
   async confirmDelete() {
     if (!this.pendingDelete || !can5("customers.delete_customertag")) return;
     this.saving = true;
-    this.formError = "";
+    this.pageError = "";
     try {
       await erplora5().command("customers.tags.delete", { tag_id: this.pendingDelete.id });
       this.formMsg = erplora5().t(CATALOG5, "ui.tagDeleted", { name: this.pendingDelete.name });
       this.pendingDelete = null;
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = domainErrorText5(e7, "ui.errDeleteTag");
+      this.pageError = domainErrorText5(e7, "ui.errDeleteTag");
     } finally {
       this.saving = false;
     }
@@ -7845,6 +7901,9 @@ var ErpCustomersTags = class extends i3 {
       <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-tags-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       <ion-button type="submit" size="small" data-testid="customers-tags-submit" ?disabled=${this.saving || !this.fName.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-tags-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
@@ -7859,10 +7918,22 @@ var ErpCustomersTags = class extends i3 {
       <ion-button size="small" fill="outline" data-testid="customers-tags-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
     </section>`;
   }
+  /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
+   *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
+   *  before, the banner still measures 0 px and ends up under the tab bar. */
+  updated(changed) {
+    super.updated(changed);
+    if (changed.has("formError") && this.formError) void this.revealFormError();
+  }
+  async revealFormError() {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-tags-form-error"]');
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: "center" });
+  }
   render() {
     const t5 = (k2) => erplora5().t(CATALOG5, k2);
     return b2`<div class="page">
-      ${this.formError ? b2`<ok-inline-feedback data-testid="customers-tags-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
+      ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-tags-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-tags-form-msg">${this.formMsg}</p>` : A}
       ${this.renderDeleteConfirm()}
       ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-tags-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
@@ -7882,6 +7953,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersTags.prototype, "pageError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "formMsg", 2);
