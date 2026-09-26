@@ -204,6 +204,19 @@ def seed():
         ('b1', '{HUB_B}', 'Bea', 'bea@b.example', '{NOW}', '{NOW}'),
         ('b2', '{HUB_B}', 'bea', '', '{NOW}', '{NOW}');
       INSERT INTO customers_customernote (id, hub_id, customer_id, content) VALUES ('n-b1', '{HUB_B}', 'b1', 'Hub B note');
+
+      -- Hub B rows whose customer_id happens to be hub A's absorbed id (an opaque id; nothing in
+      -- the schema forbids it). A merge in hub A must leave every one of them alone: this is what
+      -- pins the `hub_id = :hub_id` clause of EACH re-pointing statement (a mutant dropping it
+      -- would drag these rows into hub A's survivor).
+      INSERT INTO customers_customernote (id, hub_id, customer_id, content) VALUES ('n-b-a', '{HUB_B}', 'a', 'Hub B note on a foreign id');
+      INSERT INTO customers_customeractivity (id, hub_id, customer_id, activity_type, title, created_at) VALUES ('act-b-a', '{HUB_B}', 'a', 'note', 'activity.note_added', '{NOW}');
+      INSERT INTO customers_customerfield (id, hub_id, name) VALUES ('fb', '{HUB_B}', 'Hub B field');
+      INSERT INTO customers_customerfieldvalue (id, hub_id, customer_id, field_id, value) VALUES ('v-b-a', '{HUB_B}', 'a', 'fb', 'B');
+      INSERT INTO customers_purchase_ledger (id, hub_id, customer_id, source_type, source_id, amount, created_at, updated_at) VALUES ('l-b-a', '{HUB_B}', 'a', 'sale', 'sale-b', 10, '{NOW}', '{NOW}');
+      INSERT INTO customers_customer_order (id, hub_id, customer_id, order_id, created_at, updated_at) VALUES ('o-b-a', '{HUB_B}', 'a', 'ord-b', '{NOW}', '{NOW}');
+      INSERT INTO customers_consent_ledger (id, hub_id, customer_id, purpose, channel, contact_point, state, source, occurred_at, created_at, updated_at)
+        VALUES ('cl-b-a', '{HUB_B}', 'a', 'marketing', 'email', 'x@b.example', 'granted', 'web_form', '2026-05-01T10:00:00+00:00', '{NOW}', '{NOW}');
     """,
     )
 
@@ -483,6 +496,20 @@ def main() -> int:
             + "|"
             + q(
                 "SELECT id || ':' || customer_id FROM customers_customernote WHERE id = 'n-b1'"
+            ),
+        )
+
+        check(
+            "hub B rows pointing at the absorbed id are NOT re-pointed (every UPDATE is hub-scoped)",
+            "act-b-a:a|cl-b-a:a|l-b-a:a|n-b-a:a|n-b1:b1|o-b-a:a|v-b-a:a",
+            q(
+                "SELECT string_agg(x, '|' ORDER BY x COLLATE \"C\") FROM ("
+                " SELECT id || ':' || customer_id x FROM customers_customernote WHERE hub_id = 'hub-b'"
+                " UNION ALL SELECT id || ':' || customer_id FROM customers_customeractivity WHERE hub_id = 'hub-b'"
+                " UNION ALL SELECT id || ':' || customer_id FROM customers_customerfieldvalue WHERE hub_id = 'hub-b'"
+                " UNION ALL SELECT id || ':' || customer_id FROM customers_purchase_ledger WHERE hub_id = 'hub-b'"
+                " UNION ALL SELECT id || ':' || customer_id FROM customers_customer_order WHERE hub_id = 'hub-b'"
+                " UNION ALL SELECT id || ':' || customer_id FROM customers_consent_ledger WHERE hub_id = 'hub-b') t"
             ),
         )
 
