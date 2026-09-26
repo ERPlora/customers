@@ -55,6 +55,7 @@ EXPECTED_KEYS = {
     "activity.consent_granted": "ui.activityConsentGranted",
     "activity.consent_withdrawn": "ui.activityConsentWithdrawn",
     "activity.customer_erased": "ui.activityCustomerErased",
+    "activity.customer_merged": "ui.activityCustomerMerged",
 }
 
 #: `customers.activity.add` is the public door: whatever another module sends is its own text.

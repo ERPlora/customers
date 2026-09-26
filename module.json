@@ -23,6 +23,7 @@
     "customers.change_customer",
     "customers.delete_customer",
     "customers.erase_customer",
+    "customers.merge_customer",
     "customers.export_customer",
     "customers.link_order",
     "customers.view_customergroup",
@@ -65,6 +66,7 @@
       "customers.export_customer",
       "customers.link_order",
       "customers.manage_custom_fields",
+      "customers.merge_customer",
       "customers.view_activity",
       "customers.view_customer",
       "customers.view_customergroup",
@@ -569,6 +571,41 @@
         "description": "GDPR erasure (customers#11): replaces the customer's personal data by markers keeping the row id (sales/invoices keep their reference), blanks and soft-deletes notes, activities and custom-field values, drops group/tag membership and writes ONE `erased` audit entry (actor, reason, scope). Irreversible. The purchase ledger is retained. Idempotent and hub-scoped."
       }
     },
+    "customers.merge": {
+      "permission": "customers.merge_customer",
+      "transaction": true,
+      "schema": "schemas/merge.json",
+      "sql": [
+        "commands/merge.sql",
+        "commands/merge_notes.sql",
+        "commands/merge_activities.sql",
+        "commands/merge_field_values_fill.sql",
+        "commands/merge_field_values_move.sql",
+        "commands/merge_groups_add.sql",
+        "commands/merge_groups_clear.sql",
+        "commands/merge_tags_add.sql",
+        "commands/merge_tags_clear.sql",
+        "commands/merge_purchase_ledger.sql",
+        "commands/merge_customer_order.sql",
+        "commands/merge_consent_ledger.sql",
+        "commands/merge_consent_sync_flag.sql",
+        "commands/merge_audit.sql",
+        "commands/merge_retire.sql"
+      ],
+      "expect_rows": {
+        "op": "min",
+        "n": 1,
+        "statement": "commands/merge.sql",
+        "error": "customers.customer_unavailable",
+        "message": "Those customers cannot be merged: both must exist in this business, be different and not deleted."
+      },
+      "emit": [
+        "customer.merged"
+      ],
+      "ai": {
+        "description": "Merges a duplicate customer sheet (absorbed_id) into the surviving one (surviving_id): the survivor keeps its own data and only fills its EMPTY fields from the absorbed sheet, notes are appended and totals summed. Everything else that hangs off the absorbed sheet moves to the survivor: notes, timeline, custom-field values, groups/tags, purchase ledger, order links and consent facts. The absorbed sheet is retired (soft-deleted, never physically removed). Emits customer.merged {surviving_id, absorbed_id} so other modules can re-point their own rows. Irreversible; hub-scoped."
+      }
+    },
     "customers.record_purchase": {
       "permission": "customers.change_customer",
       "transaction": true,
@@ -861,6 +898,7 @@
       "customer.consent_withdrawn",
       "customer.created",
       "customer.deleted",
+      "customer.merged",
       "customer.updated"
     ]
   },

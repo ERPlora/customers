@@ -45,6 +45,7 @@ installing a CRM drags the whole point of sale in with it.
 | `customer.created` | a customer is created |
 | `customer.updated` | a customer is updated |
 | `customer.deleted` | a customer is deleted |
+| `customer.merged` | a duplicate sheet is merged into another; payload `surviving_id`, `absorbed_id` — listeners re-point their own rows |
 
 **Events it listens to**
 

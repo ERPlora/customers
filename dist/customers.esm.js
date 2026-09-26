@@ -4047,12 +4047,14 @@ var es_default = {
     activityConsentGranted: "Consentimiento dado",
     activityConsentWithdrawn: "Consentimiento retirado",
     activityCustomerErased: "Datos personales borrados",
+    activityCustomerMerged: "Ficha duplicada fusionada en esta",
     activityTypeNote: "Nota",
     activityTypePurchase: "Compra",
     activityTypePurchaseVoided: "Anulaci\xF3n",
     activityTypeConsentGranted: "Consentimiento",
     activityTypeConsentWithdrawn: "Consentimiento",
     activityTypeErased: "Borrado",
+    activityTypeMerged: "Fusi\xF3n",
     groupsTitle: "Grupos de clientes",
     newGroup: "Nuevo grupo",
     colDescription: "Descripci\xF3n",
@@ -4282,12 +4284,14 @@ var en_default = {
     activityConsentGranted: "Consent given",
     activityConsentWithdrawn: "Consent withdrawn",
     activityCustomerErased: "Customer data erased",
+    activityCustomerMerged: "Duplicate customer merged into this one",
     activityTypeNote: "Note",
     activityTypePurchase: "Purchase",
     activityTypePurchaseVoided: "Void",
     activityTypeConsentGranted: "Consent",
     activityTypeConsentWithdrawn: "Consent",
     activityTypeErased: "Erasure",
+    activityTypeMerged: "Merge",
     groupsTitle: "Customer groups",
     newGroup: "New group",
     colDescription: "Description",
@@ -5566,7 +5570,8 @@ var ACTIVITY_TITLE_KEY = {
   "activity.purchase_voided": "ui.activityPurchaseVoided",
   "activity.consent_granted": "ui.activityConsentGranted",
   "activity.consent_withdrawn": "ui.activityConsentWithdrawn",
-  "activity.customer_erased": "ui.activityCustomerErased"
+  "activity.customer_erased": "ui.activityCustomerErased",
+  "activity.customer_merged": "ui.activityCustomerMerged"
 };
 var LEGACY_TITLE = {
   "Note added": "ui.activityNoteAdded",
@@ -5582,7 +5587,8 @@ var ACTIVITY_TYPE_KEY = {
   purchase_voided: "ui.activityTypePurchaseVoided",
   consent_granted: "ui.activityTypeConsentGranted",
   consent_withdrawn: "ui.activityTypeConsentWithdrawn",
-  erased: "ui.activityTypeErased"
+  erased: "ui.activityTypeErased",
+  merged: "ui.activityTypeMerged"
 };
 var activityTitle = (title) => {
   const key = ACTIVITY_TITLE_KEY[title] ?? LEGACY_TITLE[title];
