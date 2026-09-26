@@ -578,7 +578,7 @@ var ElementShim = class Element extends NodeShim {
     return value ?? null;
   }
 };
-var HTMLElementShim = class HTMLElement extends ElementShim {
+var HTMLElementShim = class HTMLElement2 extends ElementShim {
 };
 var HTMLElementShimWithRealType = HTMLElementShim;
 var ShadowRootShim = class ShadowRoot extends NodeShim {
@@ -4502,6 +4502,7 @@ var ErpCustomersFields = class extends i3 {
     this.formError = "";
     this.formMsg = "";
     this.editing = null;
+    this.editTitleInHeader = false;
     this.pendingDelete = null;
     this.fName = "";
     this.fType = "text";
@@ -4592,6 +4593,19 @@ var ErpCustomersFields = class extends i3 {
   dataTable() {
     return this.renderRoot.querySelector("ok-data-table");
   }
+  /** pm#450: the table's «Add» emits no event and keeps our form state; after an edit it would
+   *  show the edited record under a «New» header, and the submit would UPDATE it. */
+  onTableClick(e7) {
+    if (!this.editing) return;
+    const addId = "customers-fields-table-add";
+    if (e7.composedPath().some((n6) => n6 instanceof HTMLElement && n6.dataset.testid === addId)) this.resetForm();
+  }
+  /** Wired natively, not with a Lit `@click` on the tag: `<ok-data-table>` carries `testid`, not
+   *  `data-testid` (outfitkit#143), and a template binding would read as an action element that
+   *  demands one. */
+  firstUpdated() {
+    this.renderRoot.querySelector("ok-data-table")?.addEventListener("click", (e7) => this.onTableClick(e7));
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -4602,7 +4616,7 @@ var ErpCustomersFields = class extends i3 {
     this.fActive = true;
     this.formError = "";
   }
-  startEdit(f3) {
+  async startEdit(f3) {
     if (!can("customers.manage_custom_fields")) return;
     this.editing = f3;
     this.fName = f3.name;
@@ -4613,7 +4627,11 @@ var ErpCustomersFields = class extends i3 {
     this.fActive = Boolean(f3.is_active);
     this.formError = "";
     this.formMsg = "";
-    this.dataTable()?.open("create");
+    const title = erplora().t(CATALOG, "ui.editFieldTitle", { name: f3.name });
+    const table = this.dataTable();
+    table?.open("edit", { title });
+    await table?.updateComplete;
+    this.editTitleInHeader = table?.shadowRoot?.querySelector('[role="dialog"]')?.getAttribute("aria-label") === title;
   }
   /** options en BD = JSON array serializado; en el form se edita una opción por coma. */
   optionsToText(options) {
@@ -4632,7 +4650,7 @@ var ErpCustomersFields = class extends i3 {
   onRowAction(ev) {
     if (!can("customers.manage_custom_fields")) return;
     const f3 = ev.detail.row;
-    if (ev.detail.actionId === "edit") this.startEdit(f3);
+    if (ev.detail.actionId === "edit") void this.startEdit(f3);
     if (ev.detail.actionId === "delete") {
       this.pendingDelete = f3;
       this.formMsg = "";
@@ -4698,7 +4716,7 @@ var ErpCustomersFields = class extends i3 {
     const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-fields-form" @submit=${(e7) => this.save(e7)}>
-      ${editing ? b2`<h3>${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
+      ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-fields-editing">${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
       <ion-input mode="md" fill="outline" data-testid="customers-fields-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
       <ion-select mode="md" fill="outline" data-testid="customers-fields-type" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e7) => this.fType = e7.target.value}>
         ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
@@ -4731,7 +4749,7 @@ var ErpCustomersFields = class extends i3 {
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
       <ok-data-table testid="customers-fields-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "layers-outline"} .addable=${can("customers.manage_custom_fields")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchField")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyFields")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
-      if (can("customers.manage_custom_fields")) this.startEdit(e7.detail.row);
+      if (can("customers.manage_custom_fields")) void this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
@@ -4750,6 +4768,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "editing", 2);
+__decorateClass([
+  r5()
+], ErpCustomersFields.prototype, "editTitleInHeader", 2);
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "pendingDelete", 2);
@@ -4795,6 +4816,7 @@ var ErpCustomersGroups = class extends i3 {
     this.formError = "";
     this.formMsg = "";
     this.editing = null;
+    this.editTitleInHeader = false;
     this.pendingDelete = null;
     this.fName = "";
     this.fDescription = "";
@@ -4867,6 +4889,19 @@ var ErpCustomersGroups = class extends i3 {
   dataTable() {
     return this.renderRoot.querySelector("ok-data-table");
   }
+  /** pm#450: the table's «Add» emits no event and keeps our form state; after an edit it would
+   *  show the edited record under a «New» header, and the submit would UPDATE it. */
+  onTableClick(e7) {
+    if (!this.editing) return;
+    const addId = "customers-groups-table-add";
+    if (e7.composedPath().some((n6) => n6 instanceof HTMLElement && n6.dataset.testid === addId)) this.resetForm();
+  }
+  /** Wired natively, not with a Lit `@click` on the tag: `<ok-data-table>` carries `testid`, not
+   *  `data-testid` (outfitkit#143), and a template binding would read as an action element that
+   *  demands one. */
+  firstUpdated() {
+    this.renderRoot.querySelector("ok-data-table")?.addEventListener("click", (e7) => this.onTableClick(e7));
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -4876,7 +4911,7 @@ var ErpCustomersGroups = class extends i3 {
     this.fActive = true;
     this.formError = "";
   }
-  startEdit(g3) {
+  async startEdit(g3) {
     if (!can2("customers.change_customergroup")) return;
     this.editing = g3;
     this.fName = g3.name;
@@ -4886,11 +4921,15 @@ var ErpCustomersGroups = class extends i3 {
     this.fActive = Boolean(g3.is_active);
     this.formError = "";
     this.formMsg = "";
-    this.dataTable()?.open("create");
+    const title = erplora2().t(CATALOG2, "ui.editGroupTitle", { name: g3.name });
+    const table = this.dataTable();
+    table?.open("edit", { title });
+    await table?.updateComplete;
+    this.editTitleInHeader = table?.shadowRoot?.querySelector('[role="dialog"]')?.getAttribute("aria-label") === title;
   }
   onRowAction(ev) {
     const g3 = ev.detail.row;
-    if (ev.detail.actionId === "edit" && can2("customers.change_customergroup")) this.startEdit(g3);
+    if (ev.detail.actionId === "edit" && can2("customers.change_customergroup")) void this.startEdit(g3);
     if (ev.detail.actionId === "delete" && can2("customers.delete_customergroup")) {
       this.pendingDelete = g3;
       this.formMsg = "";
@@ -4954,7 +4993,7 @@ var ErpCustomersGroups = class extends i3 {
     const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-groups-form" @submit=${(e7) => this.save(e7)}>
-      ${editing ? b2`<h3>${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
+      ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-groups-editing">${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
       <ion-input mode="md" fill="outline" data-testid="customers-groups-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-description" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e7) => this.fDescription = e7.target.value}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
@@ -4984,7 +5023,7 @@ var ErpCustomersGroups = class extends i3 {
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
       <ok-data-table testid="customers-groups-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora2().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "people-outline"} .addable=${can2("customers.add_customergroup")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchGroup")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyGroups")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
-      if (can2("customers.change_customergroup")) this.startEdit(e7.detail.row);
+      if (can2("customers.change_customergroup")) void this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
@@ -5003,6 +5042,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "editing", 2);
+__decorateClass([
+  r5()
+], ErpCustomersGroups.prototype, "editTitleInHeader", 2);
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "pendingDelete", 2);
@@ -7605,6 +7647,7 @@ var ErpCustomersTags = class extends i3 {
     this.formError = "";
     this.formMsg = "";
     this.editing = null;
+    this.editTitleInHeader = false;
     this.pendingDelete = null;
     this.fName = "";
     this.fColor = "primary";
@@ -7673,6 +7716,19 @@ var ErpCustomersTags = class extends i3 {
   dataTable() {
     return this.renderRoot.querySelector("ok-data-table");
   }
+  /** pm#450: the table's «Add» emits no event and keeps our form state; after an edit it would
+   *  show the edited record under a «New» header, and the submit would UPDATE it. */
+  onTableClick(e7) {
+    if (!this.editing) return;
+    const addId = "customers-tags-table-add";
+    if (e7.composedPath().some((n6) => n6 instanceof HTMLElement && n6.dataset.testid === addId)) this.resetForm();
+  }
+  /** Wired natively, not with a Lit `@click` on the tag: `<ok-data-table>` carries `testid`, not
+   *  `data-testid` (outfitkit#143), and a template binding would read as an action element that
+   *  demands one. */
+  firstUpdated() {
+    this.renderRoot.querySelector("ok-data-table")?.addEventListener("click", (e7) => this.onTableClick(e7));
+  }
   resetForm() {
     this.editing = null;
     this.fName = "";
@@ -7680,7 +7736,7 @@ var ErpCustomersTags = class extends i3 {
     this.fActive = true;
     this.formError = "";
   }
-  startEdit(tag) {
+  async startEdit(tag) {
     if (!can5("customers.change_customertag")) return;
     this.editing = tag;
     this.fName = tag.name;
@@ -7688,11 +7744,15 @@ var ErpCustomersTags = class extends i3 {
     this.fActive = Boolean(tag.is_active);
     this.formError = "";
     this.formMsg = "";
-    this.dataTable()?.open("create");
+    const title = erplora5().t(CATALOG5, "ui.editTagTitle", { name: tag.name });
+    const table = this.dataTable();
+    table?.open("edit", { title });
+    await table?.updateComplete;
+    this.editTitleInHeader = table?.shadowRoot?.querySelector('[role="dialog"]')?.getAttribute("aria-label") === title;
   }
   onRowAction(ev) {
     const tag = ev.detail.row;
-    if (ev.detail.actionId === "edit" && can5("customers.change_customertag")) this.startEdit(tag);
+    if (ev.detail.actionId === "edit" && can5("customers.change_customertag")) void this.startEdit(tag);
     if (ev.detail.actionId === "delete" && can5("customers.delete_customertag")) {
       this.pendingDelete = tag;
       this.formMsg = "";
@@ -7752,7 +7812,7 @@ var ErpCustomersTags = class extends i3 {
     const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-tags-form" @submit=${(e7) => this.save(e7)}>
-      ${editing ? b2`<h3>${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
+      ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-tags-editing">${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
       <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
@@ -7780,7 +7840,7 @@ var ErpCustomersTags = class extends i3 {
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
       <ok-data-table testid="customers-tags-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora5().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "pricetag-outline"} .addable=${can5("customers.add_customertag")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchTag")} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyTags")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => {
-      if (can5("customers.change_customertag")) this.startEdit(e7.detail.row);
+      if (can5("customers.change_customertag")) void this.startEdit(e7.detail.row);
     }} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
@@ -7799,6 +7859,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "editing", 2);
+__decorateClass([
+  r5()
+], ErpCustomersTags.prototype, "editTitleInHeader", 2);
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "pendingDelete", 2);

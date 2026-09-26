@@ -91,6 +91,12 @@ export class ErpCustomersGroups extends LitElement {
   /** null = alta; Group = edición de esa fila. El MISMO panel (`slot="create"`) sirve para las dos. */
   @state() editing: Group | null = null;
 
+  /** pm#450: whether the table's panel HEADER already carries the editing title (OutfitKit
+   *  >= 0.1.94, outfitkit#150). Set only after checking the rendered dialog — never assumed — so
+   *  an older shell (hub:stable ships 0.1.73, which ignores the `title` and keeps «New») still
+   *  gets the fallback line in the form body. */
+  @state() editTitleInHeader = false;
+
   @state() pendingDelete: Group | null = null;
 
   @state() fName = '';
@@ -146,10 +152,35 @@ export class ErpCustomersGroups extends LitElement {
   }
 
   /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
-  private dataTable(): { open(p?: 'filters' | 'create'): void; close(): void } | null {
+  private dataTable(): {
+    open(p?: 'filters' | 'create' | 'edit', opts?: { title?: string }): void;
+    close(): void;
+    updateComplete?: Promise<unknown>;
+    shadowRoot: ShadowRoot | null;
+  } | null {
     return this.renderRoot.querySelector('ok-data-table') as
-      | { open(p?: 'filters' | 'create'): void; close(): void }
+      | {
+          open(p?: 'filters' | 'create' | 'edit', opts?: { title?: string }): void;
+          close(): void;
+          updateComplete?: Promise<unknown>;
+          shadowRoot: ShadowRoot | null;
+        }
       | null;
+  }
+
+  /** pm#450: the table's «Add» emits no event and keeps our form state; after an edit it would
+   *  show the edited record under a «New» header, and the submit would UPDATE it. */
+  private onTableClick(e: Event): void {
+    if (!this.editing) return;
+    const addId = 'customers-groups-table-add';
+    if (e.composedPath().some((n) => n instanceof HTMLElement && n.dataset.testid === addId)) this.resetForm();
+  }
+
+  /** Wired natively, not with a Lit `@click` on the tag: `<ok-data-table>` carries `testid`, not
+   *  `data-testid` (outfitkit#143), and a template binding would read as an action element that
+   *  demands one. */
+  firstUpdated(): void {
+    this.renderRoot.querySelector('ok-data-table')?.addEventListener('click', (e) => this.onTableClick(e));
   }
 
   private resetForm() {
@@ -159,7 +190,7 @@ export class ErpCustomersGroups extends LitElement {
     this.formError = '';
   }
 
-  private startEdit(g: Group) {
+  private async startEdit(g: Group) {
     if (!can('customers.change_customergroup')) return;
     this.editing = g;
     this.fName = g.name; this.fDescription = g.description ?? '';
@@ -167,12 +198,18 @@ export class ErpCustomersGroups extends LitElement {
     this.fSortOrder = String(g.sort_order ?? 0); this.fActive = Boolean(g.is_active);
     this.formError = '';
     this.formMsg = '';
-    this.dataTable()?.open('create'); // el panel de alta, ya relleno con la fila
+    const title = erplora().t(CATALOG, 'ui.editGroupTitle', { name: g.name });
+    const table = this.dataTable();
+    table?.open('edit', { title });
+    await table?.updateComplete;
+    // OutfitKit < 0.1.94 ignores the title and keeps «New»: only drop the in-form line when the
+    // header REALLY carries it (the dialog is labelled with it).
+    this.editTitleInHeader = table?.shadowRoot?.querySelector('[role="dialog"]')?.getAttribute('aria-label') === title;
   }
 
   private onRowAction(ev: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) {
     const g = ev.detail.row as unknown as Group;
-    if (ev.detail.actionId === 'edit' && can('customers.change_customergroup')) this.startEdit(g);
+    if (ev.detail.actionId === 'edit' && can('customers.change_customergroup')) void this.startEdit(g);
     if (ev.detail.actionId === 'delete' && can('customers.delete_customergroup')) {
       this.pendingDelete = g; this.formMsg = ''; this.formError = '';
     }
@@ -234,7 +271,7 @@ export class ErpCustomersGroups extends LitElement {
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
     const editing = this.editing;
     return html`<form slot="create" class="form" data-testid="customers-groups-form" @submit=${(e: Event) => this.save(e)}>
-      ${editing ? html`<h3>${t('ui.editGroupTitle', { name: editing.name })}</h3>` : nothing}
+      ${editing && !this.editTitleInHeader ? html`<h3 data-testid="customers-groups-editing">${t('ui.editGroupTitle', { name: editing.name })}</h3>` : nothing}
       <ion-input mode="md" fill="outline" data-testid="customers-groups-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-description" label=${t('ui.fieldDescription')} label-placement="floating" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
@@ -266,7 +303,7 @@ export class ErpCustomersGroups extends LitElement {
       ${this.ctrl?.error ? html`<ok-inline-feedback data-testid="customers-groups-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-      <ok-data-table testid="customers-groups-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'people-outline'} .addable=${can('customers.add_customergroup')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchGroup')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyGroups')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.change_customergroup')) this.startEdit(e.detail.row as unknown as Group); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
+      <ok-data-table testid="customers-groups-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora().locale)} .views=${true} .cardTitle=${(r: Record<string, unknown>) => String(r.name ?? '—')} .cardIcon=${() => 'people-outline'} .addable=${can('customers.add_customergroup')} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? 'asc'} .searchable=${true} .searchPlaceholder=${t('ui.searchGroup')} .actions=${this.rowActions} .rowClickable=${true} .emptyMessage=${this.ctrl?.loading ? t('ui.loading') : t('ui.emptyGroups')} @rowAction=${(e: CustomEvent<{ actionId: string; row: Record<string, unknown> }>) => this.onRowAction(e)} @rowClick=${(e: CustomEvent<{ row: Record<string, unknown> }>) => { if (can('customers.change_customergroup')) void this.startEdit(e.detail.row as unknown as Group); }} @pageChange=${(e: CustomEvent<number>) => this.ctrl.setPage(e.detail)} @pageSizeChange=${(e: CustomEvent<number>) => this.ctrl.setPageSize(e.detail)} @sortChange=${(e: CustomEvent<{ sort: string; dir: 'asc' | 'desc' }>) => this.ctrl.setSort(e.detail.sort, e.detail.dir)} @searchChange=${(e: CustomEvent<string>) => this.ctrl.setSearch(e.detail)} @filterChange=${(e: CustomEvent<{ col: string; value: unknown }>) => this.ctrl.setFilter(e.detail.col, e.detail.value)}>
         ${this.renderForm()}
       </ok-data-table>
     </div>`;
