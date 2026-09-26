@@ -1527,7 +1527,7 @@ export class ErpCustomersList extends LitElement {
       <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
            and a banner on the page underneath it is never seen. -->
       ${this.createError ? html`<ok-inline-feedback data-testid="customers-list-create-error" tone="danger" icon="alert-circle-outline">${this.createError}</ok-inline-feedback>` : nothing}
-      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
+      <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
     </form>`;
   }
 
