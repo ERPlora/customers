@@ -1,4 +1,5 @@
 import { LitElement, html, css, nothing } from 'lit';
+import type { PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
@@ -353,6 +354,10 @@ export class ErpCustomersList extends LitElement {
 
   @state() formError = '';
 
+  /** What «Add customer» was refused (pm#478). It is painted INSIDE the panel's form: on a phone the
+   *  panel is a full-screen sheet and `formError`, on the page underneath, is never seen. */
+  @state() createError = '';
+
   @state() formMsg = '';
 
   @state() stats: Stats | null = null;
@@ -604,7 +609,7 @@ export class ErpCustomersList extends LitElement {
     const f = this.newForm;
     if (!can('customers.add_customer') || !f.name.trim()) return;
     this.saving = true;
-    this.formError = '';
+    this.createError = '';
     try {
       await erplora().command('customers.create', {
         name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), tax_id: f.tax_id.trim(),
@@ -621,7 +626,7 @@ export class ErpCustomersList extends LitElement {
       this.dataTable()?.close(); // el panel se cierra al crear: el alta ya está en la tabla
       await Promise.all([this.ctrl.load(), this.loadStats()]);
     } catch (e) {
-      this.formError = domainErrorText(e, 'ui.errCreate');
+      this.createError = domainErrorText(e, 'ui.errCreate');
     } finally {
       this.saving = false;
     }
@@ -814,8 +819,21 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     this.ensureDetailSlotMounted();
+    if (changed.has('createError') && this.createError) void this.revealCreateError();
+  }
+
+  /** pm#478: the refusal appears ABOVE «Add customer», at the foot of a long form — on a phone that
+   *  can leave it off the sheet. Bring it into view once it has painted itself: scrolled before, the
+   *  banner still measures 0 px and ends up under the tab bar. */
+  private async revealCreateError(): Promise<void> {
+    const banner = this.renderRoot.querySelector('[data-testid="customers-list-create-error"]') as
+      | (HTMLElement & { updateComplete?: Promise<unknown> })
+      | null;
+    await banner?.updateComplete;
+    banner?.scrollIntoView?.({ block: 'center' });
   }
 
   private closeDetail() {
@@ -1505,6 +1523,9 @@ export class ErpCustomersList extends LitElement {
         <summary data-testid="customers-list-more-details">${t('ui.moreDetails')}</summary>
         <div class="create-form">${SHEET_MORE.map(field)}</div>
       </details>
+      <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
+           and a banner on the page underneath it is never seen. -->
+      ${this.createError ? html`<ok-inline-feedback data-testid="customers-list-create-error" tone="danger" icon="alert-circle-outline">${this.createError}</ok-inline-feedback>` : nothing}
       <ion-button type="submit" size="small" data-testid="customers-list-create-submit" ?disabled=${this.saving || !this.newForm.name.trim()}>${this.saving ? t('ui.saving') : t('ui.addCustomer')}</ion-button>
     </form>`;
   }
