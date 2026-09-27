@@ -1,7 +1,7 @@
 {
   "file": "dist/customers.esm.js",
-  "sources_sha256": "67b6f4e6299b748c3cc2978560d144699e934ae39748e0bed9624b6deaeb36cd",
+  "sources_sha256": "0975c0268f558ecc7b10e9c108e49494addd926398b7da72dfc8c212a74e62b6",
   "locales_sha256": "1112e6f13ffd075b14739918c41976ceb8890c163cbc5a9a72e0a04464a2b3c2",
-  "bundle_sha256": "25abb9c56cfd26338456ecac85b936efc8739165ae9a630b98055e313bb6c4d5",
-  "built_at": "2026-09-26T21:40:13.712Z"
+  "bundle_sha256": "16b0c14ea6626861f320e5945a2c7afa5363905db2a5a2dd75cab1ab0983cedc",
+  "built_at": "2026-09-27T12:32:20.998Z"
 }

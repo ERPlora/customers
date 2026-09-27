@@ -3938,6 +3938,10 @@ function createListController(client, queryName, onChange = () => {
 }, opts = {}) {
   return new ListController(client, queryName, onChange, opts);
 }
+function majorToMinor(amount, decimals) {
+  const n6 = Number(amount);
+  return Number.isFinite(n6) ? Math.round(n6 * 10 ** decimals) : 0;
+}
 
 // locales/es.json
 var es_default = {
@@ -5637,6 +5641,19 @@ function countryName(raw, lang) {
 
 // ui/components/erp-customers-list/erp-customers-list.ts
 var CATALOG3 = { es: es_default, en: en_default };
+var MONEY_RANGE_FILTERS = /* @__PURE__ */ new Set(["total_spent"]);
+function moneyEdgeToMinor(edge, decimals) {
+  const text = typeof edge === "string" ? edge.trim().replace(",", ".") : edge;
+  if (text === "" || text === null || text === void 0) return "";
+  const n6 = Number(text);
+  return Number.isFinite(n6) ? majorToMinor(n6, decimals) : "";
+}
+function moneyRangeToMinor(value, decimals) {
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([edge, v3]) => [edge, moneyEdgeToMinor(v3, decimals)])
+  );
+}
 function erplora3() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -5949,6 +5966,10 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     super.disconnectedCallback();
   }
   /** Dinero en CÉNTIMOS → texto con moneda (ADR-0123). El toFixed(2) directo pintaba ×100. */
+  /** A column filter from the table: money ranges travel in the minor unit (pm#498). */
+  onFilterChange(col, value) {
+    this.ctrl.setFilter(col, MONEY_RANGE_FILTERS.has(col) ? moneyRangeToMinor(value, erplora3().currencyDecimals) : value);
+  }
   fmt(n6) {
     return n6 == null ? "\u2014" : erplora3().formatMoney(Number(n6));
   }
@@ -6950,7 +6971,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${this.ctrl?.error ? b2`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-        <ok-data-table testid="customers-list-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
+        <ok-data-table testid="customers-list-table" .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.onFilterChange(e7.detail.col, e7.detail.value)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
