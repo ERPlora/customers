@@ -63,6 +63,8 @@ beforeEach(() => {
     locale: 'es',
     currency: 'EUR',
     formatMoney: (cents: number) => `${(cents / 100).toFixed(2)} €`,
+    // The real client always exposes it; the list controller needs it for its money filters.
+    currencyDecimals: 2,
     hasPermission: () => true,
     t: (_c: unknown, key: string) => key,
   };
