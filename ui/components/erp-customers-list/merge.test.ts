@@ -57,6 +57,8 @@ beforeEach(() => {
       params ? `${key}:${Object.values(params).join('|')}` : key,
     currency: 'EUR',
     formatMoney: (cents: number) => `${(cents / 100).toFixed(2)} €`,
+    // The real client always exposes it; the list controller needs it for its money filters.
+    currencyDecimals: 2,
   };
 });
 
