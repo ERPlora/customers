@@ -241,6 +241,7 @@
     "customers.field_invalid_option": "Value not among the field's options: {message}",
     "customers.field_required": "A required field is missing: {message}",
     "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
+    "customers.group_name_taken": "There is already a group with that name. Choose a different name.",
     "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
     "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
