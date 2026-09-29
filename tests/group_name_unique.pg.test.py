@@ -377,6 +377,9 @@ def test_upgrade_with_duplicates() -> None:
             deleted=1,
         )
         seed(db, "g-vip", HUB_A, "VIP", "2026-09-25T18:40:00+00:00")
+        # Real ids are random: the OLDER group here has the LATER id, so «oldest» cannot be the id.
+        seed(db, "g-z-older", HUB_A, "Mayorista", "2026-09-25T17:00:00+00:00")
+        seed(db, "g-a-newer", HUB_A, "Mayorista", "2026-09-25T17:30:00+00:00")
         seed(db, "g-b", HUB_B, "Fidelidad nueva", "2026-09-25T21:00:00+00:00")
         seed(db, "g-b2", HUB_B, "Fidelidad nueva", "2026-09-25T21:05:00+00:00")
         err = db.run(
@@ -401,12 +404,30 @@ def test_upgrade_with_duplicates() -> None:
             after["g-first"][1],
             "Fidelidad nueva",
         )
+        check(
+            "the OLDER «Mayorista» keeps its name even with the later id",
+            after["g-z-older"],
+            before["g-z-older"],
+        )
+        check(
+            "the newer «Mayorista» is the one numbered",
+            after["g-a-newer"][1],
+            "Mayorista (2)",
+        )
         for gid in ("g-gone", "g-gone-on", "g-off", "g-vip", "g-owner-2"):
             check(f"{gid} is left exactly as it was", after[gid], before[gid])
         # Hub B is deduplicated on its own: its oldest keeps the name although hub A's are older,
         # and its second is numbered from (2) — hub A's rows are never counted.
-        check("hub B's oldest «Fidelidad nueva» keeps its name", after["g-b"], before["g-b"])
-        check("hub B's second one is numbered within hub B", after["g-b2"][1], "Fidelidad nueva (2)")
+        check(
+            "hub B's oldest «Fidelidad nueva» keeps its name",
+            after["g-b"],
+            before["g-b"],
+        )
+        check(
+            "hub B's second one is numbered within hub B",
+            after["g-b2"][1],
+            "Fidelidad nueva (2)",
+        )
         for gid in ("g-second", "g-third"):
             check(
                 f"{gid} stays live and active (renamed, not deleted)",
