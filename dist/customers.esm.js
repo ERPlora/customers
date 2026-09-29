@@ -4026,7 +4026,7 @@ var es_default = {
     actionView: "Ver",
     actionEdit: "Editar",
     actionDelete: "Eliminar",
-    stageLead: "Lead",
+    stageLead: "Contacto",
     stageProspect: "Prospecto",
     stageFirstPurchase: "1\xAA compra",
     stageActive: "Activo",
@@ -4074,6 +4074,14 @@ var es_default = {
     fieldBirthday: "Cumplea\xF1os",
     fieldAnniversary: "Aniversario",
     fieldSource: "Origen",
+    sourceWalkIn: "En el local",
+    sourcePhone: "Tel\xE9fono",
+    sourceWhatsapp: "WhatsApp",
+    sourceWebsite: "Web",
+    sourceSocial: "Redes sociales",
+    sourceReferral: "Recomendaci\xF3n",
+    sourceOther: "Otro",
+    sourceImport: "Importaci\xF3n",
     fieldPreferredChannel: "Canal preferido",
     fieldInternalNotes: "Notas internas",
     fieldActive: "Activo",
@@ -4226,6 +4234,13 @@ var es_default = {
     consentLegacy: "Marcado antes de que hubiera registro \u2014 no sirve como prueba. Vuelve a preguntar.",
     consentNeverAsked: "Nunca se le ha preguntado",
     consentAnyChannel: "Canal sin especificar",
+    consentSourceCounter: "en el mostrador",
+    consentSourceWebForm: "formulario web",
+    consentSourcePhone: "por tel\xE9fono",
+    consentSourceEmail: "por email",
+    consentSourceImport: "importado",
+    consentSourceReceipt: "en el tique",
+    consentSourceLegacyBoolean: "casilla antigua",
     consentHistoryHeading: "Todo lo que se decidi\xF3",
     consentNoHistory: "Todav\xEDa no se ha registrado nada.",
     consentRecorded: "Consentimiento registrado.",
@@ -4324,6 +4339,14 @@ var en_default = {
     fieldBirthday: "Birthday",
     fieldAnniversary: "Anniversary",
     fieldSource: "Source",
+    sourceWalkIn: "Walk-in",
+    sourcePhone: "Phone",
+    sourceWhatsapp: "WhatsApp",
+    sourceWebsite: "Website",
+    sourceSocial: "Social media",
+    sourceReferral: "Referral",
+    sourceOther: "Other",
+    sourceImport: "Import",
     fieldPreferredChannel: "Preferred channel",
     fieldInternalNotes: "Internal notes",
     fieldActive: "Active",
@@ -4476,6 +4499,13 @@ var en_default = {
     consentLegacy: "Ticked before there was any record \u2014 cannot be relied on. Ask again.",
     consentNeverAsked: "Never asked",
     consentAnyChannel: "Unspecified channel",
+    consentSourceCounter: "at the counter",
+    consentSourceWebForm: "web form",
+    consentSourcePhone: "by phone",
+    consentSourceEmail: "by email",
+    consentSourceImport: "imported",
+    consentSourceReceipt: "on the receipt",
+    consentSourceLegacyBoolean: "old checkbox",
     consentHistoryHeading: "Everything that was decided",
     consentNoHistory: "Nothing has been recorded yet.",
     consentRecorded: "Consent recorded.",
@@ -5766,7 +5796,31 @@ var CHANNEL_KEY = {
   whatsapp: "ui.channelWhatsapp",
   phone: "ui.channelPhone"
 };
+var SOURCE_KEY = {
+  walk_in: "ui.sourceWalkIn",
+  phone: "ui.sourcePhone",
+  whatsapp: "ui.sourceWhatsapp",
+  website: "ui.sourceWebsite",
+  social: "ui.sourceSocial",
+  referral: "ui.sourceReferral",
+  other: "ui.sourceOther"
+};
+var SYSTEM_SOURCE_KEY = { import: "ui.sourceImport" };
+var CONSENT_SOURCE_KEY = {
+  counter: "ui.consentSourceCounter",
+  web_form: "ui.consentSourceWebForm",
+  phone: "ui.consentSourcePhone",
+  email: "ui.consentSourceEmail",
+  import: "ui.consentSourceImport",
+  receipt: "ui.consentSourceReceipt",
+  legacy_boolean: "ui.consentSourceLegacyBoolean"
+};
 var stageLabel = (value) => STAGE_KEY[value] ? erplora3().t(CATALOG3, STAGE_KEY[value]) : value;
+var sourceLabel = (value) => {
+  const key = SOURCE_KEY[value] ?? SYSTEM_SOURCE_KEY[value];
+  return key ? erplora3().t(CATALOG3, key) : value;
+};
+var consentSourceLabel = (value) => CONSENT_SOURCE_KEY[value] ? erplora3().t(CATALOG3, CONSENT_SOURCE_KEY[value]) : value;
 var channelLabel = (value) => CHANNEL_KEY[value] ? erplora3().t(CATALOG3, CHANNEL_KEY[value]) : value;
 var ACTIVITY_TITLE_KEY = {
   "activity.note_added": "ui.activityNoteAdded",
@@ -6793,6 +6847,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${Object.keys(options).map((v3) => b2`<ion-select-option value=${v3}>${label_(v3)}</ion-select-option>`)}
       </ion-select>`;
     }
+    if (key === "source") {
+      const values = SOURCE_KEY[value] || !value ? Object.keys(SOURCE_KEY) : [...Object.keys(SOURCE_KEY), value];
+      return b2`<ion-select mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
+        label-placement="floating" .value=${value}
+        @ionChange=${(e7) => patch({ source: e7.target.value })}>
+        ${values.map((v3) => b2`<ion-select-option value=${v3}>${sourceLabel(v3)}</ion-select-option>`)}
+      </ion-select>`;
+    }
     if (key === "country") return this.countryField(form, label, patch, scope);
     if (key === "notes") {
       return b2`<ion-textarea mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
@@ -6937,7 +6999,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
               <div class="t">
                 ${t5(CONSENT_STATE_KEY[f3.state] ?? "ui.consentNeverAsked")} —
                 ${f3.channel === "any" ? t5("ui.consentAnyChannel") : channelLabel(f3.channel)}
-                <small>(${f3.source || "\u2014"})</small>
+                <small>(${f3.source ? consentSourceLabel(f3.source) : "\u2014"})</small>
               </div>
               ${f3.notice_text ? b2`<div class="d">${f3.notice_text}</div>` : A}
               ${f3.reason ? b2`<div class="d">${f3.reason}</div>` : A}
@@ -6979,7 +7041,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
           <div><dt>${t5("ui.fieldCompany")}</dt><dd>${d3.company_name || "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldAddress")}</dt><dd>${[d3.address, d3.postal_code, d3.city, countryName(d3.country, erplora3().locale)].filter(Boolean).join(", ") || "\u2014"}</dd></div>
           <div><dt>${t5("ui.colStage")}</dt><dd>${stageLabel(d3.lifecycle_stage)}</dd></div>
-          <div><dt>${t5("ui.fieldSource")}</dt><dd>${d3.source || "\u2014"}</dd></div>
+          <div><dt>${t5("ui.fieldSource")}</dt><dd>${d3.source ? sourceLabel(d3.source) : "\u2014"}</dd></div>
           <div><dt>${t5("ui.fieldPreferredChannel")}</dt><dd>${channelLabel(d3.preferred_channel)}</dd></div>
           <div><dt>${t5("ui.detailPurchases")}</dt><dd>${d3.total_purchases ?? 0}</dd></div>
           <div><dt>${t5("ui.colSpent")}</dt><dd>${this.fmt(d3.total_spent)}</dd></div>
