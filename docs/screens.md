@@ -63,7 +63,7 @@ Requires `customers.change_customer` to record or withdraw; `customers.view_cust
 |---|---|
 | Lifecycle stage | `lead`, `prospect`, `first_purchase`, `active`, `at_risk`, `dormant`, `churned`, `vip` |
 | Preferred channel | `email`, `sms`, `whatsapp`, `phone`, `none` |
-| Source | free text — where this customer came from |
+| Source | where this customer came from, picked from a list: `walk_in`, `phone`, `whatsapp`, `website`, `social`, `referral`, `other`. Customers created by a CSV import show `import`; a source typed by hand before the list existed is shown and kept as written |
 | Birthday, anniversary | dates |
 
 ## Groups
