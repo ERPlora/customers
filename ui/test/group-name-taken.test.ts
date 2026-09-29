@@ -143,6 +143,34 @@ describe('customers#94 · a taken group name is refused on the Name field', () =
     expect(flagged(nameField(el))).toBe(false);
   });
 
+  it('saving again and being refused for ANOTHER reason moves the reason to the banner and unflags the field', async () => {
+    const el = await mount();
+    await refuseCreate(el);
+    refusal = new DomainError('customers.group_unavailable', 'gone');
+    await el.save(submitEvent());
+    await settle(el);
+    expect(flagged(nameField(el)), 'a stale «name taken» would sit next to the real reason').toBe(false);
+    expect(banner(el)).not.toBeNull();
+  });
+
+  it('cancelling an edit clears the flag', async () => {
+    const el = await mount();
+    await el.startEdit(GROUP);
+    await refuseCreate(el, 'Mayorista');
+    expect(flagged(nameField(el))).toBe(true);
+    (el.shadowRoot.querySelector('[data-testid="customers-groups-cancel"]') as HTMLElement).click();
+    await settle(el);
+    expect(flagged(nameField(el))).toBe(false);
+  });
+
+  it('opening another group for editing clears the flag', async () => {
+    const el = await mount();
+    await refuseCreate(el);
+    await el.startEdit(GROUP);
+    await settle(el);
+    expect(flagged(nameField(el))).toBe(false);
+  });
+
   it('any OTHER refusal keeps the banner in the form and leaves the field alone', async () => {
     const el = await mount();
     el.fName = 'VIP';

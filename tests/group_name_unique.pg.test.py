@@ -366,6 +366,16 @@ def test_upgrade_with_duplicates() -> None:
         seed(
             db, "g-off", HUB_A, "Fidelidad nueva", "2026-09-25T18:30:00+00:00", active=0
         )
+        # Deleted by a path that left `is_active` at 1 (the row contract's generic soft delete only
+        # sets `is_deleted`): still history, so it must neither be renamed nor block the index.
+        seed(
+            db,
+            "g-gone-on",
+            HUB_A,
+            "Fidelidad nueva",
+            "2026-09-25T18:10:00+00:00",
+            deleted=1,
+        )
         seed(db, "g-vip", HUB_A, "VIP", "2026-09-25T18:40:00+00:00")
         seed(db, "g-b", HUB_B, "Fidelidad nueva", "2026-09-25T21:00:00+00:00")
         seed(db, "g-b2", HUB_B, "Fidelidad nueva", "2026-09-25T21:05:00+00:00")
@@ -391,7 +401,7 @@ def test_upgrade_with_duplicates() -> None:
             after["g-first"][1],
             "Fidelidad nueva",
         )
-        for gid in ("g-gone", "g-off", "g-vip", "g-owner-2"):
+        for gid in ("g-gone", "g-gone-on", "g-off", "g-vip", "g-owner-2"):
             check(f"{gid} is left exactly as it was", after[gid], before[gid])
         # Hub B is deduplicated on its own: its oldest keeps the name although hub A's are older,
         # and its second is numbered from (2) — hub A's rows are never counted.
