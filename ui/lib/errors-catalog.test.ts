@@ -40,7 +40,7 @@ const declared = (manifest as { errors?: Record<string, unknown> }).errors ?? {}
 /**
  * Every code the module can RAISE — which is not only the handler's.
  *
- * Three sources, because the contract has two and this handler names its codes in a third shape;
+ * Four sources, because the contract has two and this handler names its codes in a third shape;
  * `schemas/module.schema.json → errors` says a code raised by the HANDLER *or by
  * `expect_rows.error`* and not declared here is a broken contract:
  *
@@ -55,6 +55,8 @@ const declared = (manifest as { errors?: Record<string, unknown> }).errors ?? {}
  *   3. `commands.*.expect_rows.error` — the runtime's translatable row gate (hub#139). The
  *      declarative SQL commands have no Rust at all, and the runtime raises the code on their
  *      behalf. Reading only the handler would make a declared `expect_rows` code look undeclared.
+ *   4. `commands.*.on_unique` — the code the runtime raises when that unique index refuses the
+ *      write (customers#94). Same reason as 3: no Rust names it.
  *
  * Minus what is not a code: an internal sub-command (the `_` marker of ADR-0166) and a QUERY or
  * COMMAND the handler reads by name (`customers.create`), which has the very same shape as a code —
@@ -75,9 +77,12 @@ function emittedCodes(): string[] {
   for (const m of src.matchAll(new RegExp(`"(${MODULE_ID}\\.[a-z][a-z0-9_]*)"`, 'g'))) add(m[1]);
   for (const m of src.matchAll(/domain_error\(\s*"([a-z][a-z0-9_]*)"/g)) add(`${MODULE_ID}.${m[1]}`);
   for (const m of src.matchAll(/\(\s*"([a-z][a-z0-9_]*)",\s*format!/g)) add(`${MODULE_ID}.${m[1]}`);
-  const commands = (manifest as { commands?: Record<string, { expect_rows?: { error?: string } }> }).commands ?? {};
+  const commands = (manifest as { commands?: Record<string, { expect_rows?: { error?: string }; on_unique?: Record<string, string> }> }).commands ?? {};
   for (const command of Object.values(commands)) {
     if (command?.expect_rows?.error) found.add(command.expect_rows.error);
+    // 4. `commands.*.on_unique` — the runtime raises the mapped code when that unique index refuses
+    //    the write (customers#94, `customers.group_name_taken`).
+    for (const code of Object.values(command?.on_unique ?? {})) found.add(code);
   }
   return [...found].sort();
 }

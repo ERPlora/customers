@@ -4255,6 +4255,7 @@ var es_default = {
     "customers.field_invalid_option": "El valor no est\xE1 entre las opciones del campo: {message}",
     "customers.field_required": "Falta un campo obligatorio: {message}",
     "customers.field_unavailable": "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
+    "customers.group_name_taken": "Ya hay un grupo con ese nombre. Elige otro nombre.",
     "customers.group_unavailable": "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
     "customers.tag_unavailable": "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
   }
@@ -4519,6 +4520,7 @@ var en_default = {
     "customers.field_invalid_option": "Value not among the field's options: {message}",
     "customers.field_required": "A required field is missing: {message}",
     "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
+    "customers.group_name_taken": "There is already a group with that name. Choose a different name.",
     "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
     "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
@@ -4898,8 +4900,33 @@ __decorateClass([
 ], ErpCustomersFields.prototype, "fActive", 2);
 define("erp-customers-fields", ErpCustomersFields);
 
+// lit-html/directives/class-map.js
+var e6 = e5(class extends i4 {
+  constructor(t5) {
+    if (super(t5), t5.type !== t3.ATTRIBUTE || "class" !== t5.name || t5.strings?.length > 2) throw Error("`classMap()` can only be used in the `class` attribute and must be the only part in the attribute.");
+  }
+  render(t5) {
+    return " " + Object.keys(t5).filter((s5) => t5[s5]).join(" ") + " ";
+  }
+  update(s5, [i7]) {
+    if (void 0 === this.st) {
+      this.st = /* @__PURE__ */ new Set(), void 0 !== s5.strings && (this.nt = new Set(s5.strings.join(" ").split(/\s/).filter((t5) => "" !== t5)));
+      for (const t5 in i7) i7[t5] && !this.nt?.has(t5) && this.st.add(t5);
+      return this.render(i7);
+    }
+    const r6 = s5.element.classList;
+    for (const t5 of this.st) t5 in i7 || (r6.remove(t5), this.st.delete(t5));
+    for (const t5 in i7) {
+      const s6 = !!i7[t5];
+      s6 === this.st.has(t5) || this.nt?.has(t5) || (s6 ? (r6.add(t5), this.st.add(t5)) : (r6.remove(t5), this.st.delete(t5)));
+    }
+    return E;
+  }
+});
+
 // ui/components/erp-customers-groups/erp-customers-groups.ts
 var CATALOG2 = { es: es_default, en: en_default };
+var NAME_TAKEN = "customers.group_name_taken";
 function erplora2() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -4918,6 +4945,7 @@ var ErpCustomersGroups = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     this.formMsg = "";
     this.editing = null;
@@ -5015,6 +5043,7 @@ var ErpCustomersGroups = class extends i3 {
     this.fSortOrder = "0";
     this.fActive = true;
     this.formError = "";
+    this.nameError = "";
   }
   async startEdit(g3) {
     if (!can2("customers.change_customergroup")) return;
@@ -5025,6 +5054,7 @@ var ErpCustomersGroups = class extends i3 {
     this.fSortOrder = String(g3.sort_order ?? 0);
     this.fActive = Boolean(g3.is_active);
     this.formError = "";
+    this.nameError = "";
     this.formMsg = "";
     const title = erplora2().t(CATALOG2, "ui.editGroupTitle", { name: g3.name });
     const table = this.dataTable();
@@ -5048,6 +5078,7 @@ var ErpCustomersGroups = class extends i3 {
     if (!can2(editing ? "customers.change_customergroup" : "customers.add_customergroup")) return;
     this.saving = true;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     try {
       if (editing) {
@@ -5073,7 +5104,9 @@ var ErpCustomersGroups = class extends i3 {
       this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = e7 instanceof Error ? e7.message : erplora2().t(CATALOG2, "ui.errSaveGroup");
+      const text = domainErrorText3(e7, "ui.errSaveGroup");
+      if (e7?.code === NAME_TAKEN) this.nameError = text;
+      else this.formError = text;
     } finally {
       this.saving = false;
     }
@@ -5100,7 +5133,10 @@ var ErpCustomersGroups = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-groups-form" @submit=${(e7) => this.save(e7)}>
       ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-groups-editing">${t5("ui.editGroupTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" data-testid="customers-groups-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-groups-name" class=${e6({ "ion-invalid": !!this.nameError, "ion-touched": !!this.nameError })} error-text=${this.nameError || A} label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => {
+      this.fName = e7.target.value;
+      this.nameError = "";
+    }}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-description" label=${t5("ui.fieldDescription")} label-placement="floating" .value=${this.fDescription} @ionInput=${(e7) => this.fDescription = e7.target.value}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
       <ion-input mode="md" type="number" fill="outline" data-testid="customers-groups-order" label=${t5("ui.fieldOrder")} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e7) => this.fSortOrder = e7.target.value}></ion-input>
@@ -5128,6 +5164,9 @@ var ErpCustomersGroups = class extends i3 {
   updated(changed) {
     super.updated(changed);
     if (changed.has("formError") && this.formError) void this.revealFormError();
+    if (changed.has("nameError") && this.nameError) {
+      this.renderRoot.querySelector('[data-testid="customers-groups-name"]')?.scrollIntoView?.({ block: "center" });
+    }
   }
   async revealFormError() {
     const banner = this.renderRoot.querySelector('[data-testid="customers-groups-form-error"]');
@@ -5157,6 +5196,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersGroups.prototype, "nameError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersGroups.prototype, "pageError", 2);
@@ -7166,30 +7208,6 @@ __decorateClass([
 ], _ErpCustomersList.prototype, "mergeTarget", 2);
 var ErpCustomersList = _ErpCustomersList;
 define("erp-customers-list", ErpCustomersList);
-
-// lit-html/directives/class-map.js
-var e6 = e5(class extends i4 {
-  constructor(t5) {
-    if (super(t5), t5.type !== t3.ATTRIBUTE || "class" !== t5.name || t5.strings?.length > 2) throw Error("`classMap()` can only be used in the `class` attribute and must be the only part in the attribute.");
-  }
-  render(t5) {
-    return " " + Object.keys(t5).filter((s5) => t5[s5]).join(" ") + " ";
-  }
-  update(s5, [i7]) {
-    if (void 0 === this.st) {
-      this.st = /* @__PURE__ */ new Set(), void 0 !== s5.strings && (this.nt = new Set(s5.strings.join(" ").split(/\s/).filter((t5) => "" !== t5)));
-      for (const t5 in i7) i7[t5] && !this.nt?.has(t5) && this.st.add(t5);
-      return this.render(i7);
-    }
-    const r6 = s5.element.classList;
-    for (const t5 of this.st) t5 in i7 || (r6.remove(t5), this.st.delete(t5));
-    for (const t5 in i7) {
-      const s6 = !!i7[t5];
-      s6 === this.st.has(t5) || this.nt?.has(t5) || (s6 ? (r6.add(t5), this.st.add(t5)) : (r6.remove(t5), this.st.delete(t5)));
-    }
-    return E;
-  }
-});
 
 // @erplora/outfitkit/dist/ok-spotlight-search.js
 var __defProp6 = Object.defineProperty;

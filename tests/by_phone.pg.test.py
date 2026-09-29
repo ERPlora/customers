@@ -41,6 +41,10 @@ import uuid
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = json.loads((MODULE_DIR / "module.json").read_text())
+# A migration entry is a path or `{file, kind}` (kind: expand/backfill/contract).
+MIGRATIONS = [
+    e if isinstance(e, str) else e["file"] for e in MANIFEST["migrations"]["postgres"]
+]
 QUERY = "customers.by_phone"
 HUB_A = "hub-a"
 HUB_B = "hub-b"
@@ -183,7 +187,7 @@ def main() -> int:
 
     S.psql(["-c", f"CREATE DATABASE {S.DB}"])
     try:
-        for rel in MANIFEST["migrations"]["postgres"]:
+        for rel in MIGRATIONS:
             S.psql([], db=S.DB, stdin=(MODULE_DIR / rel).read_text())
         seed()
 
