@@ -40,6 +40,10 @@ import uuid
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = json.loads((MODULE_DIR / "module.json").read_text())
+# A migration entry is a path or `{file, kind}` (kind: expand/backfill/contract).
+MIGRATIONS = [
+    e if isinstance(e, str) else e["file"] for e in MANIFEST["migrations"]["postgres"]
+]
 CONTAINER = os.environ.get("ERPLORA_TEST_PG_CONTAINER", "erplora-test-pg-5433")
 DB = f"customers_consent_{uuid.uuid4().hex[:8]}"
 HUB_A = "hub-a"
@@ -192,7 +196,7 @@ def main() -> int:
         True,
         any(
             m.endswith("004_consent_ledger.sql")
-            for m in MANIFEST["migrations"]["postgres"]
+            for m in MIGRATIONS
         ),
     )
     for cmd in ("customers.consent.grant", "customers.consent.withdraw"):
@@ -280,7 +284,7 @@ def main() -> int:
         # the backfill, so the migrations are applied in two halves around the seed.
         legacy = [
             m
-            for m in MANIFEST["migrations"]["postgres"]
+            for m in MIGRATIONS
             if not m.endswith("004_consent_ledger.sql")
         ]
         for rel in legacy:
@@ -289,7 +293,7 @@ def main() -> int:
             "c-old", HUB_A, consent=1, consent_date="2024-01-05T09:00:00+00:00"
         )
         seed_customer("c-never", HUB_A, consent=0)
-        for rel in MANIFEST["migrations"]["postgres"]:
+        for rel in MIGRATIONS:
             if rel.endswith("004_consent_ledger.sql"):
                 psql([], db=DB, stdin=(MODULE_DIR / rel).read_text())
         seed_customer("c-a", HUB_A)
