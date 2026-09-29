@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import type { PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
@@ -12,6 +13,9 @@ import enLocale from '../../../locales/en.json';
 import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
+
+/** The refusal `on_unique` raises when another live group of the hub already has the name (customers#94). */
+const NAME_TAKEN = 'customers.group_name_taken';
 
 interface ErploraClientLike extends ListClient {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
@@ -86,6 +90,10 @@ export class ErpCustomersGroups extends LitElement {
   @state() saving = false;
 
   @state() formError = '';
+
+  /** customers#94: the name is taken by another live group of this hub. Said ON the «Name» field
+   *  (the one that has to change), not in the `formError` banner at the foot of the form. */
+  @state() nameError = '';
 
   /** What went wrong in a ROW action (delete, confirmed on the page): no panel is open then, so it
    *  is painted on the page. `formError` is only what the panel's form was refused (pm#478). */
@@ -193,6 +201,7 @@ export class ErpCustomersGroups extends LitElement {
     this.fName = ''; this.fDescription = '';
     this.fColor = 'primary'; this.fSortOrder = '0'; this.fActive = true;
     this.formError = '';
+    this.nameError = '';
   }
 
   private async startEdit(g: Group) {
@@ -202,6 +211,7 @@ export class ErpCustomersGroups extends LitElement {
     this.fColor = g.color || 'primary';
     this.fSortOrder = String(g.sort_order ?? 0); this.fActive = Boolean(g.is_active);
     this.formError = '';
+    this.nameError = '';
     this.formMsg = '';
     const title = erplora().t(CATALOG, 'ui.editGroupTitle', { name: g.name });
     const table = this.dataTable();
@@ -227,6 +237,7 @@ export class ErpCustomersGroups extends LitElement {
     if (!can(editing ? 'customers.change_customergroup' : 'customers.add_customergroup')) return;
     this.saving = true;
     this.formError = '';
+    this.nameError = '';
     this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
@@ -249,7 +260,9 @@ export class ErpCustomersGroups extends LitElement {
       this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errSaveGroup');
+      const text = domainErrorText(e, 'ui.errSaveGroup');
+      if ((e as { code?: unknown } | null)?.code === NAME_TAKEN) this.nameError = text;
+      else this.formError = text;
     } finally {
       this.saving = false;
     }
@@ -278,7 +291,7 @@ export class ErpCustomersGroups extends LitElement {
     const editing = this.editing;
     return html`<form slot="create" class="form" data-testid="customers-groups-form" @submit=${(e: Event) => this.save(e)}>
       ${editing && !this.editTitleInHeader ? html`<h3 data-testid="customers-groups-editing">${t('ui.editGroupTitle', { name: editing.name })}</h3>` : nothing}
-      <ion-input mode="md" fill="outline" data-testid="customers-groups-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-groups-name" class=${classMap({ 'ion-invalid': !!this.nameError, 'ion-touched': !!this.nameError })} error-text=${this.nameError || nothing} label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => { this.fName = e.target.value; this.nameError = ''; }}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-description" label=${t('ui.fieldDescription')} label-placement="floating" .value=${this.fDescription} @ionInput=${(e: any) => (this.fDescription = e.target.value)}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-groups-color" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
       <ion-input mode="md" type="number" fill="outline" data-testid="customers-groups-order" label=${t('ui.fieldOrder')} label-placement="floating" min="0" .value=${this.fSortOrder} @ionInput=${(e: any) => (this.fSortOrder = e.target.value)}></ion-input>
@@ -308,6 +321,9 @@ export class ErpCustomersGroups extends LitElement {
   updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('formError') && this.formError) void this.revealFormError();
+    if (changed.has('nameError') && this.nameError) {
+      this.renderRoot.querySelector('[data-testid="customers-groups-name"]')?.scrollIntoView?.({ block: 'center' });
+    }
   }
 
   private async revealFormError(): Promise<void> {

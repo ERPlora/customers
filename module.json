@@ -1,7 +1,7 @@
 {
   "id": "customers",
   "name": "Customers",
-  "version": "2.3.60",
+  "version": "2.3.61",
   "description": "Customer directory with groups, tags, custom fields, notes and activity history.",
   "agent": {
     "description": "Manages customers, groups, tags, custom fields, notes, and activity history: create, update, delete customers and look up their purchase records.",
@@ -113,7 +113,12 @@
       "migrations/postgres/001_init.sql",
       "migrations/postgres/002_customer_order.sql",
       "migrations/postgres/003_purchase_ledger.sql",
-      "migrations/postgres/004_consent_ledger.sql"
+      "migrations/postgres/004_consent_ledger.sql",
+      {
+        "file": "migrations/postgres/005_group_name_dedupe.sql",
+        "kind": "backfill"
+      },
+      "migrations/postgres/006_group_name_unique.sql"
     ]
   },
   "queries": {
@@ -672,6 +677,9 @@
       "sql": [
         "commands/group_create.sql"
       ],
+      "on_unique": {
+        "uq_customers_group_hub_name_live": "customers.group_name_taken"
+      },
       "schema": "schemas/group_create.json",
       "ai": {
         "description": "Creates a new customer group"
@@ -683,6 +691,9 @@
       "sql": [
         "commands/group_update.sql"
       ],
+      "on_unique": {
+        "uq_customers_group_hub_name_live": "customers.group_name_taken"
+      },
       "schema": "schemas/group_update.json",
       "ai": {
         "description": "Updates an existing customer group"
@@ -880,6 +891,7 @@
     "customers.field_invalid_option": {},
     "customers.field_required": {},
     "customers.field_unavailable": {},
+    "customers.group_name_taken": {},
     "customers.group_unavailable": {},
     "customers.tag_unavailable": {}
   },

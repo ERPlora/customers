@@ -40,6 +40,10 @@ import uuid
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = json.loads((MODULE_DIR / "module.json").read_text())
+# A migration entry is a path or `{file, kind}` (kind: expand/backfill/contract).
+MIGRATIONS = [
+    e if isinstance(e, str) else e["file"] for e in MANIFEST["migrations"]["postgres"]
+]
 CONTAINER = os.environ.get("ERPLORA_TEST_PG_CONTAINER", "erplora-test-pg-5433")
 DB = f"customers_orders_link_{uuid.uuid4().hex[:8]}"
 HUB_A = "hub-a"
@@ -177,7 +181,7 @@ def main() -> int:
         True,
         any(
             m.endswith("002_customer_order.sql")
-            for m in MANIFEST["migrations"]["postgres"]
+            for m in MIGRATIONS
         ),
     )
     check(
@@ -200,7 +204,7 @@ def main() -> int:
 
     psql(["-c", f"CREATE DATABASE {DB}"])
     try:
-        for rel in MANIFEST["migrations"]["postgres"]:
+        for rel in MIGRATIONS:
             psql([], db=DB, stdin=(MODULE_DIR / rel).read_text())
         seed_customer("c-a", HUB_A)
         seed_customer("c-a2", HUB_A)
