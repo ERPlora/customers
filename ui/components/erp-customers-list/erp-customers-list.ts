@@ -134,7 +134,33 @@ const CHANNEL_KEY: Record<string, string> = {
   whatsapp: 'ui.channelWhatsapp', phone: 'ui.channelPhone',
 };
 
+/**
+ * **Where a customer came from, in words** (customers#93). What a person can pick on the sheet —
+ * the list every salon and POS offers (walk-in, phone, WhatsApp, web, social, referral) — plus
+ * `import`, which only the CSV import and `bulk_create` write. The column stays free text in the
+ * schema: a source typed by hand before this list existed is shown and kept as it was written.
+ */
+const SOURCE_KEY: Record<string, string> = {
+  walk_in: 'ui.sourceWalkIn', phone: 'ui.sourcePhone', whatsapp: 'ui.sourceWhatsapp',
+  website: 'ui.sourceWebsite', social: 'ui.sourceSocial', referral: 'ui.sourceReferral',
+  other: 'ui.sourceOther',
+};
+const SYSTEM_SOURCE_KEY: Record<string, string> = { import: 'ui.sourceImport' };
+
+/** Where a consent decision was taken: the enum of `consent_grant.json` + the migrated legacy tick. */
+const CONSENT_SOURCE_KEY: Record<string, string> = {
+  counter: 'ui.consentSourceCounter', web_form: 'ui.consentSourceWebForm', phone: 'ui.consentSourcePhone',
+  email: 'ui.consentSourceEmail', import: 'ui.consentSourceImport', receipt: 'ui.consentSourceReceipt',
+  legacy_boolean: 'ui.consentSourceLegacyBoolean',
+};
+
 const stageLabel = (value: string): string => (STAGE_KEY[value] ? erplora().t(CATALOG, STAGE_KEY[value]) : value);
+const sourceLabel = (value: string): string => {
+  const key = SOURCE_KEY[value] ?? SYSTEM_SOURCE_KEY[value];
+  return key ? erplora().t(CATALOG, key) : value;
+};
+const consentSourceLabel = (value: string): string =>
+  (CONSENT_SOURCE_KEY[value] ? erplora().t(CATALOG, CONSENT_SOURCE_KEY[value]) : value);
 const channelLabel = (value: string): string => (CHANNEL_KEY[value] ? erplora().t(CATALOG, CHANNEL_KEY[value]) : value);
 
 /**
@@ -1249,6 +1275,16 @@ export class ErpCustomersList extends LitElement {
         ${Object.keys(options).map((v) => html`<ion-select-option value=${v}>${label_(v)}</ion-select-option>`)}
       </ion-select>`;
     }
+    if (key === 'source') {
+      // A stored source outside the pickable list (`import`, or text typed before the list existed)
+      // stays as an option: saving the sheet must not rewrite where the customer came from.
+      const values = SOURCE_KEY[value] || !value ? Object.keys(SOURCE_KEY) : [...Object.keys(SOURCE_KEY), value];
+      return html`<ion-select mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
+        label-placement="floating" .value=${value}
+        @ionChange=${(e: any) => patch({ source: e.target.value })}>
+        ${values.map((v) => html`<ion-select-option value=${v}>${sourceLabel(v)}</ion-select-option>`)}
+      </ion-select>`;
+    }
     if (key === 'country') return this.countryField(form, label, patch, scope);
     if (key === 'notes') {
       return html`<ion-textarea mode="md" data-sheet-field=${key} data-testid=${`customers-list-sheet-${scope}-${key}`} fill="outline" label=${label}
@@ -1416,7 +1452,7 @@ export class ErpCustomersList extends LitElement {
               <div class="t">
                 ${t(CONSENT_STATE_KEY[f.state] ?? 'ui.consentNeverAsked')} —
                 ${f.channel === 'any' ? t('ui.consentAnyChannel') : channelLabel(f.channel)}
-                <small>(${f.source || '—'})</small>
+                <small>(${f.source ? consentSourceLabel(f.source) : '—'})</small>
               </div>
               ${f.notice_text ? html`<div class="d">${f.notice_text}</div>` : nothing}
               ${f.reason ? html`<div class="d">${f.reason}</div>` : nothing}
@@ -1462,7 +1498,7 @@ export class ErpCustomersList extends LitElement {
           <div><dt>${t('ui.fieldCompany')}</dt><dd>${d.company_name || '—'}</dd></div>
           <div><dt>${t('ui.fieldAddress')}</dt><dd>${[d.address, d.postal_code, d.city, countryName(d.country, erplora().locale)].filter(Boolean).join(', ') || '—'}</dd></div>
           <div><dt>${t('ui.colStage')}</dt><dd>${stageLabel(d.lifecycle_stage)}</dd></div>
-          <div><dt>${t('ui.fieldSource')}</dt><dd>${d.source || '—'}</dd></div>
+          <div><dt>${t('ui.fieldSource')}</dt><dd>${d.source ? sourceLabel(d.source) : '—'}</dd></div>
           <div><dt>${t('ui.fieldPreferredChannel')}</dt><dd>${channelLabel(d.preferred_channel)}</dd></div>
           <div><dt>${t('ui.detailPurchases')}</dt><dd>${d.total_purchases ?? 0}</dd></div>
           <div><dt>${t('ui.colSpent')}</dt><dd>${this.fmt(d.total_spent)}</dd></div>
