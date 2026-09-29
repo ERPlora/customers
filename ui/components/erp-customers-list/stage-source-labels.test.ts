@@ -50,6 +50,7 @@ type Screen = HTMLElement & {
 
 let customer: Record<string, unknown> = CUSTOMER;
 let history: Record<string, unknown>[] = [FACT];
+let sent: Array<{ name: string; payload: Record<string, unknown> }> = [];
 
 /** `t()` of the real SDK, reduced: walks `ui.<key>` in the active locale's catalogue. */
 function install(locale: 'es' | 'en') {
@@ -62,7 +63,10 @@ function install(locale: 'es' | 'en') {
     },
     queryPage: async () => ({ rows: [customer], total: 1 }),
     queryAll: async () => [],
-    command: async () => ({}),
+    command: async (name: string, payload: Record<string, unknown>) => {
+      sent.push({ name, payload });
+      return {};
+    },
     hasPermission: () => true,
     on: () => () => {},
     locale,
@@ -83,6 +87,7 @@ beforeEach(() => {
   document.body.innerHTML = '';
   customer = { ...CUSTOMER };
   history = [FACT];
+  sent = [];
   install('es');
 });
 
@@ -231,6 +236,35 @@ describe('the create and edit forms pick the source from translated options (cus
       expect(options.find((o) => o.value === source)?.label, source).toBe(label);
       const select = el.shadowRoot.querySelector('[data-testid="customers-list-sheet-edit-source"]') as HTMLElement & { value: string };
       expect(select.value).toBe(source);
+    }
+  });
+
+  it('create: the source the person picks is the one `customers.create` receives', async () => {
+    const el = await mount();
+    const name = el.shadowRoot.querySelector('[data-testid="customers-list-sheet-create-name"]') as HTMLInputElement;
+    name.value = 'Ada Lovelace';
+    name.dispatchEvent(new CustomEvent('ionInput', { bubbles: true }));
+    const select = el.shadowRoot.querySelector('[data-testid="customers-list-sheet-create-source"]') as HTMLElement & { value: string };
+    select.value = 'referral';
+    select.dispatchEvent(new CustomEvent('ionChange', { bubbles: true }));
+    await el.updateComplete;
+    await (el as unknown as { create(e: Event): Promise<void> }).create(new Event('submit'));
+    expect(sent.map((c) => c.name)).toEqual(['customers.create']);
+    expect(sent[0].payload.source).toBe('referral');
+  });
+
+  it('edit: saving an imported or hand-typed source without touching it sends it back unchanged', async () => {
+    for (const source of ['import', 'Feria de bodas']) {
+      document.body.innerHTML = '';
+      sent = [];
+      customer = { ...CUSTOMER, source };
+      const el = await openSheet();
+      (el.shadowRoot.querySelector('[data-testid="customers-list-edit"]') as HTMLElement).click();
+      await el.updateComplete;
+      await (el as unknown as { saveEdit(e: Event): Promise<void> }).saveEdit(new Event('submit'));
+      const update = sent.find((c) => c.name === 'customers.update_with_fields');
+      expect(update, 'the sheet was saved').toBeTruthy();
+      expect(update!.payload.source, source).toBe(source);
     }
   });
 
