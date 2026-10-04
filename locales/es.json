@@ -255,10 +255,12 @@
     "customers.field_invalid_date": "Fecha no válida (usa AAAA-MM-DD): {message}",
     "customers.field_invalid_number": "Número no válido: {message}",
     "customers.field_invalid_option": "El valor no está entre las opciones del campo: {message}",
+    "customers.field_name_taken": "Ya hay un campo con ese nombre. Elige otro nombre.",
     "customers.field_required": "Falta un campo obligatorio: {message}",
     "customers.field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
     "customers.group_name_taken": "Ya hay un grupo con ese nombre. Elige otro nombre.",
     "customers.group_unavailable": "Ese grupo no está disponible en este negocio (puede haberse borrado).",
+    "customers.tag_name_taken": "Ya hay una etiqueta con ese nombre. Elige otro nombre.",
     "customers.tag_unavailable": "Esa etiqueta no está disponible en este negocio (puede haberse borrado)."
   }
 }

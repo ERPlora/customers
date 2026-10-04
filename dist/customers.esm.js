@@ -1288,6 +1288,50 @@ function e4(e7, r6) {
   };
 }
 
+// lit-html/directive.js
+var t3 = { ATTRIBUTE: 1, CHILD: 2, PROPERTY: 3, BOOLEAN_ATTRIBUTE: 4, EVENT: 5, ELEMENT: 6 };
+var e5 = (t5) => (...e7) => ({ _$litDirective$: t5, values: e7 });
+var i4 = class {
+  constructor(t5) {
+  }
+  get _$AU() {
+    return this._$AM._$AU;
+  }
+  _$AT(t5, e7, i7) {
+    this._$Ct = t5, this._$AM = e7, this._$Ci = i7;
+  }
+  _$AS(t5, e7) {
+    return this.update(t5, e7);
+  }
+  update(t5, e7) {
+    return this.render(...e7);
+  }
+};
+
+// lit-html/directives/class-map.js
+var e6 = e5(class extends i4 {
+  constructor(t5) {
+    if (super(t5), t5.type !== t3.ATTRIBUTE || "class" !== t5.name || t5.strings?.length > 2) throw Error("`classMap()` can only be used in the `class` attribute and must be the only part in the attribute.");
+  }
+  render(t5) {
+    return " " + Object.keys(t5).filter((s5) => t5[s5]).join(" ") + " ";
+  }
+  update(s5, [i7]) {
+    if (void 0 === this.st) {
+      this.st = /* @__PURE__ */ new Set(), void 0 !== s5.strings && (this.nt = new Set(s5.strings.join(" ").split(/\s/).filter((t5) => "" !== t5)));
+      for (const t5 in i7) i7[t5] && !this.nt?.has(t5) && this.st.add(t5);
+      return this.render(i7);
+    }
+    const r6 = s5.element.classList;
+    for (const t5 of this.st) t5 in i7 || (r6.remove(t5), this.st.delete(t5));
+    for (const t5 in i7) {
+      const s6 = !!i7[t5];
+      s6 === this.st.has(t5) || this.nt?.has(t5) || (s6 ? (r6.add(t5), this.st.add(t5)) : (r6.remove(t5), this.st.delete(t5)));
+    }
+    return E;
+  }
+});
+
 // @erplora/outfitkit/dist/define.js
 function define(tag, ctor) {
   if (typeof customElements !== "undefined" && !customElements.get(tag)) {
@@ -1662,26 +1706,6 @@ __decorateClass2([
   r5()
 ], OkInlineFeedback.prototype, "hasActions");
 define("ok-inline-feedback", OkInlineFeedback);
-
-// lit-html/directive.js
-var t3 = { ATTRIBUTE: 1, CHILD: 2, PROPERTY: 3, BOOLEAN_ATTRIBUTE: 4, EVENT: 5, ELEMENT: 6 };
-var e5 = (t5) => (...e7) => ({ _$litDirective$: t5, values: e7 });
-var i4 = class {
-  constructor(t5) {
-  }
-  get _$AU() {
-    return this._$AM._$AU;
-  }
-  _$AT(t5, e7, i7) {
-    this._$Ct = t5, this._$AM = e7, this._$Ci = i7;
-  }
-  _$AS(t5, e7) {
-    return this.update(t5, e7);
-  }
-  update(t5, e7) {
-    return this.render(...e7);
-  }
-};
 
 // lit-html/directive-helpers.js
 var { I: t4 } = j;
@@ -4875,10 +4899,12 @@ var es_default = {
     "customers.field_invalid_date": "Fecha no v\xE1lida (usa AAAA-MM-DD): {message}",
     "customers.field_invalid_number": "N\xFAmero no v\xE1lido: {message}",
     "customers.field_invalid_option": "El valor no est\xE1 entre las opciones del campo: {message}",
+    "customers.field_name_taken": "Ya hay un campo con ese nombre. Elige otro nombre.",
     "customers.field_required": "Falta un campo obligatorio: {message}",
     "customers.field_unavailable": "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
     "customers.group_name_taken": "Ya hay un grupo con ese nombre. Elige otro nombre.",
     "customers.group_unavailable": "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
+    "customers.tag_name_taken": "Ya hay una etiqueta con ese nombre. Elige otro nombre.",
     "customers.tag_unavailable": "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
   }
 };
@@ -5140,10 +5166,12 @@ var en_default = {
     "customers.field_invalid_date": "Invalid date (use YYYY-MM-DD): {message}",
     "customers.field_invalid_number": "Invalid number: {message}",
     "customers.field_invalid_option": "Value not among the field's options: {message}",
+    "customers.field_name_taken": "There is already a field with that name. Choose a different name.",
     "customers.field_required": "A required field is missing: {message}",
     "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
     "customers.group_name_taken": "There is already a group with that name. Choose a different name.",
     "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
+    "customers.tag_name_taken": "There is already a tag with that name. Choose a different name.",
     "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
 };
@@ -5181,6 +5209,7 @@ function alreadySpoken(catalog, code, message) {
 
 // ui/components/erp-customers-fields/erp-customers-fields.ts
 var CATALOG = { es: es_default, en: en_default };
+var NAME_TAKEN = "customers.field_name_taken";
 function erplora() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -5208,6 +5237,7 @@ var ErpCustomersFields = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     this.formMsg = "";
     this.editing = null;
@@ -5324,6 +5354,7 @@ var ErpCustomersFields = class extends i3 {
     this.fSortOrder = "0";
     this.fActive = true;
     this.formError = "";
+    this.nameError = "";
   }
   async startEdit(f3) {
     if (!can("customers.manage_custom_fields")) return;
@@ -5335,6 +5366,7 @@ var ErpCustomersFields = class extends i3 {
     this.fSortOrder = String(f3.sort_order ?? 0);
     this.fActive = Boolean(f3.is_active);
     this.formError = "";
+    this.nameError = "";
     this.formMsg = "";
     const title = erplora().t(CATALOG, "ui.editFieldTitle", { name: f3.name });
     const table = this.dataTable();
@@ -5373,6 +5405,7 @@ var ErpCustomersFields = class extends i3 {
     const editing = this.editing;
     this.saving = true;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     try {
       if (editing) {
@@ -5400,7 +5433,9 @@ var ErpCustomersFields = class extends i3 {
       this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = e7 instanceof Error ? e7.message : erplora().t(CATALOG, "ui.errSaveField");
+      const text = domainErrorText2(e7, "ui.errSaveField");
+      if (e7?.code === NAME_TAKEN) this.nameError = text;
+      else this.formError = text;
     } finally {
       this.saving = false;
     }
@@ -5427,7 +5462,10 @@ var ErpCustomersFields = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-fields-form" @submit=${(e7) => this.save(e7)}>
       ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-fields-editing">${t5("ui.editFieldTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" data-testid="customers-fields-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-fields-name" class=${e6({ "ion-invalid": !!this.nameError, "ion-touched": !!this.nameError })} error-text=${this.nameError || A} label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => {
+      this.fName = e7.target.value;
+      this.nameError = "";
+    }}></ion-input>
       <ion-select mode="md" fill="outline" data-testid="customers-fields-type" label=${t5("ui.fieldType")} label-placement="floating" .value=${this.fType} @ionChange=${(e7) => this.fType = e7.target.value}>
         ${Object.keys(TYPE_KEY).map((v3) => b2`<ion-select-option value=${v3}>${typeLabel(v3)}</ion-select-option>`)}
       </ion-select>
@@ -5458,6 +5496,9 @@ var ErpCustomersFields = class extends i3 {
   updated(changed) {
     super.updated(changed);
     if (changed.has("formError") && this.formError) void this.revealFormError();
+    if (changed.has("nameError") && this.nameError) {
+      this.renderRoot.querySelector('[data-testid="customers-fields-name"]')?.scrollIntoView?.({ block: "center" });
+    }
   }
   async revealFormError() {
     const banner = this.renderRoot.querySelector('[data-testid="customers-fields-form-error"]');
@@ -5487,6 +5528,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersFields.prototype, "nameError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersFields.prototype, "pageError", 2);
@@ -5522,33 +5566,9 @@ __decorateClass([
 ], ErpCustomersFields.prototype, "fActive", 2);
 define("erp-customers-fields", ErpCustomersFields);
 
-// lit-html/directives/class-map.js
-var e6 = e5(class extends i4 {
-  constructor(t5) {
-    if (super(t5), t5.type !== t3.ATTRIBUTE || "class" !== t5.name || t5.strings?.length > 2) throw Error("`classMap()` can only be used in the `class` attribute and must be the only part in the attribute.");
-  }
-  render(t5) {
-    return " " + Object.keys(t5).filter((s5) => t5[s5]).join(" ") + " ";
-  }
-  update(s5, [i7]) {
-    if (void 0 === this.st) {
-      this.st = /* @__PURE__ */ new Set(), void 0 !== s5.strings && (this.nt = new Set(s5.strings.join(" ").split(/\s/).filter((t5) => "" !== t5)));
-      for (const t5 in i7) i7[t5] && !this.nt?.has(t5) && this.st.add(t5);
-      return this.render(i7);
-    }
-    const r6 = s5.element.classList;
-    for (const t5 of this.st) t5 in i7 || (r6.remove(t5), this.st.delete(t5));
-    for (const t5 in i7) {
-      const s6 = !!i7[t5];
-      s6 === this.st.has(t5) || this.nt?.has(t5) || (s6 ? (r6.add(t5), this.st.add(t5)) : (r6.remove(t5), this.st.delete(t5)));
-    }
-    return E;
-  }
-});
-
 // ui/components/erp-customers-groups/erp-customers-groups.ts
 var CATALOG2 = { es: es_default, en: en_default };
-var NAME_TAKEN = "customers.group_name_taken";
+var NAME_TAKEN2 = "customers.group_name_taken";
 function erplora2() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -5727,7 +5747,7 @@ var ErpCustomersGroups = class extends i3 {
       await this.ctrl.load();
     } catch (e7) {
       const text = domainErrorText3(e7, "ui.errSaveGroup");
-      if (e7?.code === NAME_TAKEN) this.nameError = text;
+      if (e7?.code === NAME_TAKEN2) this.nameError = text;
       else this.formError = text;
     } finally {
       this.saving = false;
@@ -8520,6 +8540,7 @@ define("erp-customers-pos-search", ErpCustomersPosSearch);
 
 // ui/components/erp-customers-tags/erp-customers-tags.ts
 var CATALOG5 = { es: es_default, en: en_default };
+var NAME_TAKEN3 = "customers.tag_name_taken";
 function erplora5() {
   const c5 = globalThis.erplora;
   if (!c5) throw new Error("erplora SDK no inicializado por el shell");
@@ -8538,6 +8559,7 @@ var ErpCustomersTags = class extends i3 {
     super(...arguments);
     this.saving = false;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     this.formMsg = "";
     this.editing = null;
@@ -8629,6 +8651,7 @@ var ErpCustomersTags = class extends i3 {
     this.fColor = "primary";
     this.fActive = true;
     this.formError = "";
+    this.nameError = "";
   }
   async startEdit(tag) {
     if (!can5("customers.change_customertag")) return;
@@ -8637,6 +8660,7 @@ var ErpCustomersTags = class extends i3 {
     this.fColor = tag.color || "primary";
     this.fActive = Boolean(tag.is_active);
     this.formError = "";
+    this.nameError = "";
     this.formMsg = "";
     const title = erplora5().t(CATALOG5, "ui.editTagTitle", { name: tag.name });
     const table = this.dataTable();
@@ -8660,6 +8684,7 @@ var ErpCustomersTags = class extends i3 {
     if (!can5(editing ? "customers.change_customertag" : "customers.add_customertag")) return;
     this.saving = true;
     this.formError = "";
+    this.nameError = "";
     this.pageError = "";
     try {
       if (editing) {
@@ -8681,7 +8706,9 @@ var ErpCustomersTags = class extends i3 {
       this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e7) {
-      this.formError = e7 instanceof Error ? e7.message : erplora5().t(CATALOG5, "ui.errSaveTag");
+      const text = domainErrorText5(e7, "ui.errSaveTag");
+      if (e7?.code === NAME_TAKEN3) this.nameError = text;
+      else this.formError = text;
     } finally {
       this.saving = false;
     }
@@ -8708,7 +8735,10 @@ var ErpCustomersTags = class extends i3 {
     const editing = this.editing;
     return b2`<form slot="create" class="form" data-testid="customers-tags-form" @submit=${(e7) => this.save(e7)}>
       ${editing && !this.editTitleInHeader ? b2`<h3 data-testid="customers-tags-editing">${t5("ui.editTagTitle", { name: editing.name })}</h3>` : A}
-      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => this.fName = e7.target.value}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" class=${e6({ "ion-invalid": !!this.nameError, "ion-touched": !!this.nameError })} error-text=${this.nameError || A} label=${t5("ui.colName")} label-placement="floating" .value=${this.fName} @ionInput=${(e7) => {
+      this.fName = e7.target.value;
+      this.nameError = "";
+    }}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t5("ui.fieldColor")} label-placement="floating" .value=${this.fColor} @ionInput=${(e7) => this.fColor = e7.target.value}></ion-input>
       ${editing ? b2`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e7) => this.fActive = e7.target.checked}>${t5("ui.fieldActiveTag")}</ion-checkbox>` : A}
       <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
@@ -8734,6 +8764,9 @@ var ErpCustomersTags = class extends i3 {
   updated(changed) {
     super.updated(changed);
     if (changed.has("formError") && this.formError) void this.revealFormError();
+    if (changed.has("nameError") && this.nameError) {
+      this.renderRoot.querySelector('[data-testid="customers-tags-name"]')?.scrollIntoView?.({ block: "center" });
+    }
   }
   async revealFormError() {
     const banner = this.renderRoot.querySelector('[data-testid="customers-tags-form-error"]');
@@ -8763,6 +8796,9 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "formError", 2);
+__decorateClass([
+  r5()
+], ErpCustomersTags.prototype, "nameError", 2);
 __decorateClass([
   r5()
 ], ErpCustomersTags.prototype, "pageError", 2);

@@ -118,7 +118,12 @@
         "file": "migrations/postgres/005_group_name_dedupe.sql",
         "kind": "backfill"
       },
-      "migrations/postgres/006_group_name_unique.sql"
+      "migrations/postgres/006_group_name_unique.sql",
+      {
+        "file": "migrations/postgres/007_tag_field_name_dedupe.sql",
+        "kind": "backfill"
+      },
+      "migrations/postgres/008_tag_field_name_unique.sql"
     ]
   },
   "queries": {
@@ -722,6 +727,9 @@
       "sql": [
         "commands/tag_create.sql"
       ],
+      "on_unique": {
+        "uq_customers_tag_hub_name_live": "customers.tag_name_taken"
+      },
       "schema": "schemas/tag_create.json",
       "ai": {
         "description": "Creates a new customer tag"
@@ -733,6 +741,9 @@
       "sql": [
         "commands/tag_update.sql"
       ],
+      "on_unique": {
+        "uq_customers_tag_hub_name_live": "customers.tag_name_taken"
+      },
       "schema": "schemas/tag_update.json",
       "ai": {
         "description": "Updates an existing customer tag"
@@ -761,6 +772,9 @@
       "sql": [
         "commands/field_create.sql"
       ],
+      "on_unique": {
+        "uq_customers_field_hub_name_live": "customers.field_name_taken"
+      },
       "schema": "schemas/field_create.json",
       "ai": {
         "description": "Creates a new custom field for customers"
@@ -772,6 +786,9 @@
       "sql": [
         "commands/field_update.sql"
       ],
+      "on_unique": {
+        "uq_customers_field_hub_name_live": "customers.field_name_taken"
+      },
       "schema": "schemas/field_update.json",
       "ai": {
         "description": "Updates a customer custom field"
@@ -889,10 +906,12 @@
     "customers.field_invalid_date": {},
     "customers.field_invalid_number": {},
     "customers.field_invalid_option": {},
+    "customers.field_name_taken": {},
     "customers.field_required": {},
     "customers.field_unavailable": {},
     "customers.group_name_taken": {},
     "customers.group_unavailable": {},
+    "customers.tag_name_taken": {},
     "customers.tag_unavailable": {}
   },
   "events": {
