@@ -163,8 +163,9 @@ de la segunda columna, y sus implicados, en la misma entrega.
 |---|---|
 | Un solo formulario de ficha para el alta y la edición (mismos campos, mismo orden) | F01, F04, F11 |
 | La búsqueda por número de teléfono: la misma consulta reconoce a la clienta que pide cita y al comensal que pide mesa, y su tabla de prefijos está copiada a mano en la Bandeja de WhatsApp | F10, F11, F12, F26 |
-| La búsqueda de texto de la lista: la usan la tabla, el panel de fusión y el buscador del TPV | F02, F13, F17, F18 |
-| El aviso de ficha creada o actualizada, que escucha WhatsApp para unir conversaciones | F01, F04, F18, F26 |
+| La búsqueda de texto de la lista: la usan la tabla, el panel de fusión, el buscador del TPV y el selector de clienta de Citas (la agenda y las citas periódicas piden las 500 primeras por nombre) | F02, F13, F17, F18, F25 |
+| El teléfono tal como se guarda: lo leen la búsqueda por número (F10), WhatsApp al unir conversaciones y Citas, que lo copia en la cita y con esa copia el aviso de cita confirmada busca la conversación | F01, F04, F08, F10, F11, F18, F26 |
+| El aviso de ficha creada o actualizada, que escucha WhatsApp para unir conversaciones (la importación no lo emite) | F01, F04, F08, F18, F26 |
 | La fusión y su aviso: lo escuchan Citas (peluquería), Reservas y Cocina (restaurante), y Ventas, WhatsApp, Servicios y Reservas online | F13 |
 | El borrado de datos y su aviso, y la eliminación lógica | F07, F16 |
 | El buscador del TPV, la copia fiscal y el historial de compras: los dos negocios cobran con el mismo TPV | F17, F18, F19, F20, F21, F22, F23 |
@@ -197,7 +198,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Extensión o dos números en el mismo campo | no hecho: las cifras se juntan y no casa | F10 |
 | Buscar en Clientes un teléfono escrito de otra forma | no hecho: compara texto | F02 |
 | Avisar de un teléfono repetido al crear | parcial: solo el alta rápida del TPV, entre los resultados en pantalla | F12, F18 |
-| Comparar números ya normalizados en los demás módulos | no hecho: Reservas busca el teléfono como texto y WhatsApp busca la conversación de la cita confirmada por texto (sus WORKFLOW) | F11 |
+| Comparar números ya normalizados en los demás módulos | no hecho: el buscador de Reservas compara el teléfono como texto y WhatsApp busca la conversación de la cita confirmada con el teléfono copiado en la cita, como texto (WHATSAPP_INBOX-F23) | F11 |
 
 **2 · Borrado de datos contra el inventario (Shopify `customers/redact`, buscador de privacidad de Odoo).**
 
@@ -212,7 +213,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Notas, actividad, campos, grupos, etiquetas y consentimientos de la ficha | hecho | F16 |
 | Historial de avisos y automatizaciones del hub que nombra la ficha | parcial: se vacían los avisos ya entregados o descartados y las automatizaciones terminadas (hub#2467); los pendientes, atascados o en curso no (hub#2484); lo que solo lleva su teléfono, tampoco (hub#2477) | F16 |
 | Conversaciones de WhatsApp unidas a la ficha | hecho (WHATSAPP_INBOX-F11) | F16 |
-| Nombre, teléfono, correo y notas copiados en citas y series | no hecho (Citas no escucha) | F16 |
+| Nombre, teléfono, correo y notas copiados en citas y series | no hecho: Citas no escucha el aviso y no tiene flujo para ello (`appointments/WORKFLOW.md`, «Datos») | F16 |
 | Nombre, teléfono, correo y notas copiados en reservas y lista de espera | no hecho (RESERVATIONS-F22) | F16 |
 | Nombre, correo y teléfono copiados en reservas online | no hecho | F16 |
 | Copia fiscal en ventas y facturas | se conserva a propósito: obligación de conservar los documentos | F16, F17 |
@@ -228,7 +229,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Alta solo con el nombre, teléfono y NIF a la vista | hecho | F01 |
 | Email comprobado al guardar | no hecho: un email mal formado se guarda en el alta, la edición y el TPV; solo la importación lo rechaza | F01, F04 |
 | Alta desde el TPV en dos toques | hecho | F18 |
-| Alta desde la agenda | no hecho | F25 |
+| Alta desde la agenda | no hecho (la agenda solo elige entre las 500 primeras fichas, APPOINTMENTS-F01) | F25 |
 | Alta automática desde WhatsApp | hecho en peluquería; el restaurante no crea fichas | F26 |
 | Aviso de posible duplicado al crear (teléfono, email, NIF) | fuera del MVP por el triaje de customers#12 (06/08); ver «Dudas abiertas» | F12 |
 | Unir duplicados conservando todo | hecho | F13 |
@@ -246,7 +247,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Exportar todo el directorio | parcial: solo la página | F09 |
 | Exportar protegido por permiso | no hecho: el permiso solo esconde el botón; quien puede ver clientes lee el directorio por la API | F09 |
 | Notas y actividad | hecho | F05 |
-| Historial de visitas en la ficha | hecho (lo aporta Citas) | F24 |
+| Historial de visitas en la ficha | hecho (lo aporta Citas, APPOINTMENTS-F20) | F24 |
 | Descuento por grupo | fuera: retirado (customers#17), es de Precios | — |
 | Segmentos dinámicos por reglas, campañas, puntos de fidelidad | fuera del MVP | — |
 

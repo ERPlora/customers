@@ -34,13 +34,7 @@ eliminadas o absorbidas no salen; las no activas, sí. Una ficha extranjera guar
 nunca casa con el número que da WhatsApp, y en cambio casa con quien escriba desde esas mismas
 cifras en el país del negocio, que es otra persona (una ficha francesa `612 345 678` en un salón
 español casa con `+34 612 345 678`).
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 reconoce a la persona por su número al recibir un mensaje
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F21 la respuesta de citas busca la ficha antes de reservar
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F24 la respuesta de mesas liga la reserva a la ficha si existe
-Pendiente de enlazar: reservations — RESERVATIONS-F17 la reserva por WhatsApp queda ligada a la ficha encontrada
-Pendiente de enlazar: REC_WA_CITA — REC_WA_CITA-F03 se reconoce a la clienta por su teléfono
-Pendiente de enlazar: REC_WA_MESA — REC_WA_MESA-F03 se reconoce al cliente por su teléfono, sin crearle ficha
+Implicados: RESERVATIONS-F17, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F21, WHATSAPP_INBOX-F24, REC_WA_CITA-F03, REC_WA_MESA-F03
 QA: W-02
 
 ### CUSTOMERS-F11 Guardar el teléfono en formato internacional (E.164)
@@ -57,11 +51,15 @@ Pasos:
 4. Un número que no es válido para ese país se rechaza en el propio campo con el motivo.
 5. Buscar (F02) y reconocer (F10) comparan números ya normalizados, no texto.
 Entra: el teléfono tecleado y el país del negocio.
-Sale: el teléfono en E.164 en la ficha y en los avisos de ficha creada o actualizada.
+Sale: el teléfono en E.164 en la ficha y en los avisos de ficha creada o actualizada. Quien lo
+copia lo copia ya normalizado: Citas guarda en la cita el teléfono de la ficha al reservar
+(APPOINTMENTS-F01) y el aviso de cita confirmada de WhatsApp busca la conversación con esa copia
+como texto, así que hoy un teléfono con espacios o guiones no encuentra la conversación y no se
+avisa (WHATSAPP_INBOX-F23, REC_WA_CITA-F07). La Bandeja de WhatsApp compara además con su propia
+copia de la tabla de prefijos (WHATSAPP_INBOX-F04). Reservas no lee el teléfono de la ficha: guarda
+el que se teclea o el número de WhatsApp.
 Si falla: el campo explica por qué no es un número válido y no se guarda; lo tecleado se conserva.
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 compararía números ya normalizados en vez de aplicar su propia copia de la tabla de prefijos
-Pendiente de enlazar: sales — el alta rápida del buscador del TPV guarda el teléfono
+Implicados: APPOINTMENTS-F01, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F23, REC_WA_CITA-F07
 QA: ninguno
 
 ### CUSTOMERS-F12 Evitar fichas duplicadas de la misma persona
@@ -78,8 +76,7 @@ Pasos:
 Entra: lo que se teclea.
 Sale: nada propio; ninguna regla del servidor impide dos fichas con el mismo teléfono, email o NIF.
 Si falla: la ficha duplicada se crea sin aviso.
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F21 crea la ficha solo cuando el número no casa con ninguna
+Implicados: WHATSAPP_INBOX-F21
 QA: ninguno
 
 ### CUSTOMERS-F13 Unir dos fichas de la misma persona
@@ -111,11 +108,7 @@ Reservas, WhatsApp, Servicios (bonos), Cocina y Reservas online re-apunten sus p
 Si falla: «No se pudieron fusionar las fichas.», o «Ese cliente no está disponible en este negocio.»
 si una de las dos ya no existe o es la misma; el panel queda abierto para elegir otra. Si la
 búsqueda falla: «No se pudieron buscar las fichas. Vuelve a intentarlo.» con **Reintentar**.
-Implicados: pendiente
-Pendiente de enlazar: appointments — APPOINTMENTS-F23 pasa las citas y series de la ficha absorbida a la que queda
-Pendiente de enlazar: reservations — RESERVATIONS-F21 pasa las reservas y la lista de espera
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F12 pasa las conversaciones
-Pendiente de enlazar: sales — re-apunta las ventas de la ficha absorbida (escucha la fusión)
+Implicados: APPOINTMENTS-F23, RESERVATIONS-F21, SALES-F33, WHATSAPP_INBOX-F12
 Pendiente de enlazar: services — re-apunta los bonos y las sesiones gastadas
 Pendiente de enlazar: kitchen — re-apunta las comandas
 Pendiente de enlazar: online_booking — re-apunta las reservas online
@@ -146,7 +139,6 @@ dado (`customer.consent_granted`), que hoy solo pueden usar las automatizaciones
 Si falla: «No se ha podido registrar el consentimiento.» o «Ese cliente no está disponible en este
 negocio.». Sin permiso de editar (empleado) se ve el estado pero no hay botones.
 Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — no consulta el consentimiento antes de escribir (hueco de consentimiento y baja, L-11)
 Pendiente de enlazar: flows — el consentimiento dado o retirado puede disparar una automatización
 QA: L-10, WA-05
 
@@ -166,7 +158,7 @@ escribir), la marca de la ficha recalculada, «Consentimiento retirado» en la a
 de consentimiento retirado (`customer.consent_withdrawn`). Volver a darlo después es otro hecho.
 Si falla: como F14.
 Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — la baja escrita por WhatsApp («BAJA», «STOP») no llega aquí (L-11)
+Pendiente de enlazar: flows — el consentimiento retirado puede disparar una automatización
 QA: L-10, WA-05
 
 ### CUSTOMERS-F16 Borrar los datos personales de un cliente (RGPD)
@@ -190,18 +182,17 @@ quitan. Se conservan en la ficha el origen, la etapa, las compras, el gastado, l
 fecha de alta y quién la creó; y aparte, el historial de compras y los pedidos enlazados (prueba
 comercial y fiscal) y una única entrada de auditoría visible (quién, cuándo, el motivo tal como se
 escribió, qué se borró y qué se guardó). El aviso de ficha anonimizada (`customer.anonymized`) lo
-escuchan WhatsApp (vacía y cierra sus conversaciones), Servicios (marca sus bonos) y el propio hub,
+escuchan WhatsApp (vacía y cierra sus conversaciones, WHATSAPP_INBOX-F11), Servicios (marca sus bonos) y el propio hub,
 que vacía en su historial los avisos ya entregados o descartados y las automatizaciones terminadas
 que nombraban a esa ficha; los avisos pendientes o atascados y las automatizaciones en curso
-conservan los datos hasta que se procesan o los poda la retención. Ventas y facturas guardan su
-copia fiscal a propósito.
+conservan los datos hasta que se procesan o los poda la retención. Citas, Reservas y Reservas online
+no lo escuchan: el nombre, el teléfono, el correo y las notas copiados en citas y series, reservas y
+lista de espera (RESERVATIONS-F22, no hecho) y reservas online se quedan. Ventas y facturas guardan
+su copia fiscal a propósito.
 Si falla: «No se pudieron borrar los datos personales» o «Ese cliente no está disponible en este
 negocio.» si el identificador no es de este negocio. Sobre una ficha ya eliminada, absorbida o
 borrada no falla. Repetirlo no cambia los datos ni duplica la auditoría, pero vuelve a emitir el aviso.
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F11 vacía las conversaciones unidas a la ficha
-Pendiente de enlazar: reservations — RESERVATIONS-F22 debería vaciar nombre, teléfono, correo y notas de sus reservas (no escucha el aviso)
-Pendiente de enlazar: appointments — no escucha el aviso: nombre, teléfono, correo y notas se quedan en sus citas y series
+Implicados: RESERVATIONS-F22, WHATSAPP_INBOX-F11
 Pendiente de enlazar: online_booking — no escucha el aviso: nombre, correo y teléfono se quedan en sus reservas online
 Pendiente de enlazar: services — marca como huérfanos los bonos de la ficha borrada
 Pendiente de enlazar: hub — vacía el historial de avisos y automatizaciones que nombra la ficha (hub#2467)

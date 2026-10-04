@@ -32,8 +32,7 @@ email mal formado NO falla: se guarda (el esquema declara el formato, pero el hu
 ese tipo de esquema y la pantalla no lo mira; solo la importación lo rechaza, F08). Los campos
 personalizados no salen en el alta, así que los obligatorios no se piden aquí (F29). Nada avisa de
 que ya existe otra ficha con el mismo teléfono, email o NIF (F12).
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 une la conversación a la ficha recién creada (aviso de ficha creada)
+Implicados: WHATSAPP_INBOX-F04
 Pendiente de enlazar: flows — una automatización puede dispararse con una ficha nueva (plantilla de nota de bienvenida)
 QA: B-02
 
@@ -79,8 +78,7 @@ Si falla: «Cliente no encontrado» si ya no existe; si no carga, el motivo que 
 se pudo cargar el cliente» si no da ninguno). Si uno de los
 bloques secundarios no carga, sale vacío sin aviso (actividad, campos, grupos, consentimiento).
 Abrir otra ficha antes de que acabe de cargar la anterior no mezcla los datos de las dos.
-Implicados: pendiente
-Pendiente de enlazar: appointments — APPOINTMENTS-F20 pinta el historial de visitas dentro de la ficha
+Implicados: APPOINTMENTS-F20
 QA: B-03
 
 ### CUSTOMERS-F04 Editar la ficha y sus campos personalizados
@@ -103,8 +101,7 @@ Si falla: un campo obligatorio vacío o un valor que no encaja con su tipo recha
 (nada queda a medias) y el motivo sale arriba de la ficha. La casilla «Activo» desmarcada solo
 cambia la cifra «Activos» de la lista: la ficha sigue saliendo en búsquedas, en el TPV y en WhatsApp.
 El empleado no ve **Editar**; el perfil Cajero sí puede editar. Un email mal formado no falla: se guarda.
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 une la conversación cuando se corrige el teléfono de la ficha (aviso de ficha actualizada)
+Implicados: WHATSAPP_INBOX-F04
 QA: L-10
 
 ### CUSTOMERS-F05 Añadir una nota a la ficha
@@ -183,7 +180,7 @@ Sale: las fichas creadas, con origen «Importación» y sin consentimiento (aunq
 columna de consentimiento). No se emite ningún aviso de ficha creada.
 Si falla: un bloque rechazado se cuenta con su rango de filas y su motivo, y los siguientes siguen.
 Un corte a mitad deja creadas las filas de los bloques ya enviados: volver a importar el fichero las duplica.
-Implicados: ninguno
+Implicados: WHATSAPP_INBOX-F04
 QA: ninguno
 
 ### CUSTOMERS-F09 Exportar la lista de fichas

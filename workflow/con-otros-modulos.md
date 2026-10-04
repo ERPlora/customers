@@ -29,10 +29,7 @@ Si falla: el motivo del fallo (o «No se pudieron cargar los clientes» si no tr
 resultados, «Sin resultados.» o «No hay clientes.»; sin permiso, «No tienes permiso para consultar
 clientes.». Si la ficha completa no se puede leer, el cliente NO se asigna y sale «No se pudieron
 cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.».
-Implicados: pendiente
-Pendiente de enlazar: sales — el TPV monta el buscador en su hueco de asignar, adjunta el cliente a la venta y lo quita tras cobrar
-Pendiente de enlazar: sales — con «Exigir cliente en cada venta», abre el buscador al cobrar sin cliente
-Pendiente de enlazar: invoice — la factura copia nombre, NIF, dirección y país del cliente de la venta
+Implicados: INVOICE-F02, SALES-F04, SALES-F05
 QA: R-09, B-06, BD-09
 
 ### CUSTOMERS-F18 Crear un cliente desde el buscador del TPV
@@ -50,8 +47,7 @@ Sale: la ficha con origen «En el local», el aviso de ficha creada (`customer.c
 Si falla: «El nombre es obligatorio.» sin nombre; si el teléfono coincide, quitando espacios, con el
 de una ficha de la lista que hay en pantalla, elige esa ficha en vez de crear otra (F12). Otro fallo
 sale dentro del formulario y lo tecleado se conserva. Sin permiso de crear no aparece el botón.
-Implicados: pendiente
-Pendiente de enlazar: sales — el TPV recibe el cliente recién creado como asignado a la venta
+Implicados: SALES-F05, WHATSAPP_INBOX-F04
 QA: B-02
 
 ### CUSTOMERS-F19 Enlazar el cliente al pedido abierto
@@ -70,8 +66,7 @@ Sale: el enlace cliente ↔ pedido, que solo se consulta con el asistente o la A
 Si falla: la venta sigue; el TPV enseña «La venta sigue, pero el cliente no se pudo asociar al
 pedido: no aparecerá en su historial.» o, sin permiso, «La venta sigue, pero no tienes permiso para
 asociar clientes a pedidos: no aparecerá en su historial.».
-Implicados: pendiente
-Pendiente de enlazar: sales — el TPV avisa de que el pedido existe para que Clientes lo enlace
+Implicados: SALES-F17
 QA: ninguno
 
 ### CUSTOMERS-F20 Sumar la compra a la ficha al cobrar
@@ -90,8 +85,7 @@ Sale: una línea en el historial de compras por venta, las cifras y la etapa de 
 Si falla: una venta sin cliente no hace nada; la misma venta entregada dos veces cuenta una sola
 vez; una ficha eliminada no suma. Un fallo no se ve en el TPV ni en la ficha: el hub reintenta el
 aviso (hasta 8 veces, cada vez más espaciadas) y después lo deja atascado a la espera de que alguien lo mire.
-Implicados: pendiente
-Pendiente de enlazar: sales — la venta cobrada avisa con su cliente y su total
+Implicados: SALES-F01
 QA: B-03, R-09
 
 ### CUSTOMERS-F21 Restar una venta anulada
@@ -107,8 +101,7 @@ Pasos:
 Entra: la venta anulada (`sale.voided`).
 Sale: la línea del historial de compras marcada como anulada (no se borra), las cifras y la etapa.
 Si falla: anular dos veces la misma venta resta una sola vez.
-Implicados: pendiente
-Pendiente de enlazar: sales — anular una venta avisa con la venta y su motivo
+Implicados: SALES-F30
 QA: R-11
 
 ### CUSTOMERS-F22 Restar una devolución
@@ -122,8 +115,7 @@ Pasos:
 Entra: la devolución de la venta (`sale.refunded`).
 Sale: una línea de devolución en el historial de compras, con importe negativo, y el gastado corregido.
 Si falla: la misma devolución entregada dos veces cuenta una sola vez.
-Implicados: pendiente
-Pendiente de enlazar: sales — la devolución de una venta avisa con su importe
+Implicados: SALES-F31
 QA: R-11, B-08
 
 ### CUSTOMERS-F23 Ver el historial de compras de un cliente
@@ -133,13 +125,12 @@ Actor: administrador, responsable, empleado
 Pantalla: Ficha de cliente
 Pasos:
 1. Abre la ficha (F03).
-2. Lee las cifras «Compras», «Gastado» y «Última compra», y en «Actividad» las entradas «Compra registrada» y «Compra anulada» con su fecha.
+2. Lee las cifras «Compras», «Gastado» y «Última compra», y en «Actividad» las entradas «Compra registrada» y «Compra anulada» con su fecha. Una devolución no resta nada: «Gastado» sigue con el importe cobrado (F22).
 3. Para ver cada compra con su importe, su estado y la venta de la que viene, hoy hay que pedírselo al asistente.
 Entra: el historial de compras de la ficha.
 Sale: nada; solo lectura.
 Si falla: si la actividad no carga, sale «Sin actividad registrada.» sin aviso de error.
-Implicados: pendiente
-Pendiente de enlazar: sales — abrir la venta desde la compra de la ficha
+Implicados: ninguno
 QA: B-03
 
 ### CUSTOMERS-F24 Ver en la ficha lo que otros módulos saben del cliente
@@ -155,12 +146,11 @@ Pasos:
 Entra: qué cliente está abierto (Clientes se lo dice al bloque; no le pasa más datos).
 Sale: nada; solo lectura.
 Si falla: cada bloque enseña su propio error (Citas: «No se pudo cargar el historial de visitas.»).
-Implicados: pendiente
-Pendiente de enlazar: appointments — APPOINTMENTS-F20 pinta el historial de visitas en la ficha
+Implicados: APPOINTMENTS-F20
 QA: B-03, L-10
 
 ### CUSTOMERS-F25 Crear la clienta sin salir de la agenda
-Estado: no hecho — al dar una cita solo se elige entre fichas ya creadas (la agenda carga las 500 primeras por nombre); una clienta nueva obliga a ir a Clientes, crearla y volver
+Estado: no hecho — al dar una cita (y al crear una cita periódica) solo se elige entre fichas ya creadas (la agenda carga las 500 primeras por nombre); una clienta nueva obliga a ir a Clientes, crearla y volver
 Vertical: peluqueria
 Actor: administrador, responsable, empleado
 Pantalla: Citas: Agenda
@@ -171,8 +161,7 @@ Pasos:
 Entra: nombre y teléfono.
 Sale: la ficha nueva (origen «En el local») y la cita con ella.
 Si falla: el motivo sale en el panel de la cita sin perder lo ya elegido.
-Implicados: pendiente
-Pendiente de enlazar: appointments — APPOINTMENTS-F01 elegir la clienta de la lista de fichas al reservar
+Implicados: APPOINTMENTS-F01, APPOINTMENTS-F12
 QA: B-02, BD-06
 
 ### CUSTOMERS-F26 Crear la ficha de quien pide cita por WhatsApp
@@ -191,7 +180,5 @@ Sale: la ficha nueva, el aviso de ficha creada y la conversación unida a ella.
 Si falla: el origen «WhatsApp» lo fija el permiso que el dueño concedió al activar la respuesta;
 el nombre y el `+` del teléfono los escribe el asistente siguiendo su guion (nada lo impone). Si el
 número casa con dos o más fichas, no crea ninguna (lo que contesta entonces es de REC_WA_CITA-F03).
-Implicados: pendiente
-Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F21 crea la ficha con origen WhatsApp antes de reservar
-Pendiente de enlazar: REC_WA_CITA — REC_WA_CITA-F03 se reconoce a la clienta por su teléfono y, si no tiene ficha, se le crea
+Implicados: WHATSAPP_INBOX-F21, REC_WA_CITA-F03
 QA: W-02
