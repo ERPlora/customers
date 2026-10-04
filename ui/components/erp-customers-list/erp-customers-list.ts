@@ -12,6 +12,8 @@ import type { ListController, ListClient, ListParams, ListPage } from '@erplora/
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
+import { presentConfirmAlert } from '../../lib/confirm-alert';
+import type { ConfirmAlert } from '../../lib/confirm-alert';
 import { countryCode, countryName, countryOptions } from '../../lib/country';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
@@ -342,7 +344,8 @@ export class ErpCustomersList extends LitElement {
     .meta dt { font-size:.72rem; text-transform:uppercase; opacity:.6; }
     .meta dd { margin:0 0 .4rem; font-weight:600; }
     .chips { display:flex; gap:.4rem; flex-wrap:wrap; margin:.35rem 0; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; margin:.15rem .9rem .15rem 0; }
+    /* customers#95: the name is the checkbox's own content (its label), placed after the box. */
+    .check { margin:.15rem .9rem .15rem 0; }
     .timeline { list-style:none; margin:.5rem 0 0; padding:0; }
     .timeline li { border-left:3px solid var(--ion-border-color,#e7e2d6); padding:.25rem 0 .55rem .75rem; }
     .timeline .t { font-weight:600; }
@@ -390,8 +393,11 @@ export class ErpCustomersList extends LitElement {
 
   @state() stats: Stats | null = null;
 
-  /** Borrado en dos pasos desde la lista o la ficha. */
+  /** The customer whose deletion is being asked, from the list or the sheet; its question is the
+   *  dialog of `openDeleteDialog` (customers#95). */
   @state() pendingDelete: Customer | null = null;
+
+  private deleteDialog: ConfirmAlert | null = null;
 
   // — Detalle —
   @state() detail: Customer | null = null;
@@ -516,6 +522,9 @@ export class ErpCustomersList extends LitElement {
   disconnectedCallback() {
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     this.unsub?.();
+    // The dialog lives on document.body: it would outlive the screen it asks about.
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
 
@@ -854,6 +863,7 @@ export class ErpCustomersList extends LitElement {
   protected updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     this.ensureDetailSlotMounted();
+    if (changed.has('pendingDelete')) this.openDeleteDialog();
     if (changed.has('createError') && this.createError) void this.revealCreateError();
   }
 
@@ -947,15 +957,16 @@ export class ErpCustomersList extends LitElement {
     }
   }
 
-  // — Borrado (soft-delete) → customers.delete, confirmación en dos pasos —
+  // — Soft delete → customers.delete, asked first in a dialog —
   private async confirmDelete() {
     if (!can('customers.delete_customer') || !this.pendingDelete) return;
+    // The question is answered: the dialog closes and a refusal is told on the page (pm#478).
     const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.formError = '';
     try {
       await erplora().command('customers.delete', { customer_id: target.id });
-      this.pendingDelete = null;
       if (this.detail?.id === target.id) this.closeDetail();
       this.formMsg = erplora().t(CATALOG, 'ui.customerDeleted', { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
@@ -1186,17 +1197,34 @@ export class ErpCustomersList extends LitElement {
     </section>`;
   }
 
-  private renderDeleteConfirm() {
-    if (!this.pendingDelete || !can('customers.delete_customer')) return nothing;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared (answered, the sheet
+   *  closed, another panel opened) → closed. */
+  private openDeleteDialog(): void {
+    this.closeDeleteDialog();
+    const customer = this.pendingDelete;
+    if (!customer || !can('customers.delete_customer')) return;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
-    return html`<section class="panel">
-      <h3>${t('ui.deleteCustomerTitle')}</h3>
-      <p>${t('ui.deleteCustomerConfirm', { name: this.pendingDelete.name })}</p>
-      <footer class="actions">
-        <ion-button size="small" class="tone-danger" data-testid="customers-list-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
-        <ion-button size="small" fill="outline" data-testid="customers-list-delete-cancel" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
-      </footer>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { 'data-testid': 'customers-list-delete-confirm' },
+      header: t('ui.deleteCustomerTitle'),
+      message: t('ui.deleteCustomerConfirm', { name: customer.name }),
+      buttons: [
+        { text: t('ui.cancel'), role: 'cancel', htmlAttributes: { 'data-testid': 'customers-list-delete-cancel' } },
+        { text: t('ui.delete'), role: 'destructive', htmlAttributes: { 'data-testid': 'customers-list-delete-submit' }, handler: () => void this.confirmDelete() },
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === customer) this.pendingDelete = null;
+      },
+    });
+    this.deleteDialog = dialog;
+  }
+
+  private closeDeleteDialog(): void {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
 
   /** Campos personalizados (ADR-0132): los pinta su `field_type`, no un input de texto para todo.
@@ -1338,8 +1366,8 @@ export class ErpCustomersList extends LitElement {
            consent with no purpose, no channel, no record of what the person was shown and no author
            — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
            decision lives in its own panel below, as an action with its evidence. -->
-      <label class="check"><ion-checkbox data-testid="customers-list-edit-active" .checked=${f.is_active}
-        @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}></ion-checkbox> ${t('ui.fieldActive')}</label>
+      <ion-checkbox class="check" label-placement="end" justify="start" data-testid="customers-list-edit-active" .checked=${f.is_active}
+        @ionChange=${(e: any) => (this.form = { ...this.form, is_active: e.target.checked })}>${t('ui.fieldActive')}</ion-checkbox>
       <footer class="actions">
         <ion-button type="submit" size="small" data-testid="customers-list-edit-submit" ?disabled=${this.saving || !f.name.trim()}>${this.saving ? t('ui.saving') : t('ui.save')}</ion-button>
         <ion-button size="small" fill="outline" data-testid="customers-list-edit-cancel" @click=${() => (this.editing = false)}>${t('ui.cancel')}</ion-button>
@@ -1358,16 +1386,14 @@ export class ErpCustomersList extends LitElement {
     }
     return html`<div>
       <div class="chips">
-        ${items.map((it) => html`<label class="check">
-          <ion-checkbox data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
-            ?disabled=${!editable}
-            @ionChange=${() => {
-              if (!editable) return;
-              if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
-              else this.tagIds = this.toggleId(this.tagIds, String(it.id));
-            }}></ion-checkbox>
-          ${it.name}
-        </label>`)}
+        ${items.map((it) => html`<ion-checkbox class="check" label-placement="end" justify="start"
+          data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
+          ?disabled=${!editable}
+          @ionChange=${() => {
+            if (!editable) return;
+            if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
+            else this.tagIds = this.toggleId(this.tagIds, String(it.id));
+          }}>${it.name}</ion-checkbox>`)}
       </div>
       ${editable
         ? html`<ion-button size="small" data-testid=${`customers-list-membership-${kind}-save`} ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t(isGroups ? 'ui.saveGroups' : 'ui.saveTags')}</ion-button>`
@@ -1487,7 +1513,6 @@ export class ErpCustomersList extends LitElement {
       </header>
       ${this.formError ? html`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : nothing}
-      ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
       ${this.renderMergePanel()}
       <section class="panel">
@@ -1582,7 +1607,6 @@ export class ErpCustomersList extends LitElement {
         ${this.formMsg ? html`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : nothing}
         ${this.importing ? html`<p class="ok" data-testid="customers-list-importing">${t('ui.importing')}</p>` : nothing}
         ${this.renderImportReport()}
-        ${this.renderDeleteConfirm()}
         ${this.ctrl?.error && !dataTableShowsLoadError() ? html`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->

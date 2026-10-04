@@ -72,6 +72,7 @@ const COVERED: Record<
       'customers-list-create-submit',
       'customers-list-delete',
       'customers-list-delete-cancel',
+      'customers-list-delete-confirm',
       'customers-list-delete-submit',
       'customers-list-detail-slot',
       'customers-list-edit',
@@ -147,6 +148,7 @@ const COVERED: Record<
       'customers-fields-active',
       'customers-fields-cancel',
       'customers-fields-delete-cancel',
+      'customers-fields-delete-confirm',
       'customers-fields-delete-submit',
       'customers-fields-editing',
       'customers-fields-form',
@@ -171,6 +173,7 @@ const COVERED: Record<
       'customers-groups-cancel',
       'customers-groups-color',
       'customers-groups-delete-cancel',
+      'customers-groups-delete-confirm',
       'customers-groups-delete-submit',
       'customers-groups-description',
       'customers-groups-editing',
@@ -193,6 +196,7 @@ const COVERED: Record<
       'customers-tags-cancel',
       'customers-tags-color',
       'customers-tags-delete-cancel',
+      'customers-tags-delete-confirm',
       'customers-tags-delete-submit',
       'customers-tags-editing',
       'customers-tags-form',
@@ -376,6 +380,19 @@ function hooks(source: string): Hook[] {
     const cut = raw.indexOf('${');
     if (cut === -1 && !raw.startsWith('`')) found.push({ literal: raw });
     else found.push({ head: staticHead(raw) });
+  }
+  // The fourth shape (customers#95): the hooks of a dialog built in code travel as Ionic's
+  // `htmlAttributes`, a `'data-testid': '…'` entry of an object literal.
+  const key = /['"]data-testid['"]\s*:\s*/g;
+  for (let m = key.exec(source); m; m = key.exec(source)) {
+    const at = m.index + m[0].length;
+    if (source[at] === '`') {
+      const end = source.indexOf('`', at + 1);
+      if (end !== -1) found.push({ head: staticHead(source.slice(at, end + 1)) });
+      continue;
+    }
+    const raw = source[at] === '"' || source[at] === "'" ? quoted(source, at) : undefined;
+    if (raw !== undefined) found.push({ literal: raw });
   }
   return found;
 }

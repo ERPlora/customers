@@ -206,13 +206,16 @@ describe.each(SCREENS)('pm#478 · $surface: save refusal in the form, delete ref
     expect(onPage(el, `${surface}-page-error`), 'a stale refusal must not stay red after a save that worked').toBeNull();
   });
 
-  it('retrying the refused delete from the same confirmation clears the refusal once it succeeds', async () => {
+  it('retrying the refused delete clears the refusal once it succeeds', async () => {
     const el = await mount(tag, path);
     el.onRowAction(new CustomEvent('rowAction', { detail: { actionId: 'delete', row } }));
     refusal = new DomainError('customers.in_use', 'in use');
     await el.confirmDelete();
     refusal = null;
-    await el.confirmDelete(); // the confirmation is still open after a refusal: «Delete» again
+    // customers#95: the question is a dialog now, and answering it closes it — a refusal is told on
+    // the page. Retrying is asking again from the trash can, then «Delete».
+    el.onRowAction(new CustomEvent('rowAction', { detail: { actionId: 'delete', row } }));
+    await el.confirmDelete();
     await settle(el);
     expect(onPage(el, `${surface}-page-error`), 'the red of the first try must not sit next to the success').toBeNull();
   });

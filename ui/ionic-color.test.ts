@@ -151,7 +151,7 @@ describe('pm#392: the danger tone is painted from inside the shadow root', () =>
     expect(ruleBody(css, /ion-icon\.selected-mark/)).toMatch(/color:\s*var\(--ion-color-primary\b/);
   });
 
-  it('the customer sheet and its confirm panels render every destructive button with the tone', async () => {
+  it('the customer sheet, its erase panel and its delete dialog render every destructive button with the tone', async () => {
     await import('./components/erp-customers-list/erp-customers-list');
     const el = document.createElement('erp-customers-list') as HTMLElement & {
       shadowRoot: ShadowRoot;
@@ -171,11 +171,18 @@ describe('pm#392: the danger tone is painted from inside the shadow root', () =>
     const buttons = [...el.shadowRoot.querySelectorAll('ion-button')];
     const label = (b: Element) => b.textContent?.trim() ?? '';
     const destructive = buttons.filter((b) => ['ui.delete', 'ui.eraseData'].includes(label(b)));
-    // Header: Delete (outline) + Erase data (clear); panels: Delete (solid) + Erase data (solid).
+    // Header: Delete (outline) + Erase data (clear); erase panel: Erase data (solid).
     expect(destructive.map((b) => `${label(b)}:${b.getAttribute('fill') ?? 'solid'}`).sort()).toEqual(
-      ['ui.delete:outline', 'ui.delete:solid', 'ui.eraseData:clear', 'ui.eraseData:solid'],
+      ['ui.delete:outline', 'ui.eraseData:clear', 'ui.eraseData:solid'],
     );
     expect(destructive.filter((b) => !b.classList.contains('tone-danger')).map(label)).toEqual([]);
     expect(buttons.filter((b) => b.hasAttribute('color')).map(label)).toEqual([]);
+    // customers#95: the delete question is an <ion-alert> on document.body, whose «Delete» Ionic
+    // paints in the danger tone by its `destructive` role.
+    const dialog = document.querySelector('ion-alert[data-testid="customers-list-delete-confirm"]') as
+      | (HTMLElement & { buttons: Array<{ text: string; role?: string }> })
+      | null;
+    expect(dialog?.buttons.find((b) => b.text === 'ui.delete')?.role).toBe('destructive');
+    el.remove();
   });
 });
