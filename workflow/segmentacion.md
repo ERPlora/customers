@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F27 Crear, cambiar y eliminar grupos de clientes
-Estado: parcial — desmarcar «Activo» al editar un grupo lo hace desaparecer de la lista y de las fichas, y ninguna pantalla deja volver a activarlo
+Estado: parcial — desmarcar «Activo» al editar un grupo lo hace desaparecer de la lista y de las fichas, y ninguna pantalla deja volver a activarlo; y eliminar un grupo no quita la pertenencia de sus fichas, aunque el diálogo dice que la pierden, y esas fichas ya no pueden guardar sus grupos (F06)
 Vertical: comun
 Actor: administrador, responsable
 Pantalla: Grupos
@@ -20,7 +20,8 @@ Pasos:
 4. Para cambiarlo, toca la fila (o **Editar**): el panel se titula «Editar · {nombre}» y añade la
    casilla «Activo». **Guardar** → «Grupo actualizado».
 5. Para quitarlo (solo el administrador), **Eliminar** en la fila: «Eliminar grupo» — «¿Eliminar
-   {nombre}? Los clientes asignados pierden el grupo.» → «Grupo {nombre} eliminado».
+   {nombre}? Los clientes asignados pierden el grupo.» → «Grupo {nombre} eliminado». El grupo deja de
+   verse, pero la pertenencia sigue guardada en cada ficha.
 Entra: los datos del grupo.
 Sale: el grupo, que se asigna desde cada ficha (F06). Un grupo no lleva descuento ni precio.
 Si falla: un nombre ya usado (sin distinguir mayúsculas ni espacios de los extremos) se dice debajo
@@ -30,7 +31,7 @@ Implicados: ninguno
 QA: ninguno
 
 ### CUSTOMERS-F28 Crear, cambiar y eliminar etiquetas de clientes
-Estado: parcial — igual que los grupos: desmarcar «Activa» esconde la etiqueta sin vuelta atrás desde la pantalla
+Estado: parcial — igual que los grupos: desmarcar «Activa» esconde la etiqueta sin vuelta atrás desde la pantalla, y eliminarla no quita la pertenencia aunque el diálogo dice que sí, lo que impide guardar las etiquetas de esas fichas (F06)
 Vertical: comun
 Actor: administrador, responsable
 Pantalla: Etiquetas
@@ -39,7 +40,7 @@ Pasos:
 2. Rellena «Nombre» y «Color». **Guardar** → «Etiqueta creada».
 3. Al editar («Editar · {nombre}») aparece «Activa». **Guardar** → «Etiqueta actualizada».
 4. **Eliminar** (solo el administrador): «Eliminar etiqueta» — «¿Eliminar {nombre}? Los clientes
-   asignados pierden la etiqueta.» → «Etiqueta {nombre} eliminada».
+   asignados pierden la etiqueta.» → «Etiqueta {nombre} eliminada». La pertenencia sigue guardada en cada ficha.
 Entra: nombre y color.
 Sale: la etiqueta, que se asigna desde cada ficha (F06).
 Si falla: «Ya hay una etiqueta con ese nombre. Elige otro nombre.» debajo de «Nombre»; otro rechazo, en el aviso del formulario.
@@ -47,7 +48,7 @@ Implicados: ninguno
 QA: ninguno
 
 ### CUSTOMERS-F29 Definir los campos personalizados de la ficha
-Estado: parcial — cambiar el tipo de un campo no convierte los valores ya guardados (una ficha con un valor que ya no encaja no se puede guardar hasta corregirlo, deducido del código) y nada distingue un campo con datos de salud (alergias, embarazo) que pida consentimiento explícito
+Estado: parcial — cambiar el tipo de un campo no convierte los valores ya guardados (una ficha con un valor que ya no encaja no se puede guardar hasta corregirlo); desmarcar «Activo» lo esconde de la lista de Campos y de las fichas sin vuelta atrás desde la pantalla; y nada distingue un campo con datos de salud (alergias, embarazo) que pida consentimiento explícito
 Vertical: comun
 Actor: administrador, responsable
 Pantalla: Campos
@@ -60,8 +61,8 @@ Pasos:
 4. Al editar («Editar · {nombre}») aparece «Activo». **Eliminar** → «Eliminar campo» — «¿Eliminar
    {nombre}? Los valores guardados dejan de mostrarse.» → «Campo {nombre} eliminado».
 Entra: la definición del campo.
-Sale: el campo. «Obligatorio» se exige al guardar la ficha completa (F04), no en el alta rápida, la
-importación ni el alta por WhatsApp. Un campo desactivado o eliminado deja de pintarse, pero sus
+Sale: el campo. «Obligatorio» solo se exige al EDITAR una ficha (F04), nunca al darla de alta
+(Clientes, TPV, importación ni WhatsApp: el alta ni siquiera enseña los campos propios). Un campo desactivado o eliminado deja de pintarse, pero sus
 valores se quedan guardados.
 Si falla: «Ya hay un campo con ese nombre. Elige otro nombre.» debajo de «Nombre»; otro rechazo, en
 el aviso del formulario. La lista la ve cualquiera que vea clientes; sin permiso de gestionar campos

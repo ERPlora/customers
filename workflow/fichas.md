@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F01 Dar de alta una ficha desde Clientes
-Estado: hecho
+Estado: parcial — un email mal formado se guarda igual: ni la pantalla ni el hub lo comprueban
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
@@ -27,10 +27,11 @@ extremos (ver F11).
 Sale: la ficha nueva, sin consentimiento de ningún tipo (no hay casilla, F14), y el aviso de ficha
 creada (`customer.created`, con todos los datos tecleados). WhatsApp lo escucha para unir a la
 ficha las conversaciones que ya tenía ese número.
-Si falla: el motivo sale dentro del propio panel, encima del botón, y lo tecleado se conserva. Que
-un email mal formado se rechace está sin confirmar: el esquema declara el formato, pero no se ha
-comprobado que el hub lo haga cumplir (la pantalla no lo comprueba). Nada avisa de que ya existe
-otra ficha con el mismo teléfono, email o NIF (F12).
+Si falla: el motivo sale dentro del propio panel, encima del botón, y lo tecleado se conserva. Un
+email mal formado NO falla: se guarda (el esquema declara el formato, pero el hub no lo aplica en
+ese tipo de esquema y la pantalla no lo mira; solo la importación lo rechaza, F08). Los campos
+personalizados no salen en el alta, así que los obligatorios no se piden aquí (F29). Nada avisa de
+que ya existe otra ficha con el mismo teléfono, email o NIF (F12).
 Implicados: pendiente
 Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 une la conversación a la ficha recién creada (aviso de ficha creada)
 Pendiente de enlazar: flows — una automatización puede dispararse con una ficha nueva (plantilla de nota de bienvenida)
@@ -58,7 +59,7 @@ Implicados: ninguno
 QA: ninguno
 
 ### CUSTOMERS-F03 Abrir la ficha de un cliente
-Estado: parcial — «Última compra» sale como fecha técnica sin formatear (año-mes-día, hora con nanosegundos y zona), a diferencia de la Actividad, que sí la formatea
+Estado: parcial — «Última compra» sale como fecha técnica sin formatear (año-mes-día, hora con nanosegundos y zona), a diferencia de la Actividad; y la vista de lectura no enseña notas internas, cumpleaños, aniversario ni campos personalizados, que solo aparecen al pulsar Editar (quien no puede editar no los ve nunca)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Ficha de cliente
@@ -66,14 +67,16 @@ Pasos:
 1. Desde **Clientes**, toca la fila o **Ver**.
 2. La ficha enseña, de arriba abajo: el nombre y los botones que permite el perfil; los datos
    (Email, Teléfono, NIF/CIF, Empresa, Dirección en una línea con el nombre del país, Etapa,
-   Origen, Canal preferido, Compras, Gastado, Última compra, Activo); Grupos y Etiquetas; el panel
+   Origen, Canal preferido, Compras, Gastado, Última compra, Activo; las notas internas, cumpleaños,
+   aniversario y campos personalizados no están aquí: solo se ven en **Editar**); Grupos y Etiquetas; el panel
    «Consentimiento de marketing»; «Añadir nota» y «Actividad» (las 100 entradas más recientes);
    y, si hay módulos que cuelgan algo de la ficha, su bloque al final (Citas pone el historial de
    visitas, F24).
 3. **← Volver** regresa a la lista.
 Entra: la ficha y, en paralelo, su actividad, sus grupos y etiquetas, sus campos personalizados y su consentimiento.
 Sale: nada; solo lectura.
-Si falla: «Cliente no encontrado» si ya no existe, o «No se pudo cargar el cliente». Si uno de los
+Si falla: «Cliente no encontrado» si ya no existe; si no carga, el motivo que da el servidor (o «No
+se pudo cargar el cliente» si no da ninguno). Si uno de los
 bloques secundarios no carga, sale vacío sin aviso (actividad, campos, grupos, consentimiento).
 Abrir otra ficha antes de que acabe de cargar la anterior no mezcla los datos de las dos.
 Implicados: pendiente
@@ -81,9 +84,9 @@ Pendiente de enlazar: appointments — APPOINTMENTS-F20 pinta el historial de vi
 QA: B-03
 
 ### CUSTOMERS-F04 Editar la ficha y sus campos personalizados
-Estado: hecho
+Estado: parcial — un email mal formado se guarda igual: ni la pantalla ni el hub lo comprueban
 Vertical: comun
-Actor: administrador, responsable
+Actor: administrador, responsable, cajero
 Pantalla: Ficha de cliente
 Pasos:
 1. En la ficha pulsa **Editar**: los datos pasan a ser un formulario con los mismos campos del alta,
@@ -99,7 +102,7 @@ email, el panel sigue diciendo «Dado» con la dirección antigua al lado (F14).
 Si falla: un campo obligatorio vacío o un valor que no encaja con su tipo rechaza TODO el guardado
 (nada queda a medias) y el motivo sale arriba de la ficha. La casilla «Activo» desmarcada solo
 cambia la cifra «Activos» de la lista: la ficha sigue saliendo en búsquedas, en el TPV y en WhatsApp.
-El empleado no ve **Editar**; el perfil Cajero sí puede editar.
+El empleado no ve **Editar**; el perfil Cajero sí puede editar. Un email mal formado no falla: se guarda.
 Implicados: pendiente
 Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 une la conversación cuando se corrige el teléfono de la ficha (aviso de ficha actualizada)
 QA: L-10
@@ -120,9 +123,9 @@ Pendiente de enlazar: flows — una automatización puede añadir notas a una fi
 QA: ninguno
 
 ### CUSTOMERS-F06 Poner grupos y etiquetas a una ficha
-Estado: parcial — si la ficha estaba en un grupo o una etiqueta que después se eliminó, guardar falla con «Ese grupo no está disponible…» y no hay forma de quitarlo desde la pantalla (deducido del código, sin reproducir)
+Estado: parcial — si la ficha estaba en un grupo o una etiqueta que después se eliminó, guardar falla con «Ese grupo no está disponible…» y no hay forma de quitarlo desde la pantalla (comprobado en el código: eliminar un grupo o una etiqueta no quita su pertenencia, y la ficha la reenvía sin pintarla)
 Vertical: comun
-Actor: administrador, responsable
+Actor: administrador, responsable, cajero
 Pantalla: Ficha de cliente
 Pasos:
 1. En la ficha, en «Grupos», marca o desmarca las casillas de los grupos activos.
@@ -151,14 +154,18 @@ Entra: la ficha.
 Sale: la ficha marcada como eliminada CONSERVANDO todos sus datos personales, su actividad, notas,
 grupos y consentimientos; y el aviso de ficha eliminada (`customer.deleted`). Lo escucha Servicios
 para marcar los bonos de esa ficha. WhatsApp, Citas y Reservas no hacen nada. No es el borrado de
-datos personales: eso es F16, y una ficha ya eliminada no se puede abrir para borrarle los datos.
-Si falla: el motivo sale en la página; una ficha que ya no existe da «Ese cliente no está disponible en este negocio.» y no avisa a nadie.
+datos personales: eso es F16. Una ficha ya eliminada no se puede abrir, así que no hay botón para
+borrarle los datos; la orden sí lo admite por el asistente o la API.
+Si falla: el motivo sale en la página; un identificador que no es de este negocio da «Ese cliente no
+está disponible en este negocio.» y no avisa a nadie. Sobre una ficha ya eliminada, absorbida o con
+los datos borrados (solo alcanzable por el asistente o la API, la pantalla ya no la enseña) NO falla:
+responde bien y vuelve a emitir el aviso de ficha eliminada (Servicios lo ignora: ya la había marcado).
 Implicados: pendiente
 Pendiente de enlazar: services — marca los bonos de una ficha eliminada para que no se pierdan de vista
 QA: L-10
 
 ### CUSTOMERS-F08 Importar fichas desde un CSV
-Estado: parcial — no avisa a los demás módulos (WhatsApp no une conversaciones a las fichas importadas), no detecta duplicados (repetir el fichero duplica las fichas) y guarda los teléfonos tal como vienen
+Estado: parcial — no emite el aviso de ficha creada: las conversaciones de WhatsApp que ya existían no se unen a la ficha importada hasta que esa persona vuelve a escribir (el repaso de cada 15 minutos solo mira una vez cada conversación); no detecta duplicados (repetir el fichero duplica las fichas) y guarda los teléfonos tal como vienen
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
@@ -180,7 +187,7 @@ Implicados: ninguno
 QA: ninguno
 
 ### CUSTOMERS-F09 Exportar la lista de fichas
-Estado: parcial — exporta solo la página que está en pantalla (como mucho 50 fichas) y cinco columnas (nombre, email, teléfono, etapa en código y gastado en céntimos), no el directorio
+Estado: parcial — exporta solo la página que está en pantalla (50 por defecto, hasta 100 si se cambia el tamaño de página) y cinco columnas (nombre, email, teléfono, etapa en código y gastado en céntimos), no el directorio; y el permiso de exportar solo esconde el botón: nada en el servidor lo exige, quien puede ver clientes puede leer el directorio entero por la API
 Vertical: comun
 Actor: administrador, responsable
 Pantalla: Clientes
@@ -189,6 +196,6 @@ Pasos:
 2. El navegador descarga `customers.csv`.
 Entra: la página visible de la tabla.
 Sale: un fichero con las cabeceras técnicas (`name`, `email`, `phone`, `lifecycle_stage`, `total_spent`).
-Si falla: sin confirmar (la descarga la hace el navegador).
+Si falla: no llama al servidor: escribe lo que ya está en pantalla; sin filas, sale un fichero solo con las cabeceras.
 Implicados: ninguno
 QA: ninguno

@@ -24,7 +24,8 @@ Entra: la búsqueda y, al elegir, la ficha completa.
 Sale: al TPV, el cliente y una COPIA de sus datos fiscales (nombre, NIF, dirección en una línea y
 país en código de dos letras). La venta la lleva hasta la factura; cambiar la ficha después no
 cambia una factura ya emitida.
-Si falla: «No se pudieron cargar los clientes» con **Reintentar** (conserva lo escrito); sin
+Si falla: el motivo del fallo (o «No se pudieron cargar los clientes» si no trae ninguno) con
+**Reintentar** (conserva lo escrito); sin
 resultados, «Sin resultados.» o «No hay clientes.»; sin permiso, «No tienes permiso para consultar
 clientes.». Si la ficha completa no se puede leer, el cliente NO se asigna y sale «No se pudieron
 cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.».
@@ -62,7 +63,9 @@ Pasos:
 1. Con un cliente asignado, el TPV abre o guarda el pedido (la cuenta de la mesa, el carrito).
 2. Clientes anota qué cliente tiene ese pedido; reasignar otro cliente al mismo pedido sustituye el
    anterior (un pedido, como mucho un cliente).
-Entra: el aviso del TPV de pedido enlazado, con el pedido; el cliente elegido.
+Entra: la pantalla del TPV avisa, en el propio navegador, de que hay un pedido, y el buscador de
+Clientes lo enlaza con el cliente elegido en ese momento, con el permiso de quien está en la caja
+(si no hay cliente elegido, no hace nada).
 Sale: el enlace cliente ↔ pedido, que solo se consulta con el asistente o la API (no hay pantalla).
 Si falla: la venta sigue; el TPV enseña «La venta sigue, pero el cliente no se pudo asociar al
 pedido: no aparecerá en su historial.» o, sin permiso, «La venta sigue, pero no tienes permiso para
@@ -85,7 +88,8 @@ Pasos:
 Entra: la venta completada, con su cliente y su total en céntimos (`sale.completed`).
 Sale: una línea en el historial de compras por venta, las cifras y la etapa de la ficha y la entrada de actividad.
 Si falla: una venta sin cliente no hace nada; la misma venta entregada dos veces cuenta una sola
-vez; una ficha eliminada no suma. El fallo no se ve en el TPV: el aviso se reintenta en el hub.
+vez; una ficha eliminada no suma. Un fallo no se ve en el TPV ni en la ficha: el hub reintenta el
+aviso (hasta 8 veces, cada vez más espaciadas) y después lo deja atascado a la espera de que alguien lo mire.
 Implicados: pendiente
 Pendiente de enlazar: sales — la venta cobrada avisa con su cliente y su total
 QA: B-03, R-09

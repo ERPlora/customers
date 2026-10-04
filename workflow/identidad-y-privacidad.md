@@ -31,7 +31,9 @@ quien pregunta: WhatsApp no une la conversación a ninguna.
 Si falla: un número vacío, o con menos de 7 cifras en cualquiera de los dos lados, no casa con nadie
 (nunca devuelve la lista entera). Un país sin prefijo conocido solo casa el número exacto. Las fichas
 eliminadas o absorbidas no salen; las no activas, sí. Una ficha extranjera guardada sin su prefijo
-nunca casa con el número que da WhatsApp.
+nunca casa con el número que da WhatsApp, y en cambio casa con quien escriba desde esas mismas
+cifras en el país del negocio, que es otra persona (una ficha francesa `612 345 678` en un salón
+español casa con `+34 612 345 678`).
 Implicados: pendiente
 Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F04 reconoce a la persona por su número al recibir un mensaje
 Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F21 la respuesta de citas busca la ficha antes de reservar
@@ -103,7 +105,8 @@ grupos y etiquetas (unidos), el historial de compras, los pedidos enlazados y to
 consentimientos (que conservan la dirección para la que se dieron). Nombre, etapa, origen y
 «Activo» son los suyos. En su actividad queda «Ficha duplicada fusionada en esta · Fusión». La
 absorbida queda retirada, con totales a cero, pero CONSERVA sus datos personales y los valores de
-campo que chocaban (F16). El aviso de fichas unidas (`customer.merged`) hace que Citas, Ventas,
+campo que chocaban: ninguna pantalla deja borrarlos, aunque la orden de borrar datos sí los acepta
+por el asistente o la API con su identificador, que queda en la actividad de la superviviente (F16). El aviso de fichas unidas (`customer.merged`) hace que Citas, Ventas,
 Reservas, WhatsApp, Servicios (bonos), Cocina y Reservas online re-apunten sus propias filas.
 Si falla: «No se pudieron fusionar las fichas.», o «Ese cliente no está disponible en este negocio.»
 si una de las dos ya no existe o es la misma; el panel queda abierto para elegir otra. Si la
@@ -121,7 +124,7 @@ QA: ninguno
 ### CUSTOMERS-F14 Registrar que un cliente da su consentimiento para un canal
 Estado: parcial — «Teléfono» y «Correo postal» solo se registran con el asistente o la API; en el historial, quién lo apuntó sale como identificador interno, no como nombre; y ningún módulo que escribe a clientes consulta todavía este consentimiento
 Vertical: comun
-Actor: administrador, responsable
+Actor: administrador, responsable, cajero
 Pantalla: Ficha de cliente
 Pasos:
 1. En la ficha, panel «Consentimiento de marketing»: una línea para Email, WhatsApp y SMS (y otra
@@ -150,7 +153,7 @@ QA: L-10, WA-05
 ### CUSTOMERS-F15 Retirar el consentimiento de un canal
 Estado: hecho
 Vertical: comun
-Actor: administrador, responsable
+Actor: administrador, responsable, cajero
 Pantalla: Ficha de cliente
 Pasos:
 1. En el panel «Consentimiento de marketing», en un canal «Dado», pulsa **Retirar**: un solo toque,
@@ -167,7 +170,7 @@ Pendiente de enlazar: whatsapp_inbox — la baja escrita por WhatsApp («BAJA»,
 QA: L-10, WA-05
 
 ### CUSTOMERS-F16 Borrar los datos personales de un cliente (RGPD)
-Estado: parcial — solo desde una ficha viva: una ficha ya eliminada (F07) o absorbida en una fusión (F13) conserva sus datos y no se puede abrir para borrarlos; y de los módulos que guardan copias, Citas, Reservas y Reservas online no escuchan el aviso
+Estado: parcial — la pantalla solo ofrece el borrado en una ficha viva: una ficha eliminada (F07) o absorbida (F13) conserva sus datos y no hay botón para borrarlos, aunque la orden sí los acepta (asistente o API, con su identificador); y de los módulos que guardan copias, Citas, Reservas y Reservas online no escuchan el aviso
 Vertical: comun
 Actor: administrador
 Pantalla: Ficha de cliente
@@ -183,13 +186,18 @@ Sale: en Clientes, la ficha se queda con su identificador, el nombre cambiado po
 `Deleted customer` y sin contacto,
 NIF, dirección, fechas, notas internas, canal ni consentimiento, y desaparece de todas las listas;
 notas, actividad, valores de campos y consentimientos se vacían y se ocultan; grupos y etiquetas se
-quitan; se conservan el historial de compras y los pedidos enlazados (prueba comercial y fiscal) y
-una única entrada de auditoría (quién, cuándo, motivo, qué se borró y qué se guardó). El aviso de
-ficha anonimizada (`customer.anonymized`) lo escuchan WhatsApp (vacía y cierra sus
-conversaciones), Servicios (marca sus bonos) y el propio hub, que vacía en su historial de avisos y
-automatizaciones lo que nombraba a esa ficha. Ventas y facturas guardan su copia fiscal a propósito.
+quitan. Se conservan en la ficha el origen, la etapa, las compras, el gastado, la última compra, la
+fecha de alta y quién la creó; y aparte, el historial de compras y los pedidos enlazados (prueba
+comercial y fiscal) y una única entrada de auditoría visible (quién, cuándo, el motivo tal como se
+escribió, qué se borró y qué se guardó). El aviso de ficha anonimizada (`customer.anonymized`) lo
+escuchan WhatsApp (vacía y cierra sus conversaciones), Servicios (marca sus bonos) y el propio hub,
+que vacía en su historial los avisos ya entregados o descartados y las automatizaciones terminadas
+que nombraban a esa ficha; los avisos pendientes o atascados y las automatizaciones en curso
+conservan los datos hasta que se procesan o los poda la retención. Ventas y facturas guardan su
+copia fiscal a propósito.
 Si falla: «No se pudieron borrar los datos personales» o «Ese cliente no está disponible en este
-negocio.». Repetirlo no cambia nada ni duplica la auditoría.
+negocio.» si el identificador no es de este negocio. Sobre una ficha ya eliminada, absorbida o
+borrada no falla. Repetirlo no cambia los datos ni duplica la auditoría, pero vuelve a emitir el aviso.
 Implicados: pendiente
 Pendiente de enlazar: whatsapp_inbox — WHATSAPP_INBOX-F11 vacía las conversaciones unidas a la ficha
 Pendiente de enlazar: reservations — RESERVATIONS-F22 debería vaciar nombre, teléfono, correo y notas de sus reservas (no escucha el aviso)

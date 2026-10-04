@@ -60,8 +60,8 @@ y al restaurante (el comensal que reserva o pide factura). Cada flujo lo dice en
 2. Comprobar el **país del negocio** en los ajustes del hub: es el que se supone para todo teléfono
    escrito sin prefijo (F10). Si nunca se guardó, se toma España.
 3. Si hace falta segmentar, crear los grupos y etiquetas (F27, F28) y los campos propios del negocio
-   (F29): marcar como obligatorios solo los imprescindibles, porque se exigirán al guardar cualquier
-   ficha.
+   (F29): marcar como obligatorios solo los imprescindibles, porque se exigirán cada vez que se
+   edite una ficha (no al darla de alta).
 4. Traer los clientes que ya se tienen con **Importar CSV** (F08) o darlos de alta (F01).
 5. Comprobar en el TPV que la ficha sale en el buscador y que la venta se cobra con ella (F17).
 
@@ -73,7 +73,8 @@ Menú **Clientes**, pestaña **Clientes**. La ve todo el que vea clientes. Arrib
 salen). Debajo, la tabla: «Nombre», «Email», «Teléfono», «Etapa», «Gastado»; buscador «Buscar nombre o
 email…» (busca también teléfono, NIF y empresa); **Filtros**; vista lista o tarjetas; elegir
 columnas; 50 por página. En la barra, **Añadir** (abre el panel lateral del alta, F01) e **Importar
-CSV** a quien puede crear, y **Exportar CSV** al administrador y al responsable. Por fila: tocarla o
+CSV** a quien puede crear, y **Exportar CSV** al administrador y al responsable (solo se esconde el
+botón; ver F09). Por fila: tocarla o
 **Ver** abre la ficha; **Eliminar** solo al administrador. Vacía: «Sin clientes.»; cargando:
 «Cargando…»; error: la tabla enseña el error con **Reintentar**. Los avisos de la página
 («Cliente {nombre} eliminado», «Datos personales borrados.», el resumen de una importación) salen
@@ -82,7 +83,8 @@ encima de la tabla.
 ### Ficha de cliente
 Se abre desde **Clientes** y ocupa la pestaña; su título es el nombre del cliente. Botones según el
 perfil: **← Volver**, **Editar**, **Eliminar**, **Fusionar con…** y **Borrar datos personales**.
-Bloques: los datos (o el formulario al editar); «Grupos» y «Etiquetas» con casillas y **Guardar
+Bloques: los datos (o el formulario al editar; notas internas, cumpleaños, aniversario y campos
+personalizados solo salen en el formulario); «Grupos» y «Etiquetas» con casillas y **Guardar
 grupos** / **Guardar etiquetas**; «Consentimiento de marketing» con una línea por canal y «Todo lo
 que se decidió»; «Añadir nota»; «Actividad»; y al final los bloques de otros módulos (hoy, el
 «Historial de visitas» de Citas). Los paneles de fusión y de borrado de datos se abren encima de los
@@ -122,10 +124,10 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 
 | ID | Flujo | Estado | Vertical | Fichero |
 |---|---|---|---|---|
-| CUSTOMERS-F01 | Dar de alta una ficha desde Clientes | hecho | comun | fichas |
+| CUSTOMERS-F01 | Dar de alta una ficha desde Clientes | parcial | comun | fichas |
 | CUSTOMERS-F02 | Buscar y filtrar fichas | parcial | comun | fichas |
 | CUSTOMERS-F03 | Abrir la ficha de un cliente | parcial | comun | fichas |
-| CUSTOMERS-F04 | Editar la ficha y sus campos personalizados | hecho | comun | fichas |
+| CUSTOMERS-F04 | Editar la ficha y sus campos personalizados | parcial | comun | fichas |
 | CUSTOMERS-F05 | Añadir una nota a la ficha | hecho | comun | fichas |
 | CUSTOMERS-F06 | Poner grupos y etiquetas a una ficha | parcial | comun | fichas |
 | CUSTOMERS-F07 | Eliminar una ficha | hecho | comun | fichas |
@@ -185,12 +187,12 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Comprobar que el número es posible para su país (longitud, tipo) | no hecho: al comparar solo se exigen 7 cifras | F10, F11 |
 | Espacios, guiones, puntos y paréntesis | hecho al comparar por número; no al buscar en la lista; el alta rápida del TPV solo quita espacios | F10, F02, F18 |
 | Prefijo con `+` o con `00` | hecho al comparar | F10 |
-| Cero nacional delante (`07700…` en Reino Unido) | hecho al comparar | F10 |
+| Cero nacional delante (`07700…` en Reino Unido) | hecho al comparar cuando el número es del país del negocio; uno extranjero guardado así cae en la fila «sin su prefijo» | F10 |
 | Cero nacional entre paréntesis en un número internacional (`+44 (0)7700…`) | no hecho: el cero se queda y no casa | F10 |
 | Países que conservan el cero tras el prefijo (Italia y otros 8) | hecho, con una lista propia de 9 países | F10 |
 | País que se supone para un número sin prefijo | parcial: siempre el del negocio; el «País» de la ficha no se usa para el teléfono | F10, F11 |
 | Número extranjero guardado con su prefijo | hecho: casa solo con ese país | F10 |
-| Número extranjero guardado sin su prefijo | no hecho: se toma como del país del negocio y no casa nunca con el que da WhatsApp | F10, F11 |
+| Número extranjero guardado sin su prefijo | no hecho: se toma como del país del negocio, no casa nunca con el que da WhatsApp y sí con quien escriba desde esas cifras en el país del negocio, que es otra persona | F10, F11 |
 | Tabla de prefijos por país | parcial: escrita a mano en Clientes y copiada en la Bandeja de WhatsApp; un país nuevo hay que añadirlo en los dos | F10 |
 | Extensión o dos números en el mismo campo | no hecho: las cifras se juntan y no casa | F10 |
 | Buscar en Clientes un teléfono escrito de otra forma | no hecho: compara texto | F02 |
@@ -205,10 +207,10 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Inventario declarado: cada módulo dice qué guarda de una persona | no hecho: no hay contrato; hoy solo lo dicen los apartados «Datos» de cada WORKFLOW | F16 |
 | Buscar todo lo que el hub guarda de una persona | no hecho | — |
 | Borrar desde la ficha, con motivo y auditoría de quién y cuándo | hecho | F16 |
-| Borrar los datos de una ficha ya eliminada | no hecho: no se puede abrir | F07, F16 |
-| Borrar los datos que se quedaron en la ficha absorbida al unir duplicados | no hecho: borrar la superviviente no los toca | F13, F16 |
+| Borrar los datos de una ficha ya eliminada | parcial: la orden lo admite (asistente o API), ninguna pantalla lo ofrece | F07, F16 |
+| Borrar los datos que se quedaron en la ficha absorbida al unir duplicados | parcial: la orden lo admite con su identificador (está en la actividad de la superviviente), ninguna pantalla lo ofrece; borrar la superviviente no los toca | F13, F16 |
 | Notas, actividad, campos, grupos, etiquetas y consentimientos de la ficha | hecho | F16 |
-| Historial de avisos y automatizaciones del hub que nombra la ficha | hecho (hub#2467); lo que solo lleva su teléfono, no (hub#2477) | F16 |
+| Historial de avisos y automatizaciones del hub que nombra la ficha | parcial: se vacían los avisos ya entregados o descartados y las automatizaciones terminadas (hub#2467); los pendientes, atascados o en curso no (hub#2484); lo que solo lleva su teléfono, tampoco (hub#2477) | F16 |
 | Conversaciones de WhatsApp unidas a la ficha | hecho (WHATSAPP_INBOX-F11) | F16 |
 | Nombre, teléfono, correo y notas copiados en citas y series | no hecho (Citas no escucha) | F16 |
 | Nombre, teléfono, correo y notas copiados en reservas y lista de espera | no hecho (RESERVATIONS-F22) | F16 |
@@ -224,6 +226,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Elemento | Estado | Flujo |
 |---|---|---|
 | Alta solo con el nombre, teléfono y NIF a la vista | hecho | F01 |
+| Email comprobado al guardar | no hecho: un email mal formado se guarda en el alta, la edición y el TPV; solo la importación lo rechaza | F01, F04 |
 | Alta desde el TPV en dos toques | hecho | F18 |
 | Alta desde la agenda | no hecho | F25 |
 | Alta automática desde WhatsApp | hecho en peluquería; el restaurante no crea fichas | F26 |
@@ -238,9 +241,10 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Lista de compras con importe en la ficha | parcial: solo cifras y entradas sin importe | F23 |
 | Etapas por tiempo sin comprar («En riesgo», «Inactivo», «Perdido») | no hecho: solo cambian con una compra o a mano | F20 |
 | Grupos y etiquetas | hecho | F06, F27, F28 |
-| Campos propios validados por tipo y obligatorios | hecho | F04, F29 |
+| Campos propios validados por tipo y obligatorios | parcial: solo al editar; ningún alta los pide | F04, F29 |
 | Importar | parcial | F08 |
 | Exportar todo el directorio | parcial: solo la página | F09 |
+| Exportar protegido por permiso | no hecho: el permiso solo esconde el botón; quien puede ver clientes lee el directorio por la API | F09 |
 | Notas y actividad | hecho | F05 |
 | Historial de visitas en la ficha | hecho (lo aporta Citas) | F24 |
 | Descuento por grupo | fuera: retirado (customers#17), es de Precios | — |
@@ -252,18 +256,19 @@ Inventario sacado de recorrer las ocho migraciones y lo que viaja en los avisos.
 
 | Dato personal | Dónde vive | Dueño | Cómo se borra hoy |
 |---|---|---|---|
-| Nombre, email, teléfono, NIF, empresa, dirección, ciudad, código postal, país, foto, notas internas, cumpleaños, aniversario, canal preferido, origen, etapa, marca de consentimiento | la ficha | Clientes | F16: marcador y vacíos; la fila y su identificador se quedan. F07 no borra nada |
-| Compras, gastado, última compra | la ficha | Clientes (derivado del historial de compras) | se conservan (estadística) |
+| Nombre, email, teléfono, NIF, empresa, dirección, ciudad, código postal, país, foto, notas internas, cumpleaños, aniversario, canal preferido, marca y fecha de consentimiento | la ficha | Clientes | F16: marcador y vacíos; la fila y su identificador se quedan. F07 no borra nada |
+| Origen, etapa, compras, gastado, última compra, fecha de alta y de baja, quién la creó y cambió | la ficha | Clientes (las cifras, derivadas del historial de compras) | F16 los conserva (no identifican por sí solos) |
 | Valores de campos propios (pueden ser datos de salud: alergias, tinte, embarazo) | valores de campo | Clientes | F16: vaciados y ocultos |
-| Notas y su autor (nombre del empleado si se dio) | notas | Clientes | F16: vaciadas y ocultas |
-| Actividad: textos de notas, frase del consentimiento, motivo de una retirada o de una anulación de venta, importes | actividad | Clientes | F16: descripción y datos vaciados y ocultos; el título se queda (una clave, o el texto que escribió otro módulo) |
+| Notas, su autor (identificador del empleado) y el nombre del autor si se dio | notas | Clientes | F16: texto y nombre vaciados y ocultos; el identificador del autor se queda |
+| Actividad: textos de notas, frase del consentimiento, motivo de una retirada o de una anulación de venta, importes, quién la hizo y a qué venta, nota o ficha apunta | actividad | Clientes | F16: descripción y datos vaciados y ocultos; el título, quién la hizo y a qué apunta se quedan |
+| Entrada de auditoría del borrado, con el motivo tal como se escribió | actividad | Clientes | se queda visible a propósito |
 | Pertenencia a grupos y etiquetas | grupos y etiquetas de la ficha | Clientes | F16: se quitan |
-| Consentimientos: canal, dirección para la que se dio, frase, versión, origen, prueba, motivo, quién lo apuntó | registro de consentimientos | Clientes | F16: dirección, prueba y motivo vaciados; hecho oculto |
+| Consentimientos: canal, dirección para la que se dio, frase, versión, origen, prueba, motivo, quién lo apuntó y cuándo lo dijo | registro de consentimientos | Clientes | F16: dirección, prueba y motivo vaciados; el resto se queda; hecho oculto |
 | Ventas de la persona (identificador de venta, importe, moneda, estado) | historial de compras | Clientes | se conserva |
 | Pedidos de la persona (identificador del pedido) | enlace cliente ↔ pedido | Clientes | se conserva |
 | Quién creó y cambió cada fila (identificador de empleado) | todas las tablas | Clientes | se conserva (es del empleado) |
-| Ficha absorbida en una fusión, con todos sus datos y los valores de campo que chocaban | la ficha retirada | Clientes | no se borra nunca (F13) |
-| Ficha creada o actualizada con todos sus datos; teléfono o dirección y frase en los avisos de consentimiento; motivo en el de borrado | avisos que salen a otros módulos (historial del hub) | hub | vaciados al borrar los datos (hub#2467); el hub los poda a los 90 días |
+| Ficha absorbida en una fusión, con todos sus datos y los valores de campo que chocaban | la ficha retirada | Clientes | no se borra desde la pantalla; la orden de borrar datos sí la acepta por el asistente o la API con su identificador, que está en la actividad de la superviviente (F13, F16) |
+| Ficha creada o actualizada con todos sus datos (el aviso de ficha actualizada lleva además los valores de los campos propios, p. ej. alergias); dirección y frase en los avisos de consentimiento; motivo en el de borrado | avisos que salen a otros módulos (historial del hub) | hub | al borrar los datos se vacían solo los ya entregados o descartados (hub#2467); los pendientes o atascados conservan los datos hasta que se procesan o los poda la retención (90 días) |
 | Nombre, teléfono, correo y notas en citas y series | Citas | Citas | no se borran (no escucha) |
 | Nombre, teléfono, correo, notas en reservas y lista de espera | Reservas | Reservas | no se borran (RESERVATIONS-F22) |
 | Nombre, correo, teléfono en reservas online | Reservas online | Reservas online | no se borran |
@@ -283,20 +288,23 @@ Solo lo que el código hace cumplir.
   negocio no existe («Ese cliente no está disponible en este negocio.»).
 - **Permisos**, los aplica el servidor aunque la pantalla enseñe el botón: ver, dar de alta, añadir
   notas y asignar el cliente a la venta, cualquier perfil; editar la ficha, sus grupos y su
-  consentimiento, administrador, responsable y cajero; unir fichas, exportar y gestionar grupos,
-  etiquetas y campos, administrador y responsable; eliminar fichas, grupos y etiquetas y borrar datos
-  personales, solo administrador.
+  consentimiento, administrador, responsable y cajero; unir fichas y gestionar grupos, etiquetas y
+  campos, administrador y responsable; eliminar fichas, grupos y etiquetas y borrar datos
+  personales, solo administrador. Lo que tiene el responsable, otro perfil lo puede hacer con la
+  aprobación (PIN) de un responsable; lo que es solo del administrador, no. (Exportar no está en
+  esta regla: solo esconde el botón, F09.)
 - **Para crear basta el nombre.** Ninguna otra cosa se exige al dar de alta.
 - **El consentimiento no se pone editando, creando ni importando.** Solo con su acción propia, que
-  exige la frase mostrada; cada decisión es un hecho nuevo que no se edita ni se borra (solo se
-  oculta al borrar los datos); quién lo apuntó sale de la sesión; el estado «Marcado antes de que
-  hubiera registro» no lo puede escribir nadie.
+  exige la frase mostrada; cada decisión es un hecho nuevo que ninguna orden de consentimiento
+  edita ni borra (al unir fichas pasa a la superviviente; al borrar los datos se vacían su
+  dirección, prueba y motivo y se oculta); quién lo apuntó sale de la sesión; el estado «Marcado
+  antes de que hubiera registro» no lo puede escribir nadie.
 - **Una venta cuenta una sola vez y una anulación resta una sola vez**; una venta sin cliente no toca ninguna ficha.
 - **Un pedido tiene como mucho un cliente.**
 - **Unir fichas es todo o nada**: las dos del mismo negocio, vivas y distintas, o no cambia nada; no se puede deshacer.
-- **Borrar datos personales no se puede deshacer**, repetirlo no cambia nada, y conserva el historial de compras y los pedidos.
-- **Eliminar, borrar datos o unir sobre una ficha que no existe falla** y no avisa a nadie.
-- **La ficha completa se guarda entera o nada**: un campo propio obligatorio vacío o de tipo incorrecto la rechaza.
+- **Borrar datos personales no se puede deshacer**; repetirlo no cambia los datos (pero vuelve a avisar), y conserva el historial de compras y los pedidos.
+- **Eliminar o borrar datos con un identificador que no es de este negocio falla** y no avisa a nadie; sobre una ficha ya eliminada o absorbida, las dos órdenes funcionan y vuelven a avisar. **Unir exige dos fichas vivas.**
+- **La edición de la ficha se guarda entera o nada**: un campo propio obligatorio vacío o de tipo incorrecto la rechaza (el alta no los mira).
 - **Un nombre por negocio** entre los grupos, las etiquetas y los campos vivos y activos, sin distinguir mayúsculas ni espacios.
 - **El dinero va en céntimos**; el filtro «Gastado» se escribe en euros.
 - **Buscar por teléfono nunca devuelve a todos**: un número vacío o de menos de 7 cifras no casa con nadie.
@@ -325,8 +333,9 @@ Se resuelven con `market-decision`; no las decide el worker.
    teléfono. ¿Vuelve como aviso que no bloquea?
 3. **Inventario único de datos personales (F16).** ¿Contrato del hub —cada módulo declara qué guarda
    de una persona y responde a un único aviso— o cada módulo escucha el aviso por su cuenta, como hoy?
-4. **Eliminar frente a borrar datos (F07, F16).** ¿Eliminar debe ofrecer borrar los datos, o una
-   ficha eliminada debe poder borrarse después? ¿Y la ficha absorbida al unir duplicados?
+4. **Eliminar frente a borrar datos (F07, F16).** La orden ya borra los datos de una ficha eliminada
+   o absorbida; lo que falta es la pantalla: ¿eliminar debe ofrecer también borrar los datos, y
+   dónde se ofrece el borrado de una ficha eliminada o absorbida?
 5. **Devoluciones (F22).** ¿«Gastado» neto de devoluciones, como hacen Shopify y Square?
 6. **Perfiles.** El Cajero puede editar fichas y registrar consentimientos y el Empleado no. ¿Es lo buscado?
 7. **Etapas por tiempo.** «En riesgo», «Inactivo» y «Perdido» no los pone nadie: ¿tarea programada o fuera de la lista?
@@ -346,13 +355,14 @@ del hub (05/10/2026). Manda el código; lo de abajo está desfasado o lo contrad
 - `docs/limits.md` («The timeline records notes and activities, not sales»): cada compra y anulación deja entrada en la Actividad (F20, F21).
 - `docs/limits.md` (roles): el responsable «todo menos los tres borrados y los ajustes» — tampoco puede borrar datos personales.
 - `docs/screens.md` (consentimiento), y la frase de la pantalla «junto a tu nombre y la hora»: se guarda el identificador del empleado y el historial lo enseña tal cual, no su nombre (F14).
-- `architecture/modules/customers.md`: `customers.orders.link` con permiso `change_customer` — es `customers.link_order` desde customers#59; filtros de lista «eq» que en el manifest son «contiene»; «`sales` no emite hoy `sale.refunded`» — sí lo emite (Ventas v2.16.154) y Clientes no lo escucha (F22).
+- `architecture/modules/customers.md`: `customers.orders.link` con permiso `change_customer` — el permiso es `customers.link_order` desde customers#59; filtros de lista «eq» que en el manifest son «contiene»; «`sales` no emite hoy `sale.refunded`» — sí lo emite (Ventas v2.16.154) y Clientes no lo escucha (F22).
 - `hand-book/modulos/customers.md`: la etapa inicial se llama «Contacto» en pantalla, no «Potencial»; «En Clientes, use el alta rápida» (no existe en la lista); confirmar con **Registrar consentimiento** (el que confirma es **Ha dicho que sí**); no menciona unir fichas, importar ni exportar.
 - `module.json`: declara el permiso `customers.manage_settings`, pero no hay bloque de ajustes ni pantalla que lo use.
 - `queries/list.sql` (comentario): «más recientes primero» — la lista sale por nombre.
 - `locales/es.json` (`ui.noTagsDefined`): «No hay etiquetas definidos.» (concordancia).
 - `locales/es.json` (`errors.customers.field_*`): la frase española lleva dentro el detalle del servidor, que está en inglés («Falta un campo obligatorio: `Alergias` is required.», F04).
 - `locales/es.json` (`ui.errLinkOrder`): «no aparecerá en su historial» — lo que se pierde es el enlace al pedido, que no sale en ninguna pantalla; la compra sí se suma al cobrar (F19, F20).
+- `locales/es.json` (`ui.deleteGroupConfirm`, `ui.deleteTagConfirm`): «Los clientes asignados pierden el grupo / la etiqueta» — la pertenencia se queda guardada, y es lo que impide después guardar los grupos o etiquetas de esas fichas (F06, F27, F28).
 - `locales/es.json` (`ui.mergeConfirm`): nombra citas, ventas, reservas, conversaciones y bonos; también pasan comandas y reservas online (F13).
 - QA `WA-06` («hoy solo borrado lógico → FAIL citando whatsapp_inbox#262»): borrar datos personales existe y WhatsApp vacía las conversaciones unidas a la ficha (F16).
 - QA `L-10` («datos de salud solo con consentimiento explícito o no se guardan»): un campo propio puede guardar alergias o embarazo sin ningún consentimiento (F29).
