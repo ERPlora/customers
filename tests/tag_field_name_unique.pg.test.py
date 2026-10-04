@@ -396,6 +396,8 @@ def seed_duplicates(db: ScratchDb, ent: Entity) -> None:
     seed(db, ent, "third", HUB_A, f" {n.upper()} ", "2026-09-25T20:10:00+00:00")
     # The owner once named a row with the very suffix the backfill would pick.
     seed(db, ent, "owner-2", HUB_A, f"{n} (2)", "2026-09-25T19:00:00+00:00")
+    # …and the one a second numbering round would pick: only the id can still tell them apart.
+    seed(db, ent, "owner-2-2", HUB_A, f"{n} (2) (2)", "2026-09-25T19:30:00+00:00")
     # Rows the backfill must NOT touch.
     seed(db, ent, "gone", HUB_A, n, "2026-09-25T18:00:00+00:00", deleted=1, active=0)
     seed(db, ent, "off", HUB_A, n, "2026-09-25T18:30:00+00:00", active=0)
@@ -477,12 +479,17 @@ def test_upgrade_with_duplicates(ent: Entity) -> None:
             after["a-newer"][1],
             "Mayorista (2)",
         )
-        for rid in ("gone", "gone-on", "off", "unique", "owner-2"):
+        for rid in ("gone", "gone-on", "off", "unique", "owner-2", "owner-2-2"):
             check(f"{rid} is left exactly as it was", after[rid], before[rid])
         # Hub B is deduplicated on its own: its oldest keeps the name although hub A's are older,
         # and its second is numbered from (2) — hub A's rows are never counted.
         check(f"hub B's oldest «{n}» keeps its name", after["b"], before["b"])
         check("hub B's second one is numbered within hub B", after["b2"][1], f"{n} (2)")
+        check(
+            "the one whose (2) suffix the owner had already taken gets its id instead",
+            after["second"][1],
+            f"{n} (2) (second)",
+        )
         for rid in ("second", "third"):
             check(
                 f"{rid} stays live and active (renamed, not deleted)",
