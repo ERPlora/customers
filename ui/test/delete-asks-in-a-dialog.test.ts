@@ -231,6 +231,24 @@ describe('customers#95 · the customer sheet asks in the same dialog', () => {
     expect(el.detail, 'the deleted sheet closes').toBeNull();
   });
 
+  it('a refused delete retried from the sheet leaves no red next to the success', async () => {
+    const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
+    el.detail = CUSTOMER;
+    await settle(el);
+    const ask = () => (el.shadowRoot.querySelector('[data-testid="customers-list-delete"]') as HTMLElement).click();
+    ask();
+    await settle(el);
+    refusal = Object.assign(new Error('refused'), { code: 'customers.in_use' });
+    await press(el, 'customers-list', 'destructive');
+    expect(el.shadowRoot.querySelector('[data-testid="customers-list-form-error"]'), 'the refusal is on the sheet').not.toBeNull();
+    refusal = null;
+    ask(); // the sheet's «Delete» does not clear the refusal: the confirmed delete has to
+    await settle(el);
+    await press(el, 'customers-list', 'destructive');
+    expect(commands.filter((c) => c.name === 'customers.delete')).toHaveLength(2);
+    expect(el.shadowRoot.querySelector('[data-testid="customers-list-form-error"]'), 'the red of the first try is gone').toBeNull();
+  });
+
   it('closing the sheet with the question open closes the dialog too', async () => {
     const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
     el.detail = CUSTOMER;
