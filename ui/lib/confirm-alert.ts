@@ -49,6 +49,10 @@ export function presentConfirmAlert(options: ConfirmAlertOptions): ConfirmAlert 
   for (const [name, value] of Object.entries(options.htmlAttributes ?? {})) alert.setAttribute(name, value);
 
   let closed = false;
+  // Ionic is already taking it out (a button was pressed, Esc, the backdrop): `ionAlertDidDismiss`
+  // will follow, and a second dismiss() would only be answered `false`.
+  let leaving = false;
+  alert.addEventListener('ionAlertWillDismiss', () => (leaving = true), { once: true });
   const close = (): void => {
     if (closed) return;
     closed = true;
@@ -71,7 +75,7 @@ export function presentConfirmAlert(options: ConfirmAlertOptions): ConfirmAlert 
 
   return {
     dismiss(): void {
-      if (closed) return;
+      if (closed || leaving) return;
       if (typeof alert.dismiss === 'function') {
         // `false` = Ionic had not finished presenting it: take it out by hand, or it opens later.
         void alert

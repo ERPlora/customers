@@ -186,6 +186,17 @@ describe.each(SCREENS)('customers#95 · $surface: the trash can asks in a dialog
     expect(el.shadowRoot.querySelector(`[data-testid="${s.pageError}"]`), 'the red of the first try is gone').toBeNull();
   });
 
+  it('«Delete» answers the question by itself: it does not wait for Ionic to report the dialog gone', async () => {
+    const el = await mount(s.tag, s.path);
+    trash(el);
+    await settle(el);
+    await dialog(s.surface)?.buttons.find((b) => b.role === 'destructive')?.handler?.();
+    await settle(el);
+    expect(el.pendingDelete, 'the question was answered').toBeNull();
+    expect(dialog(s.surface), 'and its dialog is closed').toBeNull();
+    expect(commands.filter((c) => c.name === s.command)).toEqual([{ name: s.command, payload: s.payload }]);
+  });
+
   it('leaving the screen with the question open takes the dialog with it', async () => {
     const el = await mount(s.tag, s.path);
     trash(el);
@@ -198,6 +209,15 @@ describe.each(SCREENS)('customers#95 · $surface: the trash can asks in a dialog
 });
 
 describe('customers#95 · the customer sheet asks in the same dialog', () => {
+  it('without the delete permission no question is asked, whoever set it', async () => {
+    const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
+    (globalThis as Record<string, any>).erplora.hasPermission = (p: string) => p !== 'customers.delete_customer';
+    el.detail = CUSTOMER;
+    el.pendingDelete = CUSTOMER;
+    await settle(el);
+    expect(dialog('customers-list')).toBeNull();
+  });
+
   it('«Delete» on the sheet opens the dialog; confirming deletes it and closes the sheet', async () => {
     const el = await mount('erp-customers-list', '../components/erp-customers-list/erp-customers-list');
     el.detail = CUSTOMER;

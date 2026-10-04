@@ -139,6 +139,33 @@ describe('customers#95 · presentConfirmAlert', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it('dismiss() while Ionic is already closing it (a button was pressed) lets Ionic finish', async () => {
+    // Pressing «Delete» runs its handler and Ionic starts leaving; the component then clears its
+    // question and asks to close it too. Ionic answers that second dismiss() with `false` — tearing
+    // the element out then would cut its leave animation and its focus restore.
+    const dismiss = vi.fn(async () => false);
+    const spy = vi.spyOn(document, 'createElement');
+    spy.mockImplementationOnce((tag: string) => {
+      const el = Document.prototype.createElement.call(document, tag) as AlertEl & { dismiss: () => Promise<boolean> };
+      el.dismiss = dismiss;
+      return el;
+    });
+    const { handle, onDismiss } = open();
+    spy.mockRestore();
+    const [alert] = alerts();
+    alert.dispatchEvent(new CustomEvent('ionAlertWillDismiss', { detail: { role: 'destructive' } }));
+    handle.dismiss();
+    await tick();
+    await tick();
+    expect(dismiss, 'Ionic is already on it').not.toHaveBeenCalled();
+    expect(alerts(), 'still on screen while Ionic animates it out').toHaveLength(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+    dismissAs(alert, 'destructive');
+    await tick();
+    expect(alerts()).toEqual([]);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   it('a present() that fails leaves nothing open and reports the dismissal', async () => {
     const spy = vi.spyOn(document, 'createElement');
     spy.mockImplementationOnce((tag: string) => {

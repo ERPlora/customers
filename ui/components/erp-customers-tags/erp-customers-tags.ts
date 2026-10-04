@@ -260,7 +260,8 @@ export class ErpCustomersTags extends LitElement {
 
   private async confirmDelete() {
     if (!this.pendingDelete || !can('customers.delete_customertag')) return;
-    // The question is answered: the dialog closes and a refusal is told on the page (pm#478).
+    // The question is answered: it closes here, not only when Ionic reports the dialog gone (the
+    // helper leaves Ionic's own leave animation alone). A refusal is told on the page (pm#478).
     const target = this.pendingDelete;
     this.pendingDelete = null;
     this.saving = true;

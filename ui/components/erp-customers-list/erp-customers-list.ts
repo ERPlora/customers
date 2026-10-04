@@ -960,7 +960,8 @@ export class ErpCustomersList extends LitElement {
   // — Soft delete → customers.delete, asked first in a dialog —
   private async confirmDelete() {
     if (!can('customers.delete_customer') || !this.pendingDelete) return;
-    // The question is answered: the dialog closes and a refusal is told on the page (pm#478).
+    // The question is answered: it closes here, not only when Ionic reports the dialog gone (the
+    // helper leaves Ionic's own leave animation alone). A refusal is told on the page (pm#478).
     const target = this.pendingDelete;
     this.pendingDelete = null;
     this.saving = true;
