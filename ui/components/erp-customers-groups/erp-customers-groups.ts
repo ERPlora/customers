@@ -11,6 +11,8 @@ import type { ListController, ListClient, ListParams, ListPage } from '@erplora/
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
+import { presentConfirmAlert } from '../../lib/confirm-alert';
+import type { ConfirmAlert } from '../../lib/confirm-alert';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -110,7 +112,10 @@ export class ErpCustomersGroups extends LitElement {
    *  gets the fallback line in the form body. */
   @state() editTitleInHeader = false;
 
+  /** The group whose deletion is being asked; its question is the dialog below (customers#95). */
   @state() pendingDelete: Group | null = null;
+
+  private deleteDialog: ConfirmAlert | null = null;
 
   @state() fName = '';
 
@@ -161,6 +166,9 @@ export class ErpCustomersGroups extends LitElement {
 
   disconnectedCallback(): void {
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
+    // The dialog lives on document.body: it would outlive the screen it asks about.
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
 
@@ -270,12 +278,15 @@ export class ErpCustomersGroups extends LitElement {
 
   private async confirmDelete() {
     if (!this.pendingDelete || !can('customers.delete_customergroup')) return;
+    // The question is answered: it closes here, not only when Ionic reports the dialog gone (the
+    // helper leaves Ionic's own leave animation alone). A refusal is told on the page (pm#478).
+    const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.pageError = '';
     try {
-      await erplora().command('customers.groups.delete', { group_id: this.pendingDelete.id });
-      this.formMsg = erplora().t(CATALOG, 'ui.groupDeleted', { name: this.pendingDelete.name });
-      this.pendingDelete = null;
+      await erplora().command('customers.groups.delete', { group_id: target.id });
+      this.formMsg = erplora().t(CATALOG, 'ui.groupDeleted', { name: target.name });
       await this.ctrl.load();
     } catch (e) {
       this.pageError = domainErrorText(e, 'ui.errDeleteGroup');
@@ -304,15 +315,33 @@ export class ErpCustomersGroups extends LitElement {
     </form>`;
   }
 
-  private renderDeleteConfirm() {
-    if (!this.pendingDelete) return nothing;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared → closed. */
+  private openDeleteDialog(): void {
+    this.closeDeleteDialog();
+    const group = this.pendingDelete;
+    if (!group) return;
     const t = (k: string, p?: Record<string, unknown>): string => erplora().t(CATALOG, k, p);
-    return html`<section class="panel">
-      <h3>${t('ui.deleteGroupTitle')}</h3>
-      <p>${t('ui.deleteGroupConfirm', { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" data-testid="customers-groups-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t('ui.deleting') : t('ui.delete')}</ion-button>
-      <ion-button size="small" fill="outline" data-testid="customers-groups-delete-cancel" @click=${() => (this.pendingDelete = null)}>${t('ui.cancel')}</ion-button>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { 'data-testid': 'customers-groups-delete-confirm' },
+      header: t('ui.deleteGroupTitle'),
+      message: t('ui.deleteGroupConfirm', { name: group.name }),
+      buttons: [
+        { text: t('ui.cancel'), role: 'cancel', htmlAttributes: { 'data-testid': 'customers-groups-delete-cancel' } },
+        { text: t('ui.delete'), role: 'destructive', htmlAttributes: { 'data-testid': 'customers-groups-delete-submit' }, handler: () => void this.confirmDelete() },
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === group) this.pendingDelete = null;
+      },
+    });
+    this.deleteDialog = dialog;
+  }
+
+  private closeDeleteDialog(): void {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
 
   /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
@@ -320,6 +349,7 @@ export class ErpCustomersGroups extends LitElement {
    *  before, the banner still measures 0 px and ends up under the tab bar. */
   updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (changed.has('pendingDelete')) this.openDeleteDialog();
     if (changed.has('formError') && this.formError) void this.revealFormError();
     if (changed.has('nameError') && this.nameError) {
       this.renderRoot.querySelector('[data-testid="customers-groups-name"]')?.scrollIntoView?.({ block: 'center' });
@@ -340,7 +370,6 @@ export class ErpCustomersGroups extends LitElement {
     return html`<div class="page">
       ${this.pageError ? html`<ok-inline-feedback data-testid="customers-groups-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : nothing}
       ${this.formMsg ? html`<p class="ok" data-testid="customers-groups-form-msg">${this.formMsg}</p>` : nothing}
-      ${this.renderDeleteConfirm()}
       ${this.ctrl?.error && !dataTableShowsLoadError() ? html`<ok-inline-feedback data-testid="customers-groups-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : nothing}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
