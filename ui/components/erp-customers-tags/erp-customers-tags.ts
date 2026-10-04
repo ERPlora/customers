@@ -1,6 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import type { PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
 import { define } from '@erplora/outfitkit/define';
 import '@erplora/outfitkit/ok-inline-feedback';
 import '@erplora/outfitkit/ok-data-table';
@@ -12,6 +13,9 @@ import enLocale from '../../../locales/en.json';
 import { domainErrorText as declaredErrorText } from '../../lib/domain-error-text';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
+
+/** The refusal `on_unique` raises when another live tag of the hub already has the name (customers#107). */
+const NAME_TAKEN = 'customers.tag_name_taken';
 
 interface ErploraClientLike extends ListClient {
   query<T = unknown>(name: string, params?: Record<string, unknown>): Promise<T>;
@@ -81,6 +85,10 @@ export class ErpCustomersTags extends LitElement {
   @state() saving = false;
 
   @state() formError = '';
+
+  /** customers#107: the name is taken by another live tag of this hub. Said ON the «Name» field
+   *  (the one that has to change), not in the `formError` banner at the foot of the form. */
+  @state() nameError = '';
 
   /** What went wrong in a ROW action (delete, confirmed on the page): no panel is open then, so it
    *  is painted on the page. `formError` is only what the panel's form was refused (pm#478). */
@@ -181,6 +189,7 @@ export class ErpCustomersTags extends LitElement {
     this.editing = null;
     this.fName = ''; this.fColor = 'primary'; this.fActive = true;
     this.formError = '';
+    this.nameError = '';
   }
 
   private async startEdit(tag: Tag) {
@@ -188,6 +197,7 @@ export class ErpCustomersTags extends LitElement {
     this.editing = tag;
     this.fName = tag.name; this.fColor = tag.color || 'primary'; this.fActive = Boolean(tag.is_active);
     this.formError = '';
+    this.nameError = '';
     this.formMsg = '';
     const title = erplora().t(CATALOG, 'ui.editTagTitle', { name: tag.name });
     const table = this.dataTable();
@@ -213,6 +223,7 @@ export class ErpCustomersTags extends LitElement {
     if (!can(editing ? 'customers.change_customertag' : 'customers.add_customertag')) return;
     this.saving = true;
     this.formError = '';
+    this.nameError = '';
     this.pageError = ''; // a save is the next thing the person did: an older row refusal is stale
     try {
       if (editing) {
@@ -231,7 +242,9 @@ export class ErpCustomersTags extends LitElement {
       this.dataTable()?.close();
       await this.ctrl.load();
     } catch (e) {
-      this.formError = e instanceof Error ? e.message : erplora().t(CATALOG, 'ui.errSaveTag');
+      const text = domainErrorText(e, 'ui.errSaveTag');
+      if ((e as { code?: unknown } | null)?.code === NAME_TAKEN) this.nameError = text;
+      else this.formError = text;
     } finally {
       this.saving = false;
     }
@@ -260,7 +273,7 @@ export class ErpCustomersTags extends LitElement {
     const editing = this.editing;
     return html`<form slot="create" class="form" data-testid="customers-tags-form" @submit=${(e: Event) => this.save(e)}>
       ${editing && !this.editTitleInHeader ? html`<h3 data-testid="customers-tags-editing">${t('ui.editTagTitle', { name: editing.name })}</h3>` : nothing}
-      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => (this.fName = e.target.value)}></ion-input>
+      <ion-input mode="md" fill="outline" data-testid="customers-tags-name" class=${classMap({ 'ion-invalid': !!this.nameError, 'ion-touched': !!this.nameError })} error-text=${this.nameError || nothing} label=${t('ui.colName')} label-placement="floating" .value=${this.fName} @ionInput=${(e: any) => { this.fName = e.target.value; this.nameError = ''; }}></ion-input>
       <ion-input mode="md" fill="outline" data-testid="customers-tags-color" label=${t('ui.fieldColor')} label-placement="floating" .value=${this.fColor} @ionInput=${(e: any) => (this.fColor = e.target.value)}></ion-input>
       ${editing ? html`<ion-checkbox data-testid="customers-tags-active" .checked=${this.fActive} @ionChange=${(e: any) => (this.fActive = e.target.checked)}>${t('ui.fieldActiveTag')}</ion-checkbox>` : nothing}
       <!-- pm#478: the refusal travels WITH the form — on a phone the panel is a full-screen sheet
@@ -288,6 +301,9 @@ export class ErpCustomersTags extends LitElement {
   updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('formError') && this.formError) void this.revealFormError();
+    if (changed.has('nameError') && this.nameError) {
+      this.renderRoot.querySelector('[data-testid="customers-tags-name"]')?.scrollIntoView?.({ block: 'center' });
+    }
   }
 
   private async revealFormError(): Promise<void> {
