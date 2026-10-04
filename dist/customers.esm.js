@@ -5207,6 +5207,53 @@ function alreadySpoken(catalog, code, message) {
   return false;
 }
 
+// ui/lib/confirm-alert.ts
+function presentConfirmAlert(options) {
+  const alert = document.createElement("ion-alert");
+  alert.header = options.header;
+  alert.message = options.message;
+  alert.buttons = options.buttons;
+  for (const [name, value] of Object.entries(options.htmlAttributes ?? {})) alert.setAttribute(name, value);
+  let closed = false;
+  let leaving = false;
+  alert.addEventListener("ionAlertWillDismiss", () => leaving = true, { once: true });
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    setTimeout(() => alert.remove(), 0);
+    options.onDismiss();
+  };
+  alert.addEventListener("ionAlertDidDismiss", close, { once: true });
+  document.body.appendChild(alert);
+  if (typeof alert.present === "function") {
+    alert.present().catch(() => {
+      alert.remove();
+      close();
+    });
+  } else {
+    alert.isOpen = true;
+  }
+  return {
+    dismiss() {
+      if (closed || leaving) return;
+      if (typeof alert.dismiss === "function") {
+        void alert.dismiss().then((dismissed) => {
+          if (!dismissed) {
+            alert.remove();
+            close();
+          }
+        }).catch(() => {
+          alert.remove();
+          close();
+        });
+        return;
+      }
+      alert.isOpen = false;
+      close();
+    }
+  };
+}
+
 // ui/components/erp-customers-fields/erp-customers-fields.ts
 var CATALOG = { es: es_default, en: en_default };
 var NAME_TAKEN = "customers.field_name_taken";
@@ -5243,6 +5290,7 @@ var ErpCustomersFields = class extends i3 {
     this.editing = null;
     this.editTitleInHeader = false;
     this.pendingDelete = null;
+    this.deleteDialog = null;
     this.fName = "";
     this.fType = "text";
     this.fOptions = "";
@@ -5326,6 +5374,8 @@ var ErpCustomersFields = class extends i3 {
   }
   disconnectedCallback() {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
   /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
@@ -5442,12 +5492,13 @@ var ErpCustomersFields = class extends i3 {
   }
   async confirmDelete() {
     if (!this.pendingDelete || !can("customers.manage_custom_fields")) return;
+    const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.pageError = "";
     try {
-      await erplora().command("customers.fields.delete", { field_id: this.pendingDelete.id });
-      this.formMsg = erplora().t(CATALOG, "ui.fieldDeleted", { name: this.pendingDelete.name });
-      this.pendingDelete = null;
+      await erplora().command("customers.fields.delete", { field_id: target.id });
+      this.formMsg = erplora().t(CATALOG, "ui.fieldDeleted", { name: target.name });
       await this.ctrl.load();
     } catch (e7) {
       this.pageError = domainErrorText2(e7, "ui.errDeleteField");
@@ -5480,21 +5531,39 @@ var ErpCustomersFields = class extends i3 {
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-fields-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
-  renderDeleteConfirm() {
-    if (!this.pendingDelete) return A;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared → closed. */
+  openDeleteDialog() {
+    this.closeDeleteDialog();
+    const field = this.pendingDelete;
+    if (!field) return;
     const t5 = (k2, p4) => erplora().t(CATALOG, k2, p4);
-    return b2`<section class="panel">
-      <h3>${t5("ui.deleteFieldTitle")}</h3>
-      <p>${t5("ui.deleteFieldConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" data-testid="customers-fields-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" data-testid="customers-fields-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { "data-testid": "customers-fields-delete-confirm" },
+      header: t5("ui.deleteFieldTitle"),
+      message: t5("ui.deleteFieldConfirm", { name: field.name }),
+      buttons: [
+        { text: t5("ui.cancel"), role: "cancel", htmlAttributes: { "data-testid": "customers-fields-delete-cancel" } },
+        { text: t5("ui.delete"), role: "destructive", htmlAttributes: { "data-testid": "customers-fields-delete-submit" }, handler: () => void this.confirmDelete() }
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === field) this.pendingDelete = null;
+      }
+    });
+    this.deleteDialog = dialog;
+  }
+  closeDeleteDialog() {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
   /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
    *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
    *  before, the banner still measures 0 px and ends up under the tab bar. */
   updated(changed) {
     super.updated(changed);
+    if (changed.has("pendingDelete")) this.openDeleteDialog();
     if (changed.has("formError") && this.formError) void this.revealFormError();
     if (changed.has("nameError") && this.nameError) {
       this.renderRoot.querySelector('[data-testid="customers-fields-name"]')?.scrollIntoView?.({ block: "center" });
@@ -5510,7 +5579,6 @@ var ErpCustomersFields = class extends i3 {
     return b2`<div class="page">
       ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-fields-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-fields-form-msg">${this.formMsg}</p>` : A}
-      ${this.renderDeleteConfirm()}
       ${this.ctrl?.error && !dataTableShowsLoadError() ? b2`<ok-inline-feedback data-testid="customers-fields-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
@@ -5593,6 +5661,7 @@ var ErpCustomersGroups = class extends i3 {
     this.editing = null;
     this.editTitleInHeader = false;
     this.pendingDelete = null;
+    this.deleteDialog = null;
     this.fName = "";
     this.fDescription = "";
     this.fColor = "primary";
@@ -5658,6 +5727,8 @@ var ErpCustomersGroups = class extends i3 {
   }
   disconnectedCallback() {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
   /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
@@ -5755,12 +5826,13 @@ var ErpCustomersGroups = class extends i3 {
   }
   async confirmDelete() {
     if (!this.pendingDelete || !can2("customers.delete_customergroup")) return;
+    const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.pageError = "";
     try {
-      await erplora2().command("customers.groups.delete", { group_id: this.pendingDelete.id });
-      this.formMsg = erplora2().t(CATALOG2, "ui.groupDeleted", { name: this.pendingDelete.name });
-      this.pendingDelete = null;
+      await erplora2().command("customers.groups.delete", { group_id: target.id });
+      this.formMsg = erplora2().t(CATALOG2, "ui.groupDeleted", { name: target.name });
       await this.ctrl.load();
     } catch (e7) {
       this.pageError = domainErrorText3(e7, "ui.errDeleteGroup");
@@ -5790,21 +5862,39 @@ var ErpCustomersGroups = class extends i3 {
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-groups-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
-  renderDeleteConfirm() {
-    if (!this.pendingDelete) return A;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared → closed. */
+  openDeleteDialog() {
+    this.closeDeleteDialog();
+    const group = this.pendingDelete;
+    if (!group) return;
     const t5 = (k2, p4) => erplora2().t(CATALOG2, k2, p4);
-    return b2`<section class="panel">
-      <h3>${t5("ui.deleteGroupTitle")}</h3>
-      <p>${t5("ui.deleteGroupConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" data-testid="customers-groups-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" data-testid="customers-groups-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { "data-testid": "customers-groups-delete-confirm" },
+      header: t5("ui.deleteGroupTitle"),
+      message: t5("ui.deleteGroupConfirm", { name: group.name }),
+      buttons: [
+        { text: t5("ui.cancel"), role: "cancel", htmlAttributes: { "data-testid": "customers-groups-delete-cancel" } },
+        { text: t5("ui.delete"), role: "destructive", htmlAttributes: { "data-testid": "customers-groups-delete-submit" }, handler: () => void this.confirmDelete() }
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === group) this.pendingDelete = null;
+      }
+    });
+    this.deleteDialog = dialog;
+  }
+  closeDeleteDialog() {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
   /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
    *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
    *  before, the banner still measures 0 px and ends up under the tab bar. */
   updated(changed) {
     super.updated(changed);
+    if (changed.has("pendingDelete")) this.openDeleteDialog();
     if (changed.has("formError") && this.formError) void this.revealFormError();
     if (changed.has("nameError") && this.nameError) {
       this.renderRoot.querySelector('[data-testid="customers-groups-name"]')?.scrollIntoView?.({ block: "center" });
@@ -5820,7 +5910,6 @@ var ErpCustomersGroups = class extends i3 {
     return b2`<div class="page">
       ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-groups-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-groups-form-msg">${this.formMsg}</p>` : A}
-      ${this.renderDeleteConfirm()}
       ${this.ctrl?.error && !dataTableShowsLoadError() ? b2`<ok-inline-feedback data-testid="customers-groups-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
@@ -6620,6 +6709,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.formMsg = "";
     this.stats = null;
     this.pendingDelete = null;
+    this.deleteDialog = null;
     this.detail = null;
     this.editing = false;
     this.form = { ...EMPTY_FORM };
@@ -6684,7 +6774,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     .meta dt { font-size:.72rem; text-transform:uppercase; opacity:.6; }
     .meta dd { margin:0 0 .4rem; font-weight:600; }
     .chips { display:flex; gap:.4rem; flex-wrap:wrap; margin:.35rem 0; }
-    .check { display:inline-flex; align-items:center; gap:.35rem; margin:.15rem .9rem .15rem 0; }
+    /* customers#95: the name is the checkbox's own content (its label), placed after the box. */
+    .check { margin:.15rem .9rem .15rem 0; }
     .timeline { list-style:none; margin:.5rem 0 0; padding:0; }
     .timeline li { border-left:3px solid var(--ion-border-color,#e7e2d6); padding:.25rem 0 .55rem .75rem; }
     .timeline .t { font-weight:600; }
@@ -6790,6 +6881,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   disconnectedCallback() {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     this.unsub?.();
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
   /** Money in CENTS → text with the hub's currency (ADR-0123). A bare toFixed(2) painted ×100. */
@@ -7136,6 +7229,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
   updated(changed) {
     super.updated(changed);
     this.ensureDetailSlotMounted();
+    if (changed.has("pendingDelete")) this.openDeleteDialog();
     if (changed.has("createError") && this.createError) void this.revealCreateError();
   }
   /** pm#478: the refusal appears ABOVE «Add customer», at the foot of a long form — on a phone that
@@ -7233,15 +7327,15 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       this.saving = false;
     }
   }
-  // — Borrado (soft-delete) → customers.delete, confirmación en dos pasos —
+  // — Soft delete → customers.delete, asked first in a dialog —
   async confirmDelete() {
     if (!can3("customers.delete_customer") || !this.pendingDelete) return;
     const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.formError = "";
     try {
       await erplora3().command("customers.delete", { customer_id: target.id });
-      this.pendingDelete = null;
       if (this.detail?.id === target.id) this.closeDetail();
       this.formMsg = erplora3().t(CATALOG3, "ui.customerDeleted", { name: target.name });
       await Promise.all([this.ctrl.load(), this.loadStats()]);
@@ -7451,17 +7545,33 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
             </footer>`}
     </section>`;
   }
-  renderDeleteConfirm() {
-    if (!this.pendingDelete || !can3("customers.delete_customer")) return A;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared (answered, the sheet
+   *  closed, another panel opened) → closed. */
+  openDeleteDialog() {
+    this.closeDeleteDialog();
+    const customer = this.pendingDelete;
+    if (!customer || !can3("customers.delete_customer")) return;
     const t5 = (k2, p4) => erplora3().t(CATALOG3, k2, p4);
-    return b2`<section class="panel">
-      <h3>${t5("ui.deleteCustomerTitle")}</h3>
-      <p>${t5("ui.deleteCustomerConfirm", { name: this.pendingDelete.name })}</p>
-      <footer class="actions">
-        <ion-button size="small" class="tone-danger" data-testid="customers-list-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-        <ion-button size="small" fill="outline" data-testid="customers-list-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
-      </footer>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { "data-testid": "customers-list-delete-confirm" },
+      header: t5("ui.deleteCustomerTitle"),
+      message: t5("ui.deleteCustomerConfirm", { name: customer.name }),
+      buttons: [
+        { text: t5("ui.cancel"), role: "cancel", htmlAttributes: { "data-testid": "customers-list-delete-cancel" } },
+        { text: t5("ui.delete"), role: "destructive", htmlAttributes: { "data-testid": "customers-list-delete-submit" }, handler: () => void this.confirmDelete() }
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === customer) this.pendingDelete = null;
+      }
+    });
+    this.deleteDialog = dialog;
+  }
+  closeDeleteDialog() {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
   /** Campos personalizados (ADR-0132): los pinta su `field_type`, no un input de texto para todo.
    *  Un `select` con opciones es un dominio CERRADO: pintarlo como texto libre lo rompe. */
@@ -7589,8 +7699,8 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
            consent with no purpose, no channel, no record of what the person was shown and no author
            — and a pre-ticked box is invalid outright (EDPB 05/2020 §168, AEPD FAQ-0211). The
            decision lives in its own panel below, as an action with its evidence. -->
-      <label class="check"><ion-checkbox data-testid="customers-list-edit-active" .checked=${f3.is_active}
-        @ionChange=${(e7) => this.form = { ...this.form, is_active: e7.target.checked }}></ion-checkbox> ${t5("ui.fieldActive")}</label>
+      <ion-checkbox class="check" label-placement="end" justify="start" data-testid="customers-list-edit-active" .checked=${f3.is_active}
+        @ionChange=${(e7) => this.form = { ...this.form, is_active: e7.target.checked }}>${t5("ui.fieldActive")}</ion-checkbox>
       <footer class="actions">
         <ion-button type="submit" size="small" data-testid="customers-list-edit-submit" ?disabled=${this.saving || !f3.name.trim()}>${this.saving ? t5("ui.saving") : t5("ui.save")}</ion-button>
         <ion-button size="small" fill="outline" data-testid="customers-list-edit-cancel" @click=${() => this.editing = false}>${t5("ui.cancel")}</ion-button>
@@ -7608,16 +7718,14 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     }
     return b2`<div>
       <div class="chips">
-        ${items.map((it) => b2`<label class="check">
-          <ion-checkbox data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
-            ?disabled=${!editable}
-            @ionChange=${() => {
+        ${items.map((it) => b2`<ion-checkbox class="check" label-placement="end" justify="start"
+          data-testid=${`customers-list-membership-${kind}-item-${it.id}`} .checked=${selected.includes(String(it.id))}
+          ?disabled=${!editable}
+          @ionChange=${() => {
       if (!editable) return;
       if (isGroups) this.groupIds = this.toggleId(this.groupIds, String(it.id));
       else this.tagIds = this.toggleId(this.tagIds, String(it.id));
-    }}></ion-checkbox>
-          ${it.name}
-        </label>`)}
+    }}>${it.name}</ion-checkbox>`)}
       </div>
       ${editable ? b2`<ion-button size="small" data-testid=${`customers-list-membership-${kind}-save`} ?disabled=${this.saving} @click=${() => this.saveMembership(kind)}>${t5(isGroups ? "ui.saveGroups" : "ui.saveTags")}</ion-button>` : A}
     </div>`;
@@ -7719,7 +7827,6 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
       </header>
       ${this.formError ? b2`<ok-inline-feedback data-testid="customers-list-form-error" tone="danger" icon="alert-circle-outline">${this.formError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : A}
-      ${this.renderDeleteConfirm()}
       ${this.renderEraseConfirm()}
       ${this.renderMergePanel()}
       <section class="panel">
@@ -7798,7 +7905,6 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${this.formMsg ? b2`<p class="ok" data-testid="customers-list-form-msg">${this.formMsg}</p>` : A}
         ${this.importing ? b2`<p class="ok" data-testid="customers-list-importing">${t5("ui.importing")}</p>` : A}
         ${this.renderImportReport()}
-        ${this.renderDeleteConfirm()}
         ${this.ctrl?.error && !dataTableShowsLoadError() ? b2`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
@@ -8565,6 +8671,7 @@ var ErpCustomersTags = class extends i3 {
     this.editing = null;
     this.editTitleInHeader = false;
     this.pendingDelete = null;
+    this.deleteDialog = null;
     this.fName = "";
     this.fColor = "primary";
     this.fActive = true;
@@ -8626,6 +8733,8 @@ var ErpCustomersTags = class extends i3 {
   }
   disconnectedCallback() {
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
+    this.pendingDelete = null;
+    this.closeDeleteDialog();
     super.disconnectedCallback();
   }
   /** Referencia al ok-data-table para abrir/cerrar su panel lateral (alta y edición). */
@@ -8715,12 +8824,13 @@ var ErpCustomersTags = class extends i3 {
   }
   async confirmDelete() {
     if (!this.pendingDelete || !can5("customers.delete_customertag")) return;
+    const target = this.pendingDelete;
+    this.pendingDelete = null;
     this.saving = true;
     this.pageError = "";
     try {
-      await erplora5().command("customers.tags.delete", { tag_id: this.pendingDelete.id });
-      this.formMsg = erplora5().t(CATALOG5, "ui.tagDeleted", { name: this.pendingDelete.name });
-      this.pendingDelete = null;
+      await erplora5().command("customers.tags.delete", { tag_id: target.id });
+      this.formMsg = erplora5().t(CATALOG5, "ui.tagDeleted", { name: target.name });
       await this.ctrl.load();
     } catch (e7) {
       this.pageError = domainErrorText5(e7, "ui.errDeleteTag");
@@ -8748,21 +8858,39 @@ var ErpCustomersTags = class extends i3 {
       ${editing ? b2`<ion-button size="small" fill="outline" data-testid="customers-tags-cancel" @click=${() => this.resetForm()}>${t5("ui.cancel")}</ion-button>` : A}
     </form>`;
   }
-  renderDeleteConfirm() {
-    if (!this.pendingDelete) return A;
+  /** customers#95: the delete question is a dialog a screen reader finds (`role="alertdialog"`),
+   *  not a panel on the page. It follows `pendingDelete`: set → asked, cleared → closed. */
+  openDeleteDialog() {
+    this.closeDeleteDialog();
+    const tag = this.pendingDelete;
+    if (!tag) return;
     const t5 = (k2, p4) => erplora5().t(CATALOG5, k2, p4);
-    return b2`<section class="panel">
-      <h3>${t5("ui.deleteTagTitle")}</h3>
-      <p>${t5("ui.deleteTagConfirm", { name: this.pendingDelete.name })}</p>
-      <ion-button size="small" class="tone-danger" data-testid="customers-tags-delete-submit" ?disabled=${this.saving} @click=${() => this.confirmDelete()}>${this.saving ? t5("ui.deleting") : t5("ui.delete")}</ion-button>
-      <ion-button size="small" fill="outline" data-testid="customers-tags-delete-cancel" @click=${() => this.pendingDelete = null}>${t5("ui.cancel")}</ion-button>
-    </section>`;
+    const dialog = presentConfirmAlert({
+      htmlAttributes: { "data-testid": "customers-tags-delete-confirm" },
+      header: t5("ui.deleteTagTitle"),
+      message: t5("ui.deleteTagConfirm", { name: tag.name }),
+      buttons: [
+        { text: t5("ui.cancel"), role: "cancel", htmlAttributes: { "data-testid": "customers-tags-delete-cancel" } },
+        { text: t5("ui.delete"), role: "destructive", htmlAttributes: { "data-testid": "customers-tags-delete-submit" }, handler: () => void this.confirmDelete() }
+      ],
+      onDismiss: () => {
+        if (this.deleteDialog === dialog) this.deleteDialog = null;
+        if (this.pendingDelete === tag) this.pendingDelete = null;
+      }
+    });
+    this.deleteDialog = dialog;
+  }
+  closeDeleteDialog() {
+    const dialog = this.deleteDialog;
+    this.deleteDialog = null;
+    dialog?.dismiss();
   }
   /** pm#478: the refusal appears ABOVE the button that was pressed, at the foot of the form — on a
    *  phone that can leave it off the sheet. Bring it into view once it has painted itself: scrolled
    *  before, the banner still measures 0 px and ends up under the tab bar. */
   updated(changed) {
     super.updated(changed);
+    if (changed.has("pendingDelete")) this.openDeleteDialog();
     if (changed.has("formError") && this.formError) void this.revealFormError();
     if (changed.has("nameError") && this.nameError) {
       this.renderRoot.querySelector('[data-testid="customers-tags-name"]')?.scrollIntoView?.({ block: "center" });
@@ -8778,7 +8906,6 @@ var ErpCustomersTags = class extends i3 {
     return b2`<div class="page">
       ${this.pageError ? b2`<ok-inline-feedback data-testid="customers-tags-page-error" tone="danger" icon="alert-circle-outline">${this.pageError}</ok-inline-feedback>` : A}
       ${this.formMsg ? b2`<p class="ok" data-testid="customers-tags-form-msg">${this.formMsg}</p>` : A}
-      ${this.renderDeleteConfirm()}
       ${this.ctrl?.error && !dataTableShowsLoadError() ? b2`<ok-inline-feedback data-testid="customers-tags-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
       <!-- The «Edit» button is not the only door: rowClickable makes the whole row open the
            same edit panel (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
