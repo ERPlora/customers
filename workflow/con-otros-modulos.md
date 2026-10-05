@@ -29,7 +29,7 @@ Si falla: el motivo del fallo (o «No se pudieron cargar los clientes» si no tr
 resultados, «Sin resultados.» o «No hay clientes.»; sin permiso, «No tienes permiso para consultar
 clientes.». Si la ficha completa no se puede leer, el cliente NO se asigna y sale «No se pudieron
 cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.».
-Implicados: INVOICE-F02, SALES-F04, SALES-F05
+Implicados: INVOICE-F02, SALES-F04, SALES-F05, REC_PELUQUERIA-F09
 QA: R-09, B-06, BD-09
 
 ### CUSTOMERS-F18 Crear un cliente desde el buscador del TPV
@@ -85,7 +85,7 @@ Sale: una línea en el historial de compras por venta, las cifras y la etapa de 
 Si falla: una venta sin cliente no hace nada; la misma venta entregada dos veces cuenta una sola
 vez; una ficha eliminada no suma. Un fallo no se ve en el TPV ni en la ficha: el hub reintenta el
 aviso (hasta 8 veces, cada vez más espaciadas) y después lo deja atascado a la espera de que alguien lo mire.
-Implicados: SALES-F01
+Implicados: SALES-F01, REC_PELUQUERIA-F09
 QA: B-03, R-09
 
 ### CUSTOMERS-F21 Restar una venta anulada
@@ -161,7 +161,7 @@ Pasos:
 Entra: nombre y teléfono.
 Sale: la ficha nueva (origen «En el local») y la cita con ella.
 Si falla: el motivo sale en el panel de la cita sin perder lo ya elegido.
-Implicados: APPOINTMENTS-F01, APPOINTMENTS-F12
+Implicados: APPOINTMENTS-F01, APPOINTMENTS-F12, REC_PELUQUERIA-F06
 QA: B-02, BD-06
 
 ### CUSTOMERS-F26 Crear la ficha de quien pide cita por WhatsApp
@@ -182,3 +182,18 @@ el nombre y el `+` del teléfono los escribe el asistente siguiendo su guion (na
 número casa con dos o más fichas, no crea ninguna (lo que contesta entonces es de REC_WA_CITA-F03).
 Implicados: WHATSAPP_INBOX-F21, REC_WA_CITA-F03
 QA: W-02
+
+### CUSTOMERS-F30 Dar la ficha de una clienta a otros módulos
+Estado: hecho
+Vertical: comun
+Actor: sistema
+Pantalla: ninguna
+Pasos:
+1. Otro módulo pide la ficha de una clienta por su identificador: Citas al reservar (la exige: sin ella no reserva) y Servicios al pintar el nombre de la titular de un bono.
+2. Clientes contesta con la ficha viva de este negocio: nombre, contacto, datos fiscales, notas, consentimiento y acumulados de compra.
+3. Una ficha eliminada no se devuelve: quien pregunta enseña el identificador o rechaza.
+Entra: el identificador de la ficha; la consulta exige el permiso de ver clientes.
+Sale: nada guardado; solo lectura (`customers.get`).
+Si falla: una ficha que no existe o está eliminada no se devuelve: Citas rechaza la reserva (APPOINTMENTS-F01) y Servicios enseña el identificador; a quien no tiene el permiso de ver clientes, Servicios ni siquiera se la pide.
+Implicados: APPOINTMENTS-F01, SERVICES-F16, SERVICES-F19
+QA: ninguno

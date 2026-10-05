@@ -153,6 +153,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | CUSTOMERS-F27 | Crear, cambiar y eliminar grupos de clientes | parcial | comun | segmentacion |
 | CUSTOMERS-F28 | Crear, cambiar y eliminar etiquetas de clientes | parcial | comun | segmentacion |
 | CUSTOMERS-F29 | Definir los campos personalizados de la ficha | parcial | comun | segmentacion |
+| CUSTOMERS-F30 | Dar la ficha de una clienta a otros módulos | hecho | comun | con-otros-modulos |
 
 ## Qué comparten los verticales
 
@@ -367,3 +368,4 @@ del hub (05/10/2026). Manda el código; lo de abajo está desfasado o lo contrad
 - `locales/es.json` (`ui.mergeConfirm`): nombra citas, ventas, reservas, conversaciones y bonos; también pasan comandas y reservas online (F13).
 - QA `WA-06` («hoy solo borrado lógico → FAIL citando whatsapp_inbox#262»): borrar datos personales existe y WhatsApp vacía las conversaciones unidas a la ficha (F16).
 - QA `L-10` («datos de salud solo con consentimiento explícito o no se guardan»): un campo propio puede guardar alergias o embarazo sin ningún consentimiento (F29).
+- Oleada 2 (Automatizaciones y Servicios, 05/10/2026): F01 decía que una ficha nueva puede arrancar una automatización con «plantilla de nota de bienvenida»; la tarjeta de bienvenida de Automatizaciones espera un día y crea una **tarea**, y la que escribe una nota en la ficha es la de visitas grandes, que arranca con la venta cobrada (F01, F05, FLOWS-F04). La lectura de la ficha por identificador que usan Citas y Servicios no tenía flujo: ahora es F30.

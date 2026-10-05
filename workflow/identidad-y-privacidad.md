@@ -108,8 +108,7 @@ Reservas, WhatsApp, Servicios (bonos), Cocina y Reservas online re-apunten sus p
 Si falla: «No se pudieron fusionar las fichas.», o «Ese cliente no está disponible en este negocio.»
 si una de las dos ya no existe o es la misma; el panel queda abierto para elegir otra. Si la
 búsqueda falla: «No se pudieron buscar las fichas. Vuelve a intentarlo.» con **Reintentar**.
-Implicados: APPOINTMENTS-F23, KITCHEN-F30, RESERVATIONS-F21, SALES-F33, WHATSAPP_INBOX-F12
-Pendiente de enlazar: services — re-apunta los bonos y las sesiones gastadas
+Implicados: APPOINTMENTS-F23, KITCHEN-F30, RESERVATIONS-F21, SALES-F33, SERVICES-F28, WHATSAPP_INBOX-F12
 Pendiente de enlazar: online_booking — re-apunta las reservas online
 QA: ninguno
 
@@ -137,8 +136,7 @@ ficha recalculada, una entrada «Consentimiento dado» en la actividad y el avis
 dado (`customer.consent_granted`), que hoy solo pueden usar las automatizaciones como disparador.
 Si falla: «No se ha podido registrar el consentimiento.» o «Ese cliente no está disponible en este
 negocio.». Sin permiso de editar (empleado) se ve el estado pero no hay botones.
-Implicados: pendiente
-Pendiente de enlazar: flows — el consentimiento dado o retirado puede disparar una automatización
+Implicados: FLOWS-F13
 QA: L-10, WA-05
 
 ### CUSTOMERS-F15 Retirar el consentimiento de un canal
@@ -156,8 +154,7 @@ Sale: un hecho nuevo (el «Dado» anterior se conserva: es la prueba del tiempo 
 escribir), la marca de la ficha recalculada, «Consentimiento retirado» en la actividad y el aviso
 de consentimiento retirado (`customer.consent_withdrawn`). Volver a darlo después es otro hecho.
 Si falla: como F14.
-Implicados: pendiente
-Pendiente de enlazar: flows — el consentimiento retirado puede disparar una automatización
+Implicados: FLOWS-F13
 QA: L-10, WA-05
 
 ### CUSTOMERS-F16 Borrar los datos personales de un cliente (RGPD)
@@ -191,8 +188,7 @@ su copia fiscal a propósito.
 Si falla: «No se pudieron borrar los datos personales» o «Ese cliente no está disponible en este
 negocio.» si el identificador no es de este negocio. Sobre una ficha ya eliminada, absorbida o
 borrada no falla. Repetirlo no cambia los datos ni duplica la auditoría, pero vuelve a emitir el aviso.
-Implicados: RESERVATIONS-F22, WHATSAPP_INBOX-F11
+Implicados: RESERVATIONS-F22, SERVICES-F29, WHATSAPP_INBOX-F11
 Pendiente de enlazar: online_booking — no escucha el aviso: nombre, correo y teléfono se quedan en sus reservas online
-Pendiente de enlazar: services — marca como huérfanos los bonos de la ficha borrada
 Pendiente de enlazar: hub — vacía el historial de avisos y automatizaciones que nombra la ficha (hub#2467)
 QA: L-10, WA-06 (discrepa)
