@@ -108,9 +108,8 @@ Reservas, WhatsApp, Servicios (bonos), Cocina y Reservas online re-apunten sus p
 Si falla: «No se pudieron fusionar las fichas.», o «Ese cliente no está disponible en este negocio.»
 si una de las dos ya no existe o es la misma; el panel queda abierto para elegir otra. Si la
 búsqueda falla: «No se pudieron buscar las fichas. Vuelve a intentarlo.» con **Reintentar**.
-Implicados: APPOINTMENTS-F23, RESERVATIONS-F21, SALES-F33, WHATSAPP_INBOX-F12
+Implicados: APPOINTMENTS-F23, KITCHEN-F30, RESERVATIONS-F21, SALES-F33, WHATSAPP_INBOX-F12
 Pendiente de enlazar: services — re-apunta los bonos y las sesiones gastadas
-Pendiente de enlazar: kitchen — re-apunta las comandas
 Pendiente de enlazar: online_booking — re-apunta las reservas online
 QA: ninguno
 
