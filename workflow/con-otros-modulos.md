@@ -85,7 +85,7 @@ Sale: una línea en el historial de compras por venta, las cifras y la etapa de 
 Si falla: una venta sin cliente no hace nada; la misma venta entregada dos veces cuenta una sola
 vez; una ficha eliminada no suma. Un fallo no se ve en el TPV ni en la ficha: el hub reintenta el
 aviso (hasta 8 veces, cada vez más espaciadas) y después lo deja atascado a la espera de que alguien lo mire.
-Implicados: SALES-F01, REC_PELUQUERIA-F09
+Implicados: SALES-F01, REC_PELUQUERIA-F09, REC_RESTAURANTE-F11
 QA: B-03, R-09
 
 ### CUSTOMERS-F21 Restar una venta anulada
@@ -101,7 +101,7 @@ Pasos:
 Entra: la venta anulada (`sale.voided`).
 Sale: la línea del historial de compras marcada como anulada (no se borra), las cifras y la etapa.
 Si falla: anular dos veces la misma venta resta una sola vez.
-Implicados: SALES-F30
+Implicados: SALES-F30, REC_PELUQUERIA-F14, REC_RESTAURANTE-F15
 QA: R-11
 
 ### CUSTOMERS-F22 Restar una devolución
@@ -115,7 +115,7 @@ Pasos:
 Entra: la devolución de la venta (`sale.refunded`).
 Sale: una línea de devolución en el historial de compras, con importe negativo, y el gastado corregido.
 Si falla: la misma devolución entregada dos veces cuenta una sola vez.
-Implicados: SALES-F31
+Implicados: SALES-F31, REC_PELUQUERIA-F14, REC_RESTAURANTE-F15
 QA: R-11, B-08
 
 ### CUSTOMERS-F23 Ver el historial de compras de un cliente
@@ -189,11 +189,11 @@ Vertical: comun
 Actor: sistema
 Pantalla: ninguna
 Pasos:
-1. Otro módulo pide la ficha de una clienta por su identificador: Citas al reservar (la exige: sin ella no reserva) y Servicios al pintar el nombre de la titular de un bono.
-2. Clientes contesta con la ficha viva de este negocio: nombre, contacto, datos fiscales, notas, consentimiento y acumulados de compra.
-3. Una ficha eliminada no se devuelve: quien pregunta enseña el identificador o rechaza.
-Entra: el identificador de la ficha; la consulta exige el permiso de ver clientes.
+1. Otro módulo pide la ficha de una clienta por su identificador: Citas al reservar una cita, al crear o reservar una serie y al reservar varias de golpe (la exige: sin ella no reserva), y Servicios al pintar el nombre de la titular de un bono. Dentro de Clientes la usan también la ficha (F03) y el buscador del TPV (F17); y el asistente.
+2. Clientes contesta con la ficha de este negocio: nombre, email, teléfono, NIF, dirección, ciudad, código postal, país, avatar, notas, empresa, cumpleaños y aniversario, canal preferido, consentimiento de marketing, etapa, origen, si está activa y los acumulados de compra.
+3. Una ficha eliminada, fusionada en otra o con los datos borrados no se devuelve; una desactivada sí, y Citas reserva con ella.
+Entra: el identificador de la ficha. La consulta exige el permiso de ver clientes a quien la pide desde una pantalla o el asistente; cuando Citas la lee al reservar, corre como sistema y no mira el permiso de quien reserva.
 Sale: nada guardado; solo lectura (`customers.get`).
-Si falla: una ficha que no existe o está eliminada no se devuelve: Citas rechaza la reserva (APPOINTMENTS-F01) y Servicios enseña el identificador; a quien no tiene el permiso de ver clientes, Servicios ni siquiera se la pide.
-Implicados: APPOINTMENTS-F01, SERVICES-F16, SERVICES-F19
+Si falla: una ficha que no existe, eliminada, fusionada o con los datos borrados no se devuelve: Citas rechaza la reserva (APPOINTMENTS-F01) y Servicios enseña el identificador; a quien no tiene el permiso de ver clientes, Servicios ni siquiera se la pide.
+Implicados: APPOINTMENTS-F01, APPOINTMENTS-F12, APPOINTMENTS-F13, APPOINTMENTS-F21, SERVICES-F16, SERVICES-F19
 QA: ninguno

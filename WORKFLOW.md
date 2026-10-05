@@ -342,6 +342,7 @@ Se resuelven con `market-decision`; no las decide el worker.
 6. **Perfiles.** El Cajero puede editar fichas y registrar consentimientos y el Empleado no. ¿Es lo buscado?
 7. **Etapas por tiempo.** «En riesgo», «Inactivo» y «Perdido» no los pone nadie: ¿tarea programada o fuera de la lista?
 8. **Datos de salud (F29, L-10).** ¿Marca de campo sensible con consentimiento explícito?
+9. **Minimización de datos (F30).** Servicios pide la ficha entera de cada titular de un bono (con NIF, dirección, notas y cumpleaños) solo para pintar su nombre. ¿Una lectura que devuelva solo el nombre?
 
 ## Fuentes contrastadas
 
