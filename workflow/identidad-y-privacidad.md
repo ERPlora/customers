@@ -188,6 +188,6 @@ su copia fiscal a propósito.
 Si falla: «No se pudieron borrar los datos personales» o «Ese cliente no está disponible en este
 negocio.» si el identificador no es de este negocio. Sobre una ficha ya eliminada, absorbida o
 borrada no falla. Repetirlo no cambia los datos ni duplica la auditoría, pero vuelve a emitir el aviso.
-Implicados: RESERVATIONS-F22, SERVICES-F29, WHATSAPP_INBOX-F11, HUB-F248, HUB-F249
+Implicados: RESERVATIONS-F22, SERVICES-F29, WHATSAPP_INBOX-F11, HUB-F248, HUB-F249, HUB-F250
 Pendiente de enlazar: online_booking — no escucha el aviso: nombre, correo y teléfono se quedan en sus reservas online
 QA: L-10, WA-06 (discrepa)
