@@ -26,14 +26,16 @@ el email y el NIF se guardan tal como se escriben, sin quitarles nada salvo los 
 extremos (ver F11).
 Sale: la ficha nueva, sin consentimiento de ningún tipo (no hay casilla, F14), y el aviso de ficha
 creada (`customer.created`, con todos los datos tecleados). WhatsApp lo escucha para unir a la
-ficha las conversaciones que ya tenía ese número.
+ficha las conversaciones que ya tenía ese número. El aviso puede arrancar una automatización (FLOWS-F13): la tarjeta
+«Dar la bienvenida a cada cliente nuevo» de la galería de Automatizaciones espera un día y crea
+una **tarea** de darle la bienvenida (necesita el módulo Tareas, congelado), no una nota en la
+ficha (FLOWS-F04).
 Si falla: el motivo sale dentro del propio panel, encima del botón, y lo tecleado se conserva. Un
 email mal formado NO falla: se guarda (el esquema declara el formato, pero el hub no lo aplica en
 ese tipo de esquema y la pantalla no lo mira; solo la importación lo rechaza, F08). Los campos
 personalizados no salen en el alta, así que los obligatorios no se piden aquí (F29). Nada avisa de
 que ya existe otra ficha con el mismo teléfono, email o NIF (F12).
-Implicados: WHATSAPP_INBOX-F04
-Pendiente de enlazar: flows — una automatización puede dispararse con una ficha nueva (plantilla de nota de bienvenida)
+Implicados: FLOWS-F04, FLOWS-F13, WHATSAPP_INBOX-F04
 QA: B-02
 
 ### CUSTOMERS-F02 Buscar y filtrar fichas
@@ -78,7 +80,7 @@ Si falla: «Cliente no encontrado» si ya no existe; si no carga, el motivo que 
 se pudo cargar el cliente» si no da ninguno). Si uno de los
 bloques secundarios no carga, sale vacío sin aviso (actividad, campos, grupos, consentimiento).
 Abrir otra ficha antes de que acabe de cargar la anterior no mezcla los datos de las dos.
-Implicados: APPOINTMENTS-F20
+Implicados: APPOINTMENTS-F20, REC_PELUQUERIA-F08
 QA: B-03
 
 ### CUSTOMERS-F04 Editar la ficha y sus campos personalizados
@@ -113,10 +115,9 @@ Pasos:
 1. En la ficha, en «Añadir nota», escribe en «Nota».
 2. Pulsa **Añadir**. Sale «Nota añadida» y la nota aparece arriba de la «Actividad» como «Nota añadida · Nota».
 Entra: el texto.
-Sale: la nota y su entrada en la actividad, juntas o ninguna. Las notas no se editan ni se borran desde la pantalla.
+Sale: la nota y su entrada en la actividad, juntas o ninguna. Las notas no se editan ni se borran desde la pantalla. Una automatización puede escribir notas por la misma orden: la tarjeta «Apuntar las visitas grandes en la ficha del cliente» de la galería de Automatizaciones, que arranca con la venta cobrada, deja una nota en la ficha de la clienta (FLOWS-F04).
 Si falla: «No se pudo añadir la nota» o «Ese cliente no está disponible en este negocio.» si la ficha ya no existe.
-Implicados: pendiente
-Pendiente de enlazar: flows — una automatización puede añadir notas a una ficha (la nota sale igual en la Actividad)
+Implicados: FLOWS-F04
 QA: ninguno
 
 ### CUSTOMERS-F06 Poner grupos y etiquetas a una ficha
@@ -157,8 +158,7 @@ Si falla: el motivo sale en la página; un identificador que no es de este negoc
 está disponible en este negocio.» y no avisa a nadie. Sobre una ficha ya eliminada, absorbida o con
 los datos borrados (solo alcanzable por el asistente o la API, la pantalla ya no la enseña) NO falla:
 responde bien y vuelve a emitir el aviso de ficha eliminada (Servicios lo ignora: ya la había marcado).
-Implicados: pendiente
-Pendiente de enlazar: services — marca los bonos de una ficha eliminada para que no se pierdan de vista
+Implicados: SERVICES-F29, SERVICES-F30
 QA: L-10
 
 ### CUSTOMERS-F08 Importar fichas desde un CSV
