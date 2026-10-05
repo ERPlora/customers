@@ -353,7 +353,7 @@ del hub (05/10/2026). Manda el código; lo de abajo está desfasado o lo contrad
 - `docs/screens.md` («Fields»), `docs/concepts.md` y `README.md`: los valores de los campos propios «no tienen pantalla» — se editan en la ficha desde customers#13 (F04).
 - `docs/concepts.md` («Bulk creation… only through the API. There is no import screen») y `README.md`: sí hay **Importar CSV** en la lista (F08).
 - `docs/screens.md` («Dashboard widgets») y `architecture/modules/customers.md` (§Widgets): tres widgets de escritorio — `module.json` no declara ninguno.
-- `docs/overview.md`, `README.md` y `architecture/modules/customers.md`: lista de avisos que emite sin `customer.anonymized` ni los de consentimiento, y «no hay consumidores declarados» — los escuchan WhatsApp, Servicios, Citas, Reservas, Ventas, Cocina, Reservas online y el hub (F13, F16).
+- `docs/overview.md`, `README.md` y `architecture/modules/customers.md`: lista de avisos que emite sin `customer.anonymized` ni los de consentimiento, y «no hay consumidores declarados» — la unión de fichas la escuchan WhatsApp, Servicios, Citas, Reservas, Ventas, Cocina y Reservas online (F13); el borrado de datos personales, solo WhatsApp, Servicios y el hub (F16).
 - `docs/limits.md` («Nothing depends on Customers»): Citas, Reservas, Reservas online y la Bandeja de WhatsApp lo declaran como dependencia.
 - `docs/limits.md` («The timeline records notes and activities, not sales»): cada compra y anulación deja entrada en la Actividad (F20, F21).
 - `docs/limits.md` (roles): el responsable «todo menos los tres borrados y los ajustes» — tampoco puede borrar datos personales.
