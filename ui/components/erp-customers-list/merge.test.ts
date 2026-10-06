@@ -136,6 +136,19 @@ describe('picking the duplicate', () => {
     expect(last?.params.search).toBe('ana');
   });
 
+  it('finds an E.164 phone typed with spaces (customers#121)', async () => {
+    const el = await openSheet();
+    await openMerge(el);
+    const input = $(el, 'customers-list-merge-search') as HTMLElement & { value: string };
+    input.value = '600 111 222';
+    input.dispatchEvent(new CustomEvent('ionInput', { detail: { value: '600 111 222' } }));
+    await new Promise((r) => setTimeout(r, 400));
+    await settle(el);
+    const last = queries.filter((q) => q.name === 'customers.list').at(-1);
+    expect(last?.params.search, 'the card holds +34600111222: only the digits are a piece of it').toBe('600111222');
+    expect(input.value, 'the box keeps what was typed').toBe('600 111 222');
+  });
+
   it('says so when there is no other customer to merge', async () => {
     candidates = async () => ({ rows: [ANA], total: 1 });
     const el = await openSheet();

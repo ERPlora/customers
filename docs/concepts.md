@@ -126,6 +126,25 @@ get `import`, and a lifecycle stage of `customer` is normalised to `active`.
 
 `total_spent` and the revenue widget are **cents** (ADR-0123). `1250` is 12,50 €.
 
+## A phone is saved in international form (E.164)
+
+Every write of a card — the form, the till's quick-add, the CSV import, the API and the assistant —
+saves the phone as `+` and digits (`+34600111222`), with libphonenumber's rules: spaces, dashes,
+dots, slashes and parentheses go, a leading `00` (the international prefix dialled from the
+business's country) becomes `+`, and the national `0` goes too (`07700 900123` in the United
+Kingdom, `+44 (0)7700 900123`). A number **without** prefix is read in the **business's country**
+(`country_code` in the hub settings; Spain if it was never saved) — not in the card's «Country».
+A number that is not possible for its country (`600111` in Spain), letters (an extension) or two
+numbers in one field are refused with `customers.phone_invalid`: the form keeps what was typed and
+the import skips the row with its reason. The phone stays optional: an empty phone is fine.
+
+Cards typed before this change are rewritten by the scheduled task `phones_to_e164` (every 15
+minutes; the first tick after the update does the work, the next ones find nothing). It reads them
+with the same rules and the same country; a number it cannot read is left as typed and the card
+asks for a valid one the next time it is edited. Each rewritten card keeps its old text in
+`customers_phone_backup` (removed when the customer's personal data is erased); rolling back
+migration `009` puts the old texts back.
+
 ## Finding a customer by phone number
 
 Other modules find a customer by the number she writes or calls from (WhatsApp gives it as

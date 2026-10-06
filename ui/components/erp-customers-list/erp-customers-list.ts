@@ -15,6 +15,7 @@ import { domainErrorText as declaredErrorText } from '../../lib/domain-error-tex
 import { presentConfirmAlert } from '../../lib/confirm-alert';
 import type { ConfirmAlert } from '../../lib/confirm-alert';
 import { countryCode, countryName, countryOptions } from '../../lib/country';
+import { searchTerm } from '../../lib/phone-search';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -1113,7 +1114,7 @@ export class ErpCustomersList extends LitElement {
     this.mergeState = 'searching';
     try {
       const r = await erplora().query<{ rows: Customer[] } | Customer[]>('customers.list', {
-        search: q, limit: 20, sort: 'name', dir: 'asc',
+        search: searchTerm(q), limit: 20, sort: 'name', dir: 'asc',
       });
       if (seq !== this.mergeSeq) return; // a newer search already answered
       const rows = Array.isArray(r) ? r : (r?.rows ?? []);

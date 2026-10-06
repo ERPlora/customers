@@ -9,6 +9,7 @@ import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 import { countryCode, countryName } from '../../lib/country';
 import { domainErrorText } from '../../lib/domain-error-text';
+import { searchTerm } from '../../lib/phone-search';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -229,7 +230,7 @@ export class ErpCustomersPosSearch extends LitElement {
     this.error = '';
     this.state = 'searching';
     try {
-      const r = await erplora().query('customers.list', { search: q, limit: 20, sort: 'name', dir: 'asc' });
+      const r = await erplora().query('customers.list', { search: searchTerm(q), limit: 20, sort: 'name', dir: 'asc' });
       if (seq !== this.searchSeq) return; // stale: a newer search is in flight or already answered
       this.results = rows<Customer>(r);
       this.state = this.results.length ? 'idle' : 'empty';

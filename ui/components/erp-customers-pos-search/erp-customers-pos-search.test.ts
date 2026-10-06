@@ -196,6 +196,16 @@ describe('estados diferenciados y alta rápida (customers#18)', () => {
     expect(el.q).toBe('an');
   });
 
+  it('a phone typed with spaces is searched as digits, which the E.164 card contains (customers#121)', async () => {
+    const el = (await montar()) as WC;
+    await abrir(el);
+    (el.onInput as (v: string) => void)('0034 600 111 222');
+    await new Promise((r) => setTimeout(r, 350));
+    const last = consultas.filter((c) => c.name === 'customers.list').at(-1);
+    expect(last?.params?.search).toBe('34600111222');
+    expect(el.q, 'the box keeps what was typed').toBe('0034 600 111 222');
+  });
+
   it('si customers.get falla NO se emite selección: error visible, la venta no sigue sin snapshot', async () => {
     sdk().query = async (name: string) => {
       if (name === 'customers.get') throw new Error('down');
