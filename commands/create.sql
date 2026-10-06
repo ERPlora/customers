@@ -1,4 +1,6 @@
 -- Customer creation. Runtime injects :new_id, :hub_id, :current_user_id, :now.
+-- Reached as `customers._create` from the handler (`create`), which has already turned :phone into
+-- E.164 or refused it (customers#121).
 -- Walk-in of the counter (customers#32): only `name` is required — the rest is enrichment. An
 -- absent bind arrives as NULL, and every NOT NULL column falls back to the same default the table
 -- declares (empty string / lead / walk_in / none / consent 0), so a quick creation and a full sheet

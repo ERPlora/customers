@@ -56,7 +56,7 @@ def test_bulk_create_runs_the_shipped_wasm_on_the_kernel(hub: Hub) -> None:
         {
             "items": [
                 {"name": names[0], "email": "c1@x.es", "lifecycle_stage": "customer"},
-                {"name": names[1], "phone": "611"},
+                {"name": names[1], "phone": "611 22 33 44"},  # a valid ES number: since customers#121 an impossible one is left out
                 {"name": names[2]},
             ]
         },
