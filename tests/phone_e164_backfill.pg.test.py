@@ -68,6 +68,7 @@ CREATE TABLE hub_settings (
   PRIMARY KEY (hub_id, key));
 INSERT INTO hub_settings (hub_id, key, value, updated_at) VALUES
   ('hub-gb', 'country_code', 'GB', 'now'),
+  ('hub-gb', 'language', 'fr', 'now'),  -- another setting of the hub, which is no country
   ('hub-fr', 'country_code', ' fr ', 'now'),
   ('hub-xx', 'country_code', 'XX', 'now'),
   ('hub-de', 'country_code', 'DE', 'now');

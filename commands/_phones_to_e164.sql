@@ -350,8 +350,7 @@ UPDATE customers_customer c
    SET phone = b.e164
   FROM customers_e164_backed b
  WHERE c.id = b.customer_id
-   AND c.hub_id = :hub_id
-   AND b.hub_id = :hub_id;
+   AND c.hub_id = :hub_id;
 
 -- WHAT EACH STEP DOES (prose here, after the statement, so no semicolon hides inside it).
 --
