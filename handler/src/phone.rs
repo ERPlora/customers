@@ -43,9 +43,6 @@ pub fn to_e164(raw: &str, home_iso: &str) -> Result<String, InvalidPhone> {
             _ => return Err(InvalidPhone),
         }
     }
-    if digits.is_empty() {
-        return Err(InvalidPhone);
-    }
     let home = home_region(home_iso).ok_or(InvalidPhone)?;
 
     if plus {
@@ -85,9 +82,11 @@ fn international(digits: &str) -> Result<String, InvalidPhone> {
         .find(|prefix| REGIONS.iter().any(|r| r.code == *prefix))
         .ok_or(InvalidPhone)?;
     let rest = &digits[code.len()..];
+    // Every region of a shared calling code dials the same trunk prefix (pinned by
+    // `regions_sharing_a_calling_code_share_their_trunk_prefix`).
     let trunk = REGIONS
         .iter()
-        .find(|r| r.code == code && r.main)
+        .find(|r| r.code == code)
         .map_or("", |r| r.trunk);
     let national = strip_trunk(rest, trunk, code);
     if possible(code, national) {
@@ -97,16 +96,15 @@ fn international(digits: &str) -> Result<String, InvalidPhone> {
     }
 }
 
-/// Drops the national trunk prefix when what follows is a possible number of that code. A number
-/// that is possible WITH the digit keeps it unless the trunk is `0` (no country writes its numbers
-/// after the calling code starting with a `0` trunk; Russia's `8 800…` freephone does start with
-/// its `8` trunk digit, and keeps it).
+/// Drops the national trunk prefix. A trunk `0` always goes: no country that dials one writes its
+/// numbers with a `0` after the calling code, so what is left has to stand on its own (Italy and
+/// the others that keep their `0` have no trunk prefix). Another trunk digit goes only when the
+/// number is not possible with it: Russia's `8 800…` freephone, typed without its trunk, begins
+/// with an `8` of its own. (Without a trunk prefix, `rest` is `digits`.)
 fn strip_trunk<'a>(digits: &'a str, trunk: &str, code: &str) -> &'a str {
     match digits.strip_prefix(trunk) {
         Some(rest)
-            if !trunk.is_empty()
-                && possible(code, rest)
-                && (trunk == "0" || !possible(code, digits)) =>
+            if trunk == "0" || !possible(code, digits) =>
         {
             rest
         }
@@ -116,9 +114,9 @@ fn strip_trunk<'a>(digits: &'a str, trunk: &str, code: &str) -> &'a str {
 
 /// Whether `national` has a length some region of `code` allows.
 fn possible(code: &str, national: &str) -> bool {
+    // No region has a zero length, so the empty number is never possible.
     let len = national.len();
-    len > 0
-        && REGIONS
+    REGIONS
             .iter()
             .filter(|r| r.code == code)
             .any(|r| r.lengths.iter().any(|l| usize::from(*l) == len))
@@ -188,6 +186,40 @@ mod tests {
         assert_eq!(ok("+44 (0)7700 900123", "ES"), "+447700900123");
         assert_eq!(ok("+44 7700 900123", "ES"), "+447700900123");
         assert_eq!(ok("06 12 34 56 78", "FR"), "+33612345678");
+    }
+
+    #[test]
+    fn trunk_zero_is_dropped_even_when_the_number_would_be_possible_with_it() {
+        // Germany allows 4 to 15 digits, so «0301234567» is a possible length WITH its trunk zero
+        // too; libphonenumber still drops it — no German number starts with 0 after the +49.
+        assert_eq!(ok("030 12345678", "DE"), "+493012345678");
+        assert_eq!(ok("+49 (0)30 12345678", "ES"), "+493012345678");
+    }
+
+    #[test]
+    fn a_trunk_zero_never_survives_behind_the_calling_code() {
+        // «01234 5678» in the United Kingdom is 8 digits after its trunk zero: not a UK number. It
+        // must be refused, not saved as «+44012345678», which no UK number looks like.
+        assert_eq!(to_e164("01234 5678", "GB"), Err(InvalidPhone));
+        assert_eq!(to_e164("+44 01234 5678", "ES"), Err(InvalidPhone));
+    }
+
+    #[test]
+    fn a_leading_trunk_digit_stays_when_dropping_it_leaves_no_possible_number() {
+        // Russian freephone typed WITHOUT the trunk «8»: its own first 8 is part of the number.
+        assert_eq!(ok("800 123-45-67", "RU"), "+78001234567");
+    }
+
+    #[test]
+    fn regions_sharing_a_calling_code_share_their_trunk_prefix() {
+        // `international` reads the trunk of the first region with the calling code (+1 is the
+        // United States, Canada and the Caribbean; +7 Russia and Kazakhstan): it is only right
+        // while every region behind one code dials the same trunk prefix.
+        for r in REGIONS {
+            for other in REGIONS.iter().filter(|o| o.code == r.code) {
+                assert_eq!(r.trunk, other.trunk, "{} and {} share +{}", r.iso, other.iso, r.code);
+            }
+        }
     }
 
     #[test]
