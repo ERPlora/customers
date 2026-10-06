@@ -1,0 +1,231 @@
+//! A customer's phone, saved in E.164 (`+34600111222`) — customers#121, CUSTOMERS-F11.
+//!
+//! The card's phone is what the rest of the hub compares against: Appointments copies it into the
+//! appointment and the «appointment confirmed» WhatsApp notice looks the conversation up with that
+//! copy, and WhatsApp keys its conversations by the international number. A phone saved as typed
+//! («600 111 222», «600111») either matched nobody or matched somebody else, so every write of a
+//! card goes through [`to_e164`]: one canonical form, or a refusal.
+//!
+//! The rules are libphonenumber's (the reference the module adopted), on its own metadata
+//! ([`crate::phone_metadata`], generated from it): the library itself does not fit the hub's WASM
+//! sandbox (loading its metadata spends more fuel than a handler call is given).
+
+use crate::phone_metadata::{Region, REGIONS};
+
+/// The country a number without prefix belongs to when the hub never saved one (CUSTOMERS-F10).
+pub const DEFAULT_COUNTRY: &str = "ES";
+
+/// The typed text is not a phone number of its country.
+#[derive(Debug, PartialEq, Eq)]
+pub struct InvalidPhone;
+
+/// `raw` as E.164, reading a number without prefix as one of `home_iso` (the business's country,
+/// ISO 3166 alpha-2; empty or unknown → [`DEFAULT_COUNTRY`]). The empty phone stays empty: only
+/// the name is required on a card.
+///
+/// Accepted: digits with spaces, `-`, `.`, `/` and parentheses, an optional leading `+` or the
+/// international call prefix dialled from the business's country (`00` in Spain), and a national
+/// trunk prefix (`07700…` in the United Kingdom, `+44 (0)7700…`). Refused: letters (an extension,
+/// a note), more than one `+`, and a national number whose length is not possible for its country
+/// («600111» in Spain) — that also catches two numbers typed in the same field.
+pub fn to_e164(raw: &str, home_iso: &str) -> Result<String, InvalidPhone> {
+    let text = raw.trim();
+    if text.is_empty() {
+        return Ok(String::new());
+    }
+    let mut digits = String::new();
+    let mut plus = false;
+    for c in text.chars() {
+        match c {
+            '0'..='9' => digits.push(c),
+            '+' if !plus && digits.is_empty() => plus = true,
+            ' ' | '\u{a0}' | '\t' | '-' | '.' | '/' | '(' | ')' => {}
+            _ => return Err(InvalidPhone),
+        }
+    }
+    if digits.is_empty() {
+        return Err(InvalidPhone);
+    }
+    let home = home_region(home_iso).ok_or(InvalidPhone)?;
+
+    if plus {
+        return international(&digits);
+    }
+    if !home.idd.is_empty() && digits.len() > home.idd.len() && digits.starts_with(home.idd) {
+        return international(&digits[home.idd.len()..]);
+    }
+    let national = strip_trunk(&digits, home.trunk, home.code);
+    if possible(home.code, national) {
+        return Ok(format!("+{}{}", home.code, national));
+    }
+    // «34600111222» typed in Spain: the business's own calling code without its `+`.
+    if let Some(rest) = digits.strip_prefix(home.code) {
+        if possible(home.code, rest) {
+            return Ok(format!("+{}{}", home.code, rest));
+        }
+    }
+    Err(InvalidPhone)
+}
+
+/// The business's region; an empty or unknown code falls back to [`DEFAULT_COUNTRY`] (always in
+/// the generated table — `default_country_is_in_the_table` pins it).
+fn home_region(iso: &str) -> Option<&'static Region> {
+    let iso = iso.trim().to_ascii_uppercase();
+    REGIONS
+        .iter()
+        .find(|r| r.iso == iso)
+        .or_else(|| REGIONS.iter().find(|r| r.iso == DEFAULT_COUNTRY))
+}
+
+/// Digits after the `+` (or after the international call prefix): calling code, then national.
+fn international(digits: &str) -> Result<String, InvalidPhone> {
+    // Calling codes are prefix-free (ITU-T E.164): the first 1–3 digit prefix that is one, is it.
+    let code = (1..=3.min(digits.len()))
+        .map(|n| &digits[..n])
+        .find(|prefix| REGIONS.iter().any(|r| r.code == *prefix))
+        .ok_or(InvalidPhone)?;
+    let rest = &digits[code.len()..];
+    let trunk = REGIONS
+        .iter()
+        .find(|r| r.code == code && r.main)
+        .map_or("", |r| r.trunk);
+    let national = strip_trunk(rest, trunk, code);
+    if possible(code, national) {
+        Ok(format!("+{code}{national}"))
+    } else {
+        Err(InvalidPhone)
+    }
+}
+
+/// Drops the national trunk prefix when what follows is a possible number of that code. A number
+/// that is possible WITH the digit keeps it unless the trunk is `0` (no country writes its numbers
+/// after the calling code starting with a `0` trunk; Russia's `8 800…` freephone does start with
+/// its `8` trunk digit, and keeps it).
+fn strip_trunk<'a>(digits: &'a str, trunk: &str, code: &str) -> &'a str {
+    match digits.strip_prefix(trunk) {
+        Some(rest)
+            if !trunk.is_empty()
+                && possible(code, rest)
+                && (trunk == "0" || !possible(code, digits)) =>
+        {
+            rest
+        }
+        _ => digits,
+    }
+}
+
+/// Whether `national` has a length some region of `code` allows.
+fn possible(code: &str, national: &str) -> bool {
+    let len = national.len();
+    len > 0
+        && REGIONS
+            .iter()
+            .filter(|r| r.code == code)
+            .any(|r| r.lengths.iter().any(|l| usize::from(*l) == len))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ok(raw: &str, home: &str) -> String {
+        to_e164(raw, home).unwrap_or_else(|_| panic!("{raw:?} in {home} must be valid"))
+    }
+
+    #[test]
+    fn spanish_number_typed_any_way_is_one_e164() {
+        for raw in [
+            "600 111 222",
+            "600111222",
+            "600-111-222",
+            "600.111.222",
+            "+34 600 111 222",
+            "+34600111222",
+            "0034 600 111 222",
+            "34600111222",
+            "(+34) 600 11 12 22",
+            "  600 111 222  ",
+        ] {
+            assert_eq!(ok(raw, "ES"), "+34600111222", "{raw:?}");
+        }
+    }
+
+    #[test]
+    fn empty_phone_stays_empty() {
+        assert_eq!(to_e164("", "ES"), Ok(String::new()));
+        assert_eq!(to_e164("   ", "ES"), Ok(String::new()));
+    }
+
+    #[test]
+    fn number_too_short_or_too_long_for_its_country_is_refused() {
+        assert_eq!(to_e164("600111", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("12", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("+34 600 111", "ES"), Err(InvalidPhone));
+        // Two numbers in one field.
+        assert_eq!(to_e164("600111222 / 611222333", "ES"), Err(InvalidPhone));
+    }
+
+    #[test]
+    fn letters_extension_or_a_second_plus_are_refused() {
+        assert_eq!(to_e164("600 111 222 ext 12", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("call me", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("+34 +600111222", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("600+111222", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("+", "ES"), Err(InvalidPhone));
+    }
+
+    #[test]
+    fn foreign_number_keeps_its_own_country() {
+        assert_eq!(ok("+33 6 12 34 56 78", "ES"), "+33612345678");
+        assert_eq!(ok("0033 6 12 34 56 78", "ES"), "+33612345678");
+        // Same national digits, another country: another person (CUSTOMERS-F10 step 5).
+        assert_ne!(ok("+33 600 111 222", "ES"), ok("600 111 222", "ES"));
+    }
+
+    #[test]
+    fn trunk_zero_is_dropped_nationally_and_inside_parentheses() {
+        assert_eq!(ok("07700 900123", "GB"), "+447700900123");
+        assert_eq!(ok("+44 (0)7700 900123", "ES"), "+447700900123");
+        assert_eq!(ok("+44 7700 900123", "ES"), "+447700900123");
+        assert_eq!(ok("06 12 34 56 78", "FR"), "+33612345678");
+    }
+
+    #[test]
+    fn italy_keeps_its_leading_zero() {
+        assert_eq!(ok("06 1234 5678", "IT"), "+390612345678");
+        assert_eq!(ok("+39 06 1234 5678", "ES"), "+390612345678");
+    }
+
+    #[test]
+    fn international_prefix_of_the_business_country_is_read() {
+        // From the United States, `011` is the international prefix.
+        assert_eq!(ok("011 34 600 111 222", "US"), "+34600111222");
+        assert_eq!(ok("(212) 555-0123", "US"), "+12125550123");
+        assert_eq!(ok("1 212 555 0123", "US"), "+12125550123");
+    }
+
+    #[test]
+    fn russian_freephone_keeps_its_eight() {
+        // `8` is Russia's trunk prefix AND the first digit of its freephone numbers.
+        assert_eq!(ok("+7 800 123 45 67", "ES"), "+78001234567");
+        assert_eq!(ok("8 912 345 67 89", "RU"), "+79123456789");
+    }
+
+    #[test]
+    fn unknown_or_empty_business_country_reads_as_spain() {
+        assert_eq!(ok("600 111 222", ""), "+34600111222");
+        assert_eq!(ok("600 111 222", "es"), "+34600111222");
+        assert_eq!(ok("600 111 222", "XX"), "+34600111222");
+    }
+
+    #[test]
+    fn default_country_is_in_the_table() {
+        assert!(REGIONS.iter().any(|r| r.iso == DEFAULT_COUNTRY));
+    }
+
+    #[test]
+    fn unknown_calling_code_is_refused() {
+        // +999 is not assigned.
+        assert_eq!(to_e164("+999 123 456 789", "ES"), Err(InvalidPhone));
+    }
+}
