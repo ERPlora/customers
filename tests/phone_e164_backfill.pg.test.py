@@ -48,6 +48,7 @@ HUB_ES = "hub-es"  # no settings row: Spain
 HUB_GB = "hub-gb"
 HUB_FR = "hub-fr"  # stored as « fr »: trimmed and upper-cased, as the runtime reads it
 HUB_XX = "hub-xx"  # a code nobody knows: Spain
+HUB_DE = "hub-de"  # 4 to 15 digits: a number can read both as national and as «49» + national
 
 # The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4).
 CORE_TABLES = """
@@ -58,7 +59,8 @@ CREATE TABLE hub_settings (
 INSERT INTO hub_settings (hub_id, key, value, updated_at) VALUES
   ('hub-gb', 'country_code', 'GB', 'now'),
   ('hub-fr', 'country_code', ' fr ', 'now'),
-  ('hub-xx', 'country_code', 'XX', 'now');
+  ('hub-xx', 'country_code', 'XX', 'now'),
+  ('hub-de', 'country_code', 'DE', 'now');
 """
 
 # (hub, card, phone as typed, phone after the upgrade, deleted?) — the expectations are the
@@ -81,6 +83,8 @@ CARDS = [
     (HUB_GB, "gb-es-local", "600 111 222", "+44600111222", 0),
     (HUB_FR, "fr-trunk", "06 12 34 56 78", "+33612345678", 0),
     (HUB_XX, "xx-spain", "600 111 229", "+34600111229", 0),
+    # National first, as the handler: «4930 123456» is a possible German number as it stands.
+    (HUB_DE, "de-national-first", "4930 123456", "+494930123456", 0),
 ]
 
 failures: list[str] = []
@@ -305,6 +309,17 @@ def test_upgrade() -> None:
         db.migrate([TABLE, BACKFILL])
         check("phones unchanged on a second run", db.phones(), phones)
         check("backups unchanged on a second run", db.backups(), want_backups)
+
+        # A card that went back to typed text by a path that skips the handler: the upgrade run
+        # again keeps the FIRST copy (the text from before the upgrade) and does not fail.
+        db.run("UPDATE customers_customer SET phone = '0034 600 111 999' WHERE id = 'es-idd'")
+        check(
+            "a third run over a card whose copy already exists does not fail",
+            db.run((MODULE_DIR / BACKFILL).read_text(encoding="utf-8")),
+            None,
+        )
+        check("its first copy is kept", db.backups().get("es-idd"), want_backups["es-idd"])
+        db.run("UPDATE customers_customer SET phone = '+34600111224' WHERE id = 'es-idd'")
 
         print(
             "\n4b · erasing a customer's personal data erases her backup copy, in her hub only"

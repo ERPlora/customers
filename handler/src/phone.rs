@@ -237,6 +237,13 @@ mod tests {
     }
 
     #[test]
+    fn the_national_reading_wins_over_the_own_calling_code_without_plus() {
+        // Germany allows 4 to 15 digits: «4930 123456» is possible as it stands AND as «49» +
+        // «30123456». Read nationally first, as `010_phone_e164.sql` does for the existing cards.
+        assert_eq!(ok("4930 123456", "DE"), "+494930123456");
+    }
+
+    #[test]
     fn russian_freephone_keeps_its_eight() {
         // `8` is Russia's trunk prefix AND the first digit of its freephone numbers.
         assert_eq!(ok("+7 800 123 45 67", "ES"), "+78001234567");
