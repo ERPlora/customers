@@ -4,12 +4,12 @@
 -- (`+34600111222`) or not at all. The cards typed before that keep «600 111 222», «0034 600…» or
 -- «07700 900123», and whoever copies that text (Appointments into the appointment, and from there
 -- the «appointment confirmed» WhatsApp notice) compares it and finds nobody. This rewrites them
--- once, with the handler's rules (`handler/src/phone.rs`), on the handler's table: the `regions`
+-- once, with the handler's rules (`handler/src/phone.rs`), on the handler's table: the `customers_e164_regions`
 -- list below is `handler/src/phone_metadata.rs` row by row, printed by
 -- `cargo run -q -- sql` in `handler/tools/phone-metadata` (the battery
 -- `tests/phone_e164_backfill.pg.test.py` fails if they drift). The prose of each step is at the end
 -- of the file.
-WITH regions (iso, code, trunk, idd, lengths) AS (
+WITH customers_e164_regions (iso, code, trunk, idd, lengths) AS (
   VALUES
     ('001', '979', '', '', '{9}'::int[]),
     ('AC', '247', '', '00', '{5,6}'::int[]),
@@ -258,15 +258,15 @@ WITH regions (iso, code, trunk, idd, lengths) AS (
     ('ZM', '260', '0', '00', '{9}'::int[]),
     ('ZW', '263', '0', '00', '{5,6,7,8,9,10}'::int[])
 ),
-codes AS (
+customers_e164_codes AS (
   SELECT r.code,
          (array_agg(r.trunk ORDER BY r.iso))[1] AS trunk,
          array_agg(DISTINCT l.n) AS lengths
-    FROM regions r
+    FROM customers_e164_regions r
    CROSS JOIN LATERAL unnest(r.lengths) AS l(n)
    GROUP BY r.code
 ),
-hubs AS (
+customers_e164_hubs AS (
   SELECT DISTINCT c.hub_id,
          CASE WHEN to_regclass('hub_settings') IS NULL THEN NULL
               ELSE (xpath('/row/v/text()', query_to_xml(format(
@@ -275,23 +275,23 @@ hubs AS (
          END AS iso
     FROM customers_customer c
 ),
-homes AS (
+customers_e164_homes AS (
   SELECT DISTINCT ON (h.hub_id) h.hub_id, r.code, r.trunk, r.idd
-    FROM hubs h
-    JOIN regions r
-      ON r.iso = CASE WHEN EXISTS (SELECT 1 FROM regions x WHERE x.iso = h.iso) THEN h.iso ELSE 'ES' END
+    FROM customers_e164_hubs h
+    JOIN customers_e164_regions r
+      ON r.iso = CASE WHEN EXISTS (SELECT 1 FROM customers_e164_regions x WHERE x.iso = h.iso) THEN h.iso ELSE 'ES' END
    ORDER BY h.hub_id, r.code::int
 ),
-cards AS (
+customers_e164_cards AS (
   SELECT c.hub_id, c.id, c.phone, m.code AS home_code, m.trunk AS home_trunk, m.idd AS home_idd,
          regexp_replace(c.phone, '[^0-9]', '', 'g') AS d,
          strpos(c.phone, '+') > 0 AS plus
     FROM customers_customer c
-    JOIN homes m ON m.hub_id = c.hub_id
+    JOIN customers_e164_homes m ON m.hub_id = c.hub_id
    WHERE btrim(c.phone, E' \t\n\r\u00a0')
          ~ '^[- \t./()\u00a0]*(\+[- \t./()\u00a0]*)?[0-9][0-9 \t./()\u00a0-]*$'
 ),
-routed AS (
+customers_e164_routed AS (
   SELECT k.*,
          CASE WHEN k.plus THEN k.d
               WHEN k.home_idd <> ''
@@ -299,27 +299,27 @@ routed AS (
                AND left(k.d, length(k.home_idd)) = k.home_idd
               THEN substr(k.d, length(k.home_idd) + 1)
          END AS intl
-    FROM cards k
+    FROM customers_e164_cards k
 ),
-readings AS (
+customers_e164_readings AS (
   SELECT r.hub_id, r.id, r.phone, 1 AS pref, c.code, c.trunk, c.lengths,
          substr(r.intl, length(c.code) + 1) AS rest
-    FROM routed r
-    JOIN codes c ON length(c.code) <= length(r.intl) AND left(r.intl, length(c.code)) = c.code
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON length(c.code) <= length(r.intl) AND left(r.intl, length(c.code)) = c.code
    WHERE r.intl IS NOT NULL
   UNION ALL
   SELECT r.hub_id, r.id, r.phone, 1, c.code, r.home_trunk, c.lengths, r.d
-    FROM routed r
-    JOIN codes c ON c.code = r.home_code
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON c.code = r.home_code
    WHERE r.intl IS NULL
   UNION ALL
   SELECT r.hub_id, r.id, r.phone, 2, c.code, '', c.lengths, substr(r.d, length(c.code) + 1)
-    FROM routed r
-    JOIN codes c ON c.code = r.home_code
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON c.code = r.home_code
    WHERE r.intl IS NULL
      AND left(r.d, length(c.code)) = c.code
 ),
-national AS (
+customers_e164_national AS (
   SELECT x.hub_id, x.id, x.phone, x.pref, x.code, x.lengths,
          CASE WHEN x.trunk <> ''
                AND left(x.rest, length(x.trunk)) = x.trunk
@@ -327,55 +327,57 @@ national AS (
               THEN substr(x.rest, length(x.trunk) + 1)
               ELSE x.rest
          END AS nat
-    FROM readings x
+    FROM customers_e164_readings x
 ),
-rewritten AS (
+customers_e164_rewritten AS (
   SELECT DISTINCT ON (n.hub_id, n.id) n.hub_id, n.id, n.phone, '+' || n.code || n.nat AS e164
-    FROM national n
+    FROM customers_e164_national n
    WHERE length(n.nat) = ANY (n.lengths)
    ORDER BY n.hub_id, n.id, n.pref
 ),
-backed AS (
+customers_e164_backed AS (
   INSERT INTO customers_phone_backup
          (id, hub_id, customer_id, phone, e164, created_by, updated_by, created_at, updated_at)
   SELECT 'phone-backup-' || w.id, w.hub_id, w.id, w.phone, w.e164,
          'system', 'system', now()::text, now()::text
-    FROM rewritten w
+    FROM customers_e164_rewritten w
    WHERE w.e164 <> w.phone
   ON CONFLICT (hub_id, customer_id) DO NOTHING
   RETURNING hub_id, customer_id, e164
 )
 UPDATE customers_customer c
    SET phone = b.e164
-  FROM backed b
+  FROM customers_e164_backed b
  WHERE c.id = b.customer_id
    AND c.hub_id = b.hub_id;
 
--- WHAT EACH STEP DOES (prose here, after the statement, so no `;` hides inside it):
+-- WHAT EACH STEP DOES (prose here, after the statement, so no `;` hides inside it). Every CTE
+-- carries the module's prefix: the hub refuses a migration that names a table outside `customers_`,
+-- and its lexical check cannot tell a CTE from a table.
 --
--- `codes`: one row per calling code, with the lengths ANY region of that code allows and the
+-- `customers_e164_codes`: one row per calling code, with the lengths ANY region of that code allows and the
 --   trunk prefix they share (the handler's `possible` and `international`).
--- `hubs`/`homes`: each hub reads a number without prefix in ITS country, `country_code` of
+-- `customers_e164_hubs`/`customers_e164_homes`: each hub reads a number without prefix in ITS country, `country_code` of
 --   `hub_settings` trimmed and upper-cased, as the runtime reads it. No row, a code the table does
 --   not know, or no `hub_settings` table at all (`erplora validate --pg`, the module batteries)
 --   → Spain, the handler's `DEFAULT_COUNTRY`. Read through `query_to_xml` so the statement still
 --   plans in a database without the core table.
--- `cards`: only what the handler would read as a number — digits, spaces, tabs, no-break spaces,
+-- `customers_e164_cards`: only what the handler would read as a number — digits, spaces, tabs, no-break spaces,
 --   `-`, `.`, `/`, parentheses and at most one `+` before the first digit, after trimming. Letters,
 --   a second `+` or an empty phone leave the card exactly as it is.
--- `routed`: a `+`, or the international call prefix dialled from the hub's country (`00` in Spain),
+-- `customers_e164_routed`: a `+`, or the international call prefix dialled from the hub's country (`00` in Spain),
 --   means the digits start with a calling code.
--- `readings`: the candidate readings, in the handler's order — the international one (the calling
+-- `customers_e164_readings`: the candidate readings, in the handler's order — the international one (the calling
 --   code is the first 1–3 digit prefix that is one: E.164 codes are prefix-free), or the national
 --   one in the hub's country and, failing that, the hub's own calling code typed without its `+`
 --   («34600111222»).
--- `national`: the trunk prefix goes when it is `0` (no country that dials one writes a `0` after
+-- `customers_e164_national`: the trunk prefix goes when it is `0` (no country that dials one writes a `0` after
 --   its calling code: «+44 (0)7700…», «07700…») and any other trunk only when the number is not
 --   possible with it (Russia's «8 800…»).
--- `rewritten`: the first reading whose length is possible for its calling code. A number no reading
+-- `customers_e164_rewritten`: the first reading whose length is possible for its calling code. A number no reading
 --   makes possible («600111», «01234 5678» in the United Kingdom) is left as typed: nothing is thrown
 --   away, and the card asks for a valid number the next time it is edited.
--- `backed`: deleted cards are rewritten too (the merge and the erasure read them). Every card that
+-- `customers_e164_backed`: deleted cards are rewritten too (the merge and the erasure read them). Every card that
 --   changes leaves its old text in `customers_phone_backup` (`009`), and only those cards are
 --   rewritten, so a second run changes nothing. `updated_at` is not touched: nobody edited the card.
 --
