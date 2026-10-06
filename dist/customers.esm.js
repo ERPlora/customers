@@ -7270,6 +7270,16 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.formError = "";
     this.formMsg = "";
   }
+  /** The table's search box and «Phone» filter send a phone typed with spaces or a prefix as its
+   *  digits, like the till's and the merge panel's boxes: cards keep it in E.164 and the hub
+   *  compares with «contains» (customers#126). The box keeps showing what was typed. */
+  onSearchChange(ev) {
+    this.ctrl.setSearch(searchTerm(String(ev.detail ?? "")));
+  }
+  onFilterChange(ev) {
+    const { col, value } = ev.detail;
+    this.ctrl.setFilter(col, col === "phone" && typeof value === "string" ? searchTerm(value) : value);
+  }
   onRowAction(ev) {
     const row = ev.detail.row;
     if (ev.detail.actionId === "view") this.openDetail(String(row.id));
@@ -7928,7 +7938,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         ${this.ctrl?.error && !dataTableShowsLoadError() ? b2`<ok-inline-feedback data-testid="customers-list-load-error" tone="danger" icon="alert-circle-outline">${this.ctrl.error}</ok-inline-feedback>` : A}
         <!-- The «View» button is not the only door: rowClickable makes the whole row open the
              same ficha (outfitkit#67 — the actions column can be off-screen at 1440 px). -->
-        <ok-data-table testid="customers-list-table" .error=${this.ctrl?.error ?? ""} @retry=${() => Promise.all([this.ctrl?.load(), this.loadStats()])} .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.ctrl.setSearch(e7.detail)} @filterChange=${(e7) => this.ctrl.setFilter(e7.detail.col, e7.detail.value)}>
+        <ok-data-table testid="customers-list-table" .error=${this.ctrl?.error ?? ""} @retry=${() => Promise.all([this.ctrl?.load(), this.loadStats()])} .serverSide=${true} .fill=${true} .labels=${dataTableLabels(erplora3().locale)} .views=${true} .cardTitle=${(r6) => String(r6.name ?? "\u2014")} .cardIcon=${() => "person-outline"} .addable=${can3("customers.add_customer")} .columns=${this.columns} .rows=${this.ctrl?.rows ?? []} .total=${this.ctrl?.total ?? 0} .page=${this.ctrl?.state.page ?? 0} .pageSize=${this.ctrl?.state.pageSize ?? 50} .sort=${this.ctrl?.state.sort} .sortDir=${this.ctrl?.state.dir ?? "asc"} .searchable=${true} .searchPlaceholder=${t5("ui.searchCustomers")} .actions=${this.rowActions} .rowClickable=${true} .importable=${can3("customers.add_customer")} .exportable=${can3("customers.export_customer")} .csvName=${"customers.csv"} .columnPicker=${true} .emptyMessage=${this.ctrl?.loading ? t5("ui.loading") : t5("ui.emptyCustomers")} @rowAction=${(e7) => this.onRowAction(e7)} @rowClick=${(e7) => this.openDetail(String(e7.detail.row.id))} @csvImport=${(e7) => this.onCsvImport(e7)} @pageChange=${(e7) => this.ctrl.setPage(e7.detail)} @pageSizeChange=${(e7) => this.ctrl.setPageSize(e7.detail)} @sortChange=${(e7) => this.ctrl.setSort(e7.detail.sort, e7.detail.dir)} @searchChange=${(e7) => this.onSearchChange(e7)} @filterChange=${(e7) => this.onFilterChange(e7)}>
           ${this.renderCreateForm()}
         </ok-data-table>
       </div>`;
