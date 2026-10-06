@@ -6,7 +6,7 @@
 //! a national number may have — so they are extracted here, once, and compiled in as a table.
 //!
 //! `cargo run -q` prints the Rust table; `cargo run -q -- sql` prints the same rows as the
-//! `VALUES` list `migrations/postgres/010_phone_e164.sql` carries, so the upgrade of the cards
+//! `VALUES` list `commands/_phones_to_e164.sql` carries, so the upgrade of the cards
 //! that already exist reads the same table as the handler (the battery
 //! `tests/phone_e164_backfill.pg.test.py` compares them row by row).
 

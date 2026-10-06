@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""The cards a hub already has get their phone in E.164 when the module updates (customers#121).
+"""The cards a hub already has get their phone in E.164 after the module updates (customers#121).
 
 Since customers#121 every write of a card saves its phone in E.164 (`+34600111222`) through the
 handler. The cards typed before that («600 111 222», «0034 600…», «07700 900123») would keep the
 old text forever, and with it the bug: whoever copies the phone (Appointments into the
 appointment, and from there the «appointment confirmed» WhatsApp notice) compares text and finds
-nobody. The upgrade rewrites them once, with the same rules as the handler:
+nobody. A migration cannot do the rewrite: it gets no `:hub_id`, so it cannot read the hub's
+country, and the hub refuses a migration that names `hub_settings`. The rewrite is the internal
+command `customers._phones_to_e164`, run per hub by a scheduled task (system context, the hub's
+`:hub_id`), with the same rules as the handler:
 
+  0. the manifest declares the backup table (`009`), the internal command and its scheduled task,
+     and no migration rewrites phones;
   1. a number the handler would accept is rewritten to exactly what the handler would save, read
-     in the hub's country (`hub_settings.country_code`; no row, an unknown code or no table at
-     all → Spain, the runtime's default) — per hub, never another hub's country;
+     in the hub's country (`hub_settings.country_code`; no row or an unknown code → Spain, the
+     runtime's default) — the command touches its own hub's cards only;
   2. what the handler would refuse («600111», «call me») is left exactly as typed: nothing is
      thrown away, the card asks for a valid number the next time it is edited;
   3. deleted cards are rewritten too (the merge and the erasure read them), empty phones stay empty;
@@ -17,10 +22,10 @@ nobody. The upgrade rewrites them once, with the same rules as the handler:
      and an untouched one leaves nothing; erasing a customer's personal data (`customers.anonymize`)
      erases that copy too, in its hub only;
   5. running it again changes nothing;
-  6. reversible: the documented DOWN puts the old text back on the cards that still carry the
-     rewritten number (a phone edited after the upgrade is kept), then the table goes, and the up
-     runs again;
-  7. the country table the migration carries is the handler's (`handler/src/phone_metadata.rs`),
+  6. reversible: the DOWN documented in `009` puts the old text back on the cards that still carry
+     the rewritten number (a phone edited after the upgrade is kept), then the table goes, and the
+     up runs again;
+  7. the country table the command carries is the handler's (`handler/src/phone_metadata.rs`),
      row by row: a drift would make the upgrade and the handler save two different numbers.
 
 Usage: tests/phone_e164_backfill.pg.test.py   (exit 0 = green)
@@ -41,7 +46,9 @@ MANIFEST = json.loads((MODULE_DIR / "module.json").read_text(encoding="utf-8"))
 CONTAINER = os.environ.get("ERPLORA_TEST_PG_CONTAINER", "erplora-test-pg-5433")
 
 TABLE = "migrations/postgres/009_phone_backup.sql"
-BACKFILL = "migrations/postgres/010_phone_e164.sql"
+COMMAND = "customers._phones_to_e164"
+COMMAND_SQL = "commands/_phones_to_e164.sql"
+RETIRED = "migrations/postgres/010_phone_e164.sql"
 METADATA = MODULE_DIR / "handler" / "src" / "phone_metadata.rs"
 
 HUB_ES = "hub-es"  # no settings row: Spain
@@ -50,7 +57,10 @@ HUB_FR = "hub-fr"  # stored as « fr »: trimmed and upper-cased, as the runtime
 HUB_XX = "hub-xx"  # a code nobody knows: Spain
 HUB_DE = "hub-de"  # 4 to 15 digits: a number can read both as national and as «49» + national
 
-# The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4).
+HUBS = [HUB_ES, HUB_GB, HUB_FR, HUB_XX, HUB_DE]
+
+# The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4): every hub
+# has it, so the scratch database always does.
 CORE_TABLES = """
 CREATE TABLE hub_settings (
   hub_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,
@@ -165,11 +175,10 @@ class ScratchDb:
     def __init__(self, prefix: str):
         self.name = f"{prefix}_{os.getpid()}_{uuid.uuid4().hex[:6]}"
 
-    def create(self, core: bool) -> None:
+    def create(self) -> None:
         psql(["-c", f'DROP DATABASE IF EXISTS "{self.name}"'])
         psql(["-c", f'CREATE DATABASE "{self.name}"'])
-        if core:
-            psql([], db=self.name, stdin=CORE_TABLES)
+        psql([], db=self.name, stdin=CORE_TABLES)
 
     def migrate(self, migrations: list[str]) -> None:
         for rel in migrations:
@@ -195,11 +204,15 @@ class ScratchDb:
         )
         return json.loads(out.strip() or "[]")
 
-    def command(self, name: str, payload: dict, hub: str) -> str | None:
+    def command(
+        self, name: str, payload: dict, hub: str, user: str = "admin"
+    ) -> str | None:
+        if name not in MANIFEST["commands"]:
+            return f"{name} is not declared in module.json"
         params = dict(payload)
         params.update(
             hub_id=hub,
-            current_user_id="admin",
+            current_user_id=user,
             now="2026-10-06T10:00:00+00:00",
             new_id=str(uuid.uuid4()),
         )
@@ -225,6 +238,13 @@ class ScratchDb:
             r["id"]: r["phone"]
             for r in self.rows("SELECT id, phone FROM customers_customer")
         }
+
+    def sweep(self, hubs: list[str]) -> None:
+        """What the scheduled task does on its tick: the command, once per hub, with nobody."""
+        for hub in hubs:
+            err = self.command(COMMAND, {}, hub, user="")
+            if err:
+                raise RuntimeError(f"{COMMAND} in {hub}: {err}")
 
     def backups(self) -> dict[str, tuple]:
         return {
@@ -264,13 +284,24 @@ def test_manifest() -> None:
     files = migration_files()
     check("009 (the backup table) is declared", TABLE in files, True)
     check(
-        "010 (the rewrite) is declared after it",
-        BACKFILL in files and files.index(BACKFILL) > files.index(TABLE)
-        if TABLE in files
-        else False,
-        True,
+        "no migration rewrites phones (it cannot know the hub's country)",
+        RETIRED in files or (MODULE_DIR / RETIRED).exists(),
+        False,
     )
-    check("010 is a backfill", migration_kind(BACKFILL), "backfill")
+    command = MANIFEST["commands"].get(COMMAND, {})
+    check("the rewrite is a command", command.get("sql"), [COMMAND_SQL])
+    check("nobody outside the hub can call it", command.get("internal"), True)
+    check("it is all or nothing", command.get("transaction"), True)
+    tasks = [
+        t for t in MANIFEST.get("scheduled_tasks", []) if t.get("command") == COMMAND
+    ]
+    check("a scheduled task runs it", len(tasks), 1)
+    if tasks:
+        check(
+            "and catches up once, not once per missed tick",
+            tasks[0].get("catch_up"),
+            "collapse",
+        )
     anonymize = MANIFEST["commands"]["customers.anonymize"]["sql"]
     check(
         "the erasure also erases the backup copy",
@@ -288,34 +319,50 @@ def test_upgrade() -> None:
     )
     db = ScratchDb("customers_phone_e164")
     try:
-        db.create(core=True)
+        db.create()
         db.migrate(before_upgrade())
         db.seed()
-        db.migrate([TABLE, BACKFILL])
+        db.migrate([TABLE])
+        typed = db.phones()
+
+        print("\n1b · the command only touches the hub it runs for")
+        db.sweep([HUB_GB])
+        after_gb = db.phones()
+        for hub, cid, was, want, _ in CARDS:
+            check(
+                f"{hub} «{was}» after running for {HUB_GB}",
+                after_gb.get(cid),
+                want if hub == HUB_GB else typed.get(cid),
+            )
+        check(
+            f"only {HUB_GB} cards have a backup",
+            sorted({h for h, _, _ in db.backups().values()}),
+            [HUB_GB],
+        )
+
+        db.sweep(HUBS)
         phones = db.phones()
-        for hub, cid, typed, want, _ in CARDS:
-            check(f"{hub} «{typed}» → «{want}»", phones.get(cid), want)
+        for hub, cid, was, want, _ in CARDS:
+            check(f"{hub} «{was}» → «{want}»", phones.get(cid), want)
 
         print("\n4 · the old text is kept, once per rewritten card, in its hub")
         backups = db.backups()
         want_backups = {
-            cid: (hub, typed, want)
-            for hub, cid, typed, want, _ in CARDS
-            if typed != want
+            cid: (hub, was, want) for hub, cid, was, want, _ in CARDS if was != want
         }
         check("one backup per rewritten card, none for the rest", backups, want_backups)
 
         print("\n5 · running it again changes nothing")
-        db.migrate([TABLE, BACKFILL])
+        db.sweep(HUBS)
         check("phones unchanged on a second run", db.phones(), phones)
         check("backups unchanged on a second run", db.backups(), want_backups)
 
-        # A card that went back to typed text by a path that skips the handler: the upgrade run
-        # again keeps the FIRST copy (the text from before the upgrade) and does not fail.
+        # A card that went back to typed text by a path that skips the handler: the next tick
+        # keeps the FIRST copy (the text from before the upgrade) and does not fail.
         db.run("UPDATE customers_customer SET phone = '0034 600 111 999' WHERE id = 'es-idd'")
         check(
-            "a third run over a card whose copy already exists does not fail",
-            db.run((MODULE_DIR / BACKFILL).read_text(encoding="utf-8")),
+            "a tick over a card whose copy already exists does not fail",
+            db.command(COMMAND, {}, HUB_ES, user=""),
             None,
         )
         check("its first copy is kept", db.backups().get("es-idd"), want_backups["es-idd"])
@@ -344,9 +391,9 @@ def test_upgrade() -> None:
         check("the others stay", len(db.backups()), len(want_backups) - 1)
 
         print("\n6 · reversible")
-        down = documented_down(BACKFILL) + documented_down(TABLE)
-        if not documented_down(BACKFILL) or not documented_down(TABLE):
-            fail("009 and 010 must each document their `down` (a `-- DOWN` block)")
+        down = documented_down(TABLE)
+        if "customers_customer" not in down or "DROP TABLE" not in down:
+            fail("009 must document a `down` that restores the phones and drops the table")
             return
         check(
             "a phone is edited after the upgrade",
@@ -357,7 +404,7 @@ def test_upgrade() -> None:
         )
         check("the documented down runs", db.run(down), None)
         restored = db.phones()
-        for hub, cid, typed, want, _ in CARDS:
+        for hub, cid, was, want, _ in CARDS:
             if cid == "es-dashes":
                 check(
                     "a phone edited after the upgrade is kept",
@@ -367,13 +414,14 @@ def test_upgrade() -> None:
             elif cid == "es-spaces":
                 check("an erased card stays erased", restored.get(cid), "")
             else:
-                check(f"«{typed}» is back as typed", restored.get(cid), typed)
+                check(f"«{was}» is back as typed", restored.get(cid), was)
         check(
             "the backup table is gone",
             db.rows("SELECT to_regclass('customers_phone_backup') AS reg")[0]["reg"],
             None,
         )
-        db.migrate([TABLE, BACKFILL])
+        db.migrate([TABLE])
+        db.sweep([HUB_GB])
         check(
             "the up runs again after the down",
             db.phones().get("gb-trunk"),
@@ -381,33 +429,6 @@ def test_upgrade() -> None:
         )
     except RuntimeError as exc:
         fail(f"upgrade: {exc}")
-    finally:
-        db.drop()
-
-
-def test_without_core_tables() -> None:
-    print(
-        "\n1b · a database without the core's settings table (validate --pg, the batteries) reads Spain"
-    )
-    db = ScratchDb("customers_phone_e164_bare")
-    try:
-        db.create(core=False)
-        db.migrate(before_upgrade())
-        db.seed()
-        db.migrate([TABLE, BACKFILL])
-        phones = db.phones()
-        check(
-            "«600 111 222» in hub-gb, read as Spain",
-            phones.get("gb-es-local"),
-            "+34600111222",
-        )
-        check(
-            "«07700 900123» in hub-gb, read as Spain, is refused and kept",
-            phones.get("gb-trunk"),
-            "07700 900123",
-        )
-    except RuntimeError as exc:
-        fail(f"without core tables: {exc}")
     finally:
         db.drop()
 
@@ -424,11 +445,11 @@ RUST_ROW = re.compile(
 
 
 def test_table_matches_the_handler() -> None:
-    print("\n7 · the migration's country table is the handler's, row by row")
-    if not (MODULE_DIR / BACKFILL).exists():
-        fail(f"{BACKFILL} does not exist")
+    print("\n7 · the command's country table is the handler's, row by row")
+    if not (MODULE_DIR / COMMAND_SQL).exists():
+        fail(f"{COMMAND_SQL} does not exist")
         return
-    sql_rows = sorted(ROW.findall((MODULE_DIR / BACKFILL).read_text(encoding="utf-8")))
+    sql_rows = sorted(ROW.findall((MODULE_DIR / COMMAND_SQL).read_text(encoding="utf-8")))
     rust_rows = sorted(
         (iso, code, trunk, idd, lengths.replace(" ", ""))
         for iso, code, trunk, idd, lengths in RUST_ROW.findall(
@@ -449,7 +470,6 @@ def main() -> int:
         fail(f"no Postgres in container {CONTAINER}: {exc} — this battery never skips")
         return report()
     test_upgrade()
-    test_without_core_tables()
     test_table_matches_the_handler()
     return report()
 

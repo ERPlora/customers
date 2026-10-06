@@ -124,11 +124,7 @@
         "kind": "backfill"
       },
       "migrations/postgres/008_tag_field_name_unique.sql",
-      "migrations/postgres/009_phone_backup.sql",
-      {
-        "file": "migrations/postgres/010_phone_e164.sql",
-        "kind": "backfill"
-      }
+      "migrations/postgres/009_phone_backup.sql"
     ]
   },
   "queries": {
@@ -660,6 +656,17 @@
         "description": "Listener of sale.voided (customers#8): flips the ledger row to voided (history kept), reverts amount/count/last purchase, steps the stage back deterministically and writes a `purchase_voided` timeline entry. Idempotent."
       }
     },
+    "customers._phones_to_e164": {
+      "permission": "customers.change_customer",
+      "internal": true,
+      "transaction": true,
+      "sql": [
+        "commands/_phones_to_e164.sql"
+      ],
+      "ai": {
+        "description": "Scheduled sweep (customers#121): rewrites the phones of this hub's cards that were typed before phones were saved in E.164 («600 111 222» → «+34600111222»), reading a number without prefix in the hub's country, with the handler's rules. Each rewritten card keeps its old text in customers_phone_backup; a number that is not valid is left as typed. Idempotent: a second run changes nothing."
+      }
+    },
     "customers.bulk_create": {
       "permission": "customers.add_customer",
       "handler": {
@@ -954,6 +961,14 @@
       "customer.updated"
     ]
   },
+  "scheduled_tasks": [
+    {
+      "name": "phones_to_e164",
+      "command": "customers._phones_to_e164",
+      "cron": "*/15 * * * *",
+      "catch_up": "collapse"
+    }
+  ],
   "provides_slots": [
     {
       "slot": "sales.pos.assign",

@@ -1,14 +1,20 @@
--- customers · 010 — customers#121: the cards a hub already has get their phone in E.164.
+-- customers._phones_to_e164 — customers#121: the cards a hub already has get their phone in E.164.
 --
 -- Since customers#121 every write of a card saves its phone through the handler, in E.164
 -- (`+34600111222`) or not at all. The cards typed before that keep «600 111 222», «0034 600…» or
 -- «07700 900123», and whoever copies that text (Appointments into the appointment, and from there
 -- the «appointment confirmed» WhatsApp notice) compares it and finds nobody. This rewrites them
--- once, with the handler's rules (`handler/src/phone.rs`), on the handler's table: the `customers_e164_regions`
--- list below is `handler/src/phone_metadata.rs` row by row, printed by
+-- with the handler's rules (`handler/src/phone.rs`), on the handler's table: the
+-- `customers_e164_regions` list below is `handler/src/phone_metadata.rs` row by row, printed by
 -- `cargo run -q -- sql` in `handler/tools/phone-metadata` (the battery
--- `tests/phone_e164_backfill.pg.test.py` fails if they drift). The prose of each step is at the end
--- of the file.
+-- `tests/phone_e164_backfill.pg.test.py` fails if they drift).
+--
+-- Why a command and not a migration: a number without prefix is read in the HUB's country, and a
+-- migration has no `:hub_id` to read it with (the hub also refuses a migration that names
+-- `hub_settings`). Guessing Spain would turn a British «600 111 222» into a Spanish number, which
+-- is somebody else. So the scheduled task `phones_to_e164` runs this per hub, in system context
+-- (`:hub_id` of the hub, `:current_user_id` empty): the first tick after the update rewrites the
+-- old cards, every later tick finds nothing to do. The prose of each step is at the end of the file.
 WITH customers_e164_regions (iso, code, trunk, idd, lengths) AS (
   VALUES
     ('001', '979', '', '', '{9}'::int[]),
@@ -266,29 +272,24 @@ customers_e164_codes AS (
    CROSS JOIN LATERAL unnest(r.lengths) AS l(n)
    GROUP BY r.code
 ),
-customers_e164_hubs AS (
-  SELECT DISTINCT c.hub_id,
-         CASE WHEN to_regclass('hub_settings') IS NULL THEN NULL
-              ELSE (xpath('/row/v/text()', query_to_xml(format(
-                     'SELECT max(upper(btrim(value))) AS v FROM hub_settings WHERE hub_id = %L AND key = %L',
-                     c.hub_id, 'country_code'), false, true, '')))[1]::text
-         END AS iso
-    FROM customers_customer c
-),
-customers_e164_homes AS (
-  SELECT DISTINCT ON (h.hub_id) h.hub_id, r.code, r.trunk, r.idd
-    FROM customers_e164_hubs h
-    JOIN customers_e164_regions r
-      ON r.iso = CASE WHEN EXISTS (SELECT 1 FROM customers_e164_regions x WHERE x.iso = h.iso) THEN h.iso ELSE 'ES' END
-   ORDER BY h.hub_id, r.code::int
+customers_e164_home AS (
+  SELECT r.code, r.trunk, r.idd
+    FROM customers_e164_regions r
+   WHERE r.iso = COALESCE(
+           (SELECT x.iso
+              FROM hub_settings s
+              JOIN customers_e164_regions x ON x.iso = UPPER(TRIM(s.value))
+             WHERE s.hub_id = :hub_id AND s.key = 'country_code'),
+           'ES')
 ),
 customers_e164_cards AS (
   SELECT c.hub_id, c.id, c.phone, m.code AS home_code, m.trunk AS home_trunk, m.idd AS home_idd,
          regexp_replace(c.phone, '[^0-9]', '', 'g') AS d,
          strpos(c.phone, '+') > 0 AS plus
     FROM customers_customer c
-    JOIN customers_e164_homes m ON m.hub_id = c.hub_id
-   WHERE btrim(c.phone, E' \t\n\r\u00a0')
+   CROSS JOIN customers_e164_home m
+   WHERE c.hub_id = :hub_id
+     AND btrim(c.phone, E' \t\n\r\u00a0')
          ~ '^[- \t./()\u00a0]*(\+[- \t./()\u00a0]*)?[0-9][0-9 \t./()\u00a0-]*$'
 ),
 customers_e164_routed AS (
@@ -339,7 +340,7 @@ customers_e164_backed AS (
   INSERT INTO customers_phone_backup
          (id, hub_id, customer_id, phone, e164, created_by, updated_by, created_at, updated_at)
   SELECT 'phone-backup-' || w.id, w.hub_id, w.id, w.phone, w.e164,
-         'system', 'system', now()::text, now()::text
+         :current_user_id, :current_user_id, :now, :now
     FROM customers_e164_rewritten w
    WHERE w.e164 <> w.phone
   ON CONFLICT (hub_id, customer_id) DO NOTHING
@@ -349,38 +350,34 @@ UPDATE customers_customer c
    SET phone = b.e164
   FROM customers_e164_backed b
  WHERE c.id = b.customer_id
-   AND c.hub_id = b.hub_id;
+   AND c.hub_id = :hub_id
+   AND b.hub_id = :hub_id;
 
--- WHAT EACH STEP DOES (prose here, after the statement, so no `;` hides inside it). Every CTE
--- carries the module's prefix: the hub refuses a migration that names a table outside `customers_`,
--- and its lexical check cannot tell a CTE from a table.
+-- WHAT EACH STEP DOES (prose here, after the statement, so no semicolon hides inside it).
 --
--- `customers_e164_codes`: one row per calling code, with the lengths ANY region of that code allows and the
---   trunk prefix they share (the handler's `possible` and `international`).
--- `customers_e164_hubs`/`customers_e164_homes`: each hub reads a number without prefix in ITS country, `country_code` of
---   `hub_settings` trimmed and upper-cased, as the runtime reads it. No row, a code the table does
---   not know, or no `hub_settings` table at all (`erplora validate --pg`, the module batteries)
---   → Spain, the handler's `DEFAULT_COUNTRY`. Read through `query_to_xml` so the statement still
---   plans in a database without the core table.
--- `customers_e164_cards`: only what the handler would read as a number — digits, spaces, tabs, no-break spaces,
---   `-`, `.`, `/`, parentheses and at most one `+` before the first digit, after trimming. Letters,
---   a second `+` or an empty phone leave the card exactly as it is.
--- `customers_e164_routed`: a `+`, or the international call prefix dialled from the hub's country (`00` in Spain),
---   means the digits start with a calling code.
--- `customers_e164_readings`: the candidate readings, in the handler's order — the international one (the calling
---   code is the first 1–3 digit prefix that is one: E.164 codes are prefix-free), or the national
---   one in the hub's country and, failing that, the hub's own calling code typed without its `+`
---   («34600111222»).
--- `customers_e164_national`: the trunk prefix goes when it is `0` (no country that dials one writes a `0` after
---   its calling code: «+44 (0)7700…», «07700…») and any other trunk only when the number is not
---   possible with it (Russia's «8 800…»).
--- `customers_e164_rewritten`: the first reading whose length is possible for its calling code. A number no reading
---   makes possible («600111», «01234 5678» in the United Kingdom) is left as typed: nothing is thrown
---   away, and the card asks for a valid number the next time it is edited.
--- `customers_e164_backed`: deleted cards are rewritten too (the merge and the erasure read them). Every card that
---   changes leaves its old text in `customers_phone_backup` (`009`), and only those cards are
---   rewritten, so a second run changes nothing. `updated_at` is not touched: nobody edited the card.
---
--- DOWN (one statement per line, run in this order):
---   UPDATE customers_customer c SET phone = b.phone FROM customers_phone_backup b WHERE b.hub_id = c.hub_id AND b.customer_id = c.id AND c.phone = b.e164
---   DELETE FROM customers_phone_backup
+-- `customers_e164_codes`: one row per calling code, with the lengths ANY region of that code allows
+--   and the trunk prefix they share (the handler's `possible` and `international`).
+-- `customers_e164_home`: a number without prefix is read in the hub's country, `country_code` of
+--   `hub_settings` trimmed and upper-cased, as the runtime reads it. No row or a code the table does
+--   not know → Spain, the handler's `DEFAULT_COUNTRY`. One row: each region is listed once.
+-- `customers_e164_cards`: this hub's cards only, and only what the handler would read as a number —
+--   digits, spaces, tabs, no-break spaces, `-`, `.`, `/`, parentheses and at most one `+` before the
+--   first digit, after trimming. Letters, a second `+` or an empty phone leave the card as it is.
+-- `customers_e164_routed`: a `+`, or the international call prefix dialled from the hub's country
+--   (`00` in Spain), means the digits start with a calling code.
+-- `customers_e164_readings`: the candidate readings, in the handler's order — the international one
+--   (the calling code is the first 1–3 digit prefix that is one: E.164 codes are prefix-free), or
+--   the national one in the hub's country and, failing that, the hub's own calling code typed
+--   without its `+` («34600111222»).
+-- `customers_e164_national`: the trunk prefix goes when it is `0` (no country that dials one writes a
+--   `0` after its calling code: «+44 (0)7700…», «07700…») and any other trunk only when the number is
+--   not possible with it (Russia's «8 800…»).
+-- `customers_e164_rewritten`: the first reading whose length is possible for its calling code. A
+--   number no reading makes possible («600111», «01234 5678» in the United Kingdom) is left as
+--   typed: nothing is thrown away, and the card asks for a valid number the next time it is edited.
+-- `customers_e164_backed`: deleted cards are rewritten too (the merge and the erasure read them).
+--   Every card that changes leaves its old text in `customers_phone_backup` (migration `009`, whose
+--   DOWN puts it back), and only those cards are rewritten, so a second tick changes nothing — also
+--   for a card whose copy already exists. `updated_at` of the card is not touched: nobody edited it.
+-- Every CTE carries the module's prefix: the hub's write-scope check is lexical and cannot tell a
+--   CTE from a table.
