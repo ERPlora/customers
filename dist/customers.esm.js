@@ -4846,6 +4846,7 @@ var es_default = {
     importRows: "Filas {rows}",
     importReasonName: "falta el nombre",
     importReasonEmail: "el email no es v\xE1lido",
+    importReasonPhone: "el tel\xE9fono no es v\xE1lido \u2014 escr\xEDbelo con su prefijo internacional (+44\u2026)",
     importReasonCountry: "pa\xEDs no reconocido \u2014 importado tal cual, rev\xEDsalo en la ficha",
     close: "Cerrar",
     eraseData: "Borrar datos personales",
@@ -4904,6 +4905,7 @@ var es_default = {
     "customers.field_unavailable": "Ese campo no est\xE1 disponible en este negocio (puede haberse borrado).",
     "customers.group_name_taken": "Ya hay un grupo con ese nombre. Elige otro nombre.",
     "customers.group_unavailable": "Ese grupo no est\xE1 disponible en este negocio (puede haberse borrado).",
+    "customers.phone_invalid": "No es un tel\xE9fono v\xE1lido de su pa\xEDs: revisa las cifras o escr\xEDbelo con su prefijo internacional (+44\u2026).",
     "customers.tag_name_taken": "Ya hay una etiqueta con ese nombre. Elige otro nombre.",
     "customers.tag_unavailable": "Esa etiqueta no est\xE1 disponible en este negocio (puede haberse borrado)."
   }
@@ -5113,6 +5115,7 @@ var en_default = {
     importRows: "Rows {rows}",
     importReasonName: "name is required",
     importReasonEmail: "email is not valid",
+    importReasonPhone: "phone is not valid \u2014 write it with its international prefix (+44\u2026)",
     importReasonCountry: "country not recognised \u2014 imported as written, review it on the customer",
     close: "Close",
     eraseData: "Erase personal data",
@@ -5171,6 +5174,7 @@ var en_default = {
     "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
     "customers.group_name_taken": "There is already a group with that name. Choose a different name.",
     "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
+    "customers.phone_invalid": "That is not a phone number of its country: check the digits, or write it with its international prefix (+44\u2026).",
     "customers.tag_name_taken": "There is already a tag with that name. Choose a different name.",
     "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }
@@ -6974,8 +6978,13 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
         const batch = valid.slice(i7, i7 + _ErpCustomersList.IMPORT_BATCH);
         const range = `${batch[0].row}-${batch[batch.length - 1].row}`;
         try {
-          await erplora3().command("customers.bulk_create", { items: batch.map((b3) => b3.item) });
-          report.created += batch.length;
+          const out = await erplora3().command("customers.bulk_create", { items: batch.map((b3) => b3.item) });
+          const rejected = out?.result?.rejected ?? [];
+          for (const r6 of rejected) {
+            const item = batch[r6.index];
+            if (item) report.skipped.push({ row: item.row, reason: "ui.importReasonPhone" });
+          }
+          report.created += batch.length - rejected.length;
         } catch (e7) {
           report.failed.push({ rows: range, reason: e7 instanceof Error && e7.message ? e7.message : erplora3().t(CATALOG3, "ui.errCreate") });
         }
@@ -8530,24 +8539,37 @@ var ErpCustomersPosSearch = class extends i3 {
       this.quickError = erplora4().t(CATALOG4, "ui.quickNameRequired");
       return;
     }
-    const dup = phone ? this.results.find((r6) => (r6.phone ?? "").replace(/\s+/g, "") === phone.replace(/\s+/g, "")) : void 0;
-    if (dup) {
-      this.quickOpen = false;
-      await this.pick(dup);
-      return;
-    }
     this.creating = true;
     this.quickError = "";
     try {
+      const dup = phone ? await this.cardWithPhone(phone) : void 0;
+      if (dup) {
+        this.quickOpen = false;
+        await this.pick(dup);
+        return;
+      }
       const out = await erplora4().command("customers.create", { name, phone, source: "walk_in" });
       const id = out?.new_ids?.[0];
       if (!id) throw new Error(erplora4().t(CATALOG4, "ui.errCreate"));
       this.quickOpen = false;
       await this.pick({ id, name, phone });
     } catch (e7) {
-      this.quickError = e7 instanceof Error && e7.message ? e7.message : erplora4().t(CATALOG4, "ui.errCreate");
+      this.quickError = domainErrorText(CATALOG4, erplora4().locale, e7) || (e7 instanceof Error && e7.message ? e7.message : erplora4().t(CATALOG4, "ui.errCreate"));
     } finally {
       this.creating = false;
+    }
+  }
+  /** The live card that already carries `phone`, compared as a NUMBER of the business's country by
+   *  the server (`customers.by_phone`, F10): cards are stored in E.164 (customers#121), so the text
+   *  the cashier typed («600 111 222») never equals the stored one. If that read fails, the rows on
+   *  screen are compared as before — a failed duplicate check must not block the sale. */
+  async cardWithPhone(phone) {
+    try {
+      const rows2 = await erplora4().query("customers.by_phone", { phone });
+      return Array.isArray(rows2) ? rows2[0] : void 0;
+    } catch {
+      const typed = phone.replace(/\s+/g, "");
+      return this.results.find((r6) => (r6.phone ?? "").replace(/\s+/g, "") === typed);
     }
   }
   clear() {
