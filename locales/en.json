@@ -201,6 +201,7 @@
     "importRows": "Rows {rows}",
     "importReasonName": "name is required",
     "importReasonEmail": "email is not valid",
+    "importReasonPhone": "phone is not valid — write it with its international prefix (+44…)",
     "importReasonCountry": "country not recognised — imported as written, review it on the customer",
     "close": "Close",
     "eraseData": "Erase personal data",
@@ -259,6 +260,7 @@
     "customers.field_unavailable": "That field is not available in this business (it may have been deleted).",
     "customers.group_name_taken": "There is already a group with that name. Choose a different name.",
     "customers.group_unavailable": "That group is not available in this business (it may have been deleted).",
+    "customers.phone_invalid": "That is not a phone number of its country: check the digits, or write it with its international prefix (+44…).",
     "customers.tag_name_taken": "There is already a tag with that name. Choose a different name.",
     "customers.tag_unavailable": "That tag is not available in this business (it may have been deleted)."
   }

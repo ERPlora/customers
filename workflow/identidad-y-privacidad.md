@@ -11,7 +11,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F10 Reconocer a una persona por su número de teléfono
-Estado: parcial — compara con una regla propia escrita a mano, no con E.164 ni libphonenumber: lee los dos números al vuelo, supone siempre el país del negocio para el que no lleva prefijo (aunque la ficha diga otro país) y no entiende el «(0)» de un número internacional
+Estado: parcial — las fichas ya guardan el teléfono en E.164 (F11), pero la búsqueda por número sigue comparando con su propia regla escrita a mano (una tabla de prefijos copiada en la Bandeja de WhatsApp), no con la del alta: no entiende el «(0)» de un número internacional que llegue a preguntar, y una ficha antigua que la tarea de F11 no pudo leer se sigue comparando como texto tecleado
 Vertical: comun
 Actor: sistema
 Pantalla: ninguna
@@ -38,39 +38,56 @@ Implicados: RESERVATIONS-F17, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F21, WHATSAPP_I
 QA: W-02
 
 ### CUSTOMERS-F11 Guardar el teléfono en formato internacional (E.164)
-Estado: no hecho — el teléfono se guarda tal como se teclea, en la ficha, el alta rápida del TPV, la importación y la respuesta de WhatsApp; nadie lo valida ni lo convierte
+Estado: parcial — la ficha enseña el número tal como se guarda, todo junto, y no con el formato de su país (customers#127); y el buscador de la tabla de Clientes no encuentra un teléfono tecleado con espacios (customers#126)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Ficha de cliente
 Pasos:
-1. Al dar de alta o editar una ficha (F01, F04), en el alta rápida del TPV (F18) o al importar (F08),
-   la persona escribe el teléfono como lo tenga (`600 111 222`, `+44 7700 900123`).
-2. Al guardar, el número se interpreta con las reglas de libphonenumber, usando como país el que
-   lleve el número o, si no lleva prefijo, el del negocio, y se guarda en E.164 (`+34600111222`).
-3. La ficha lo enseña con el formato de su país (`+34 600 11 12 22`); el número guardado no cambia.
-4. Un número que no es válido para ese país se rechaza en el propio campo con el motivo.
-5. Buscar (F02) y reconocer (F10) comparan números ya normalizados, no texto.
+1. Al dar de alta o editar una ficha (F01, F04), en el alta rápida del TPV (F18), al importar (F08)
+   o cuando la crea la respuesta de WhatsApp (F26), la persona escribe el teléfono como lo tenga
+   (`600 111 222`, `0034 600-111-222`, `+44 (0)7700 900123`).
+2. Al guardar, el número se lee con las reglas de libphonenumber (sus metadatos de cada país, dentro
+   del módulo): con el prefijo que lleve (`+` o el `00` que se marca desde el país del negocio) o, si
+   no lleva, en el país del negocio (ajustes del hub; España si nunca se guardó), nunca en el «País»
+   de la ficha. Se quitan espacios, guiones, puntos, barras, paréntesis y el cero nacional, y se
+   guarda en E.164 (`+34600111222`). Vaciar el teléfono está permitido: solo el nombre es obligatorio.
+3. La ficha y la tabla lo enseñan tal como se guarda (`+34600111222`).
+4. Un número que no es posible para su país (`600111` en España), con letras (una extensión) o con
+   dos números en el mismo campo se rechaza con el motivo y no se guarda nada.
+5. Las fichas que ya existían las reescribe sola una tarea programada (cada 15 minutos; la primera
+   pasada tras actualizar hace el trabajo y las siguientes no encuentran nada): con las mismas reglas
+   y el mismo país, guardando aparte el texto viejo de cada ficha que cambia. Un número que no sabe
+   leer se queda como estaba, y la ficha pedirá uno válido la próxima vez que se edite.
+6. Reconocer por número (F10) compara con la ficha ya normalizada. Los buscadores del TPV (F18) y de
+   fusionar fichas (F13) mandan un teléfono tecleado como sus cifras, que el número guardado contiene;
+   el de la tabla de Clientes (F02) aún no.
 Entra: el teléfono tecleado y el país del negocio.
-Sale: el teléfono en E.164 en la ficha y en los avisos de ficha creada o actualizada. Quien lo
-copia lo copia ya normalizado: Citas guarda en la cita el teléfono de la ficha al reservar
-(APPOINTMENTS-F01) y el aviso de cita confirmada de WhatsApp busca la conversación con esa copia
-como texto, así que hoy un teléfono con espacios o guiones no encuentra la conversación y no se
-avisa (WHATSAPP_INBOX-F23, REC_WA_CITA-F07). La Bandeja de WhatsApp compara además con su propia
-copia de la tabla de prefijos (WHATSAPP_INBOX-F04). Reservas no lee el teléfono de la ficha: guarda
-el que se teclea o el número de WhatsApp.
-Si falla: el campo explica por qué no es un número válido y no se guarda; lo tecleado se conserva.
+Sale: el teléfono en E.164 en la ficha y en los avisos de ficha creada o actualizada; por cada ficha
+reescrita por la tarea, una copia de su texto anterior (se borra con los datos personales, F16, y
+deshacer la actualización del módulo devuelve los textos). Quien lo copia lo copia ya normalizado:
+Citas guarda en la cita el teléfono de la ficha al reservar (APPOINTMENTS-F01) y el aviso de cita
+confirmada de WhatsApp busca la conversación, que ya guarda su número en E.164, con esa copia, así
+que una ficha escrita con espacios o guiones ya no deja a la clienta sin aviso. Lo que no depende de
+Clientes sigue abierto en whatsapp_inbox#279: el aviso busca la conversación por «contiene», así que
+el teléfono de una cita tecleado a mano o una ficha antigua incompleta pueden dar con otra persona.
+La Bandeja de WhatsApp compara además con su propia copia de la tabla de prefijos (WHATSAPP_INBOX-F04).
+Reservas no lee el teléfono de la ficha: guarda el que se teclea o el número de WhatsApp.
+Si falla: «No es un teléfono válido de su país: revisa las cifras o escríbelo con su prefijo
+internacional (+44…).» en el formulario (o en el alta rápida del TPV), y lo tecleado se conserva. En la
+importación, la fila se omite con «el teléfono no es válido — escríbelo con su prefijo internacional
+(+44…)» y las demás se crean. Por el asistente o la API, el código `customers.phone_invalid`.
 Implicados: APPOINTMENTS-F01, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F23, REC_WA_CITA-F07
 QA: ninguno
 
 ### CUSTOMERS-F12 Evitar fichas duplicadas de la misma persona
-Estado: parcial — solo dos caminos miran antes de crear: el alta rápida del TPV (y solo entre los resultados en pantalla, quitando espacios) y la respuesta de WhatsApp de citas (por número, F10). El alta desde Clientes y la importación no avisan de nada
+Estado: parcial — solo dos caminos miran antes de crear: el alta rápida del TPV y la respuesta de WhatsApp de citas, los dos por número (F10). El alta desde Clientes y la importación no avisan de nada
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
 Pasos:
 1. Antes de crear, la persona busca por nombre, teléfono, email o NIF (F02); nada se lo pide.
-2. En el TPV, si el teléfono del alta rápida coincide (sin espacios) con el de una ficha de la lista
-   que tiene en pantalla, se elige esa ficha en vez de crear otra.
+2. En el TPV, si el teléfono del alta rápida es, como número, el de una ficha viva del negocio (F10),
+   se elige esa ficha en vez de crear otra.
 3. Por WhatsApp, la respuesta de citas solo crea ficha si la búsqueda por número no encuentra a nadie.
 4. Si ya hay dos fichas de la misma persona, se juntan con F13.
 Entra: lo que se teclea.

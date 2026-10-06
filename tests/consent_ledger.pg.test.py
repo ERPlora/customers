@@ -505,7 +505,7 @@ def main() -> int:
         print("· editing the sheet cannot switch consent on")
         before = sheet("c-a")
         ok, err = run(
-            "customers.update",
+            "customers._update",
             {
                 "customer_id": "c-a",
                 "name": "Ada",

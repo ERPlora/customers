@@ -4,6 +4,7 @@
   "consumes": {
     "queries": [
       "customers.activities",
+      "customers.by_phone",
       "customers.consent.history",
       "customers.consent.state",
       "customers.fields.list",

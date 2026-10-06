@@ -10,7 +10,10 @@
 //! por nombre de command del mismo módulo + params) que el host valida y ejecuta en una
 //! transacción. Los ids de filas nuevas salen de `context.new_ids` (autoridad del host).
 
-use erplora_guest_sdk::{DomainError, Operation, Output};
+pub mod phone;
+mod phone_metadata;
+
+use erplora_guest_sdk::{DomainError, Event, Operation, Output};
 use serde_json::{json, Map, Value};
 
 #[cfg(feature = "guest")]
@@ -20,6 +23,18 @@ use extism_pdk::*;
 #[plugin_fn]
 pub fn bulk_create(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output>> {
     Ok(Json(bulk_create_pure(input.into_inner().into_value())))
+}
+
+#[cfg(feature = "guest")]
+#[plugin_fn]
+pub fn create(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output>> {
+    Ok(Json(create_pure(input.into_inner().into_value())))
+}
+
+#[cfg(feature = "guest")]
+#[plugin_fn]
+pub fn update(input: Json<erplora_guest_sdk::Input>) -> FnResult<Json<Output>> {
+    Ok(Json(update_pure(input.into_inner().into_value())))
 }
 
 #[cfg(feature = "guest")]
@@ -102,7 +117,19 @@ pub fn bulk_create_pure(input: Value) -> Output {
         .unwrap_or(&empty);
 
     let mut ops: Vec<Operation> = Vec::new();
+    // customers#121: a row whose phone is not a phone of its country is NOT created; the answer
+    // names it (`result.rejected`, by item index) so the import can say which line it skipped.
+    let mut rejected: Vec<Value> = Vec::new();
+    let home = business_country(&input);
     for (i, item) in items.iter().take(MAX_BULK).enumerate() {
+        let phone = match phone::to_e164(&str_or(item, "phone", ""), &home) {
+            Ok(phone) => phone,
+            Err(_) => {
+                rejected.push(json!({ "index": i, "code": format!("customers.{PHONE_INVALID}") }));
+                continue;
+            }
+        };
+        // Item `i` keeps batch id `i` whether or not an earlier row was skipped.
         let id = new_ids.get(i).cloned().unwrap_or(Value::Null);
         let mut p = Map::new();
         p.insert("new_id".into(), id); // create.sql usa :new_id
@@ -111,7 +138,7 @@ pub fn bulk_create_pure(input: Value) -> Output {
             json!(as_str(item.get("name").unwrap_or(&Value::Null))),
         );
         p.insert("email".into(), json!(str_or(item, "email", "")));
-        p.insert("phone".into(), json!(str_or(item, "phone", "")));
+        p.insert("phone".into(), json!(phone));
         p.insert("tax_id".into(), json!(str_or(item, "tax_id", "")));
         p.insert("address".into(), json!(str_or(item, "address", "")));
         p.insert("city".into(), json!(str_or(item, "city", "")));
@@ -139,11 +166,67 @@ pub fn bulk_create_pure(input: Value) -> Output {
                 .unwrap_or(false) as i64),
         );
         p.insert("consent_date".into(), opt_str(item, "consent_date"));
-        ops.push(Operation::sql("customers.create", p));
+        ops.push(Operation::sql("customers._create", p));
     }
     Output {
         operations: ops,
         events: vec![],
+        result: Some(json!({ "rejected": rejected })),
+        ..Default::default()
+    }
+}
+
+const PHONE_INVALID: &str = "phone_invalid";
+const PHONE_INVALID_MESSAGE: &str =
+    "That is not a phone number of its country: check the digits, or write it with its international prefix (+44…).";
+
+/// The business's country (`hub_settings.country_code`, handed over by the host as
+/// `context.country_code`): the one a phone typed without prefix belongs to.
+fn business_country(input: &Value) -> String {
+    as_str(input.get("context").and_then(|c| c.get("country_code")).unwrap_or(&Value::Null))
+}
+
+/// The card as the caller sent it, with its phone in E.164 (customers#121) — or the refusal.
+/// An absent or null phone is left alone: the SQL keeps its own default for it.
+fn card_with_e164_phone(input: &Value, card: &Value) -> Result<Map<String, Value>, Output> {
+    let mut card = card.as_object().cloned().unwrap_or_default();
+    if let Some(raw) = card.get("phone").filter(|v| !v.is_null()) {
+        let e164 = phone::to_e164(&as_str(raw), &business_country(input))
+            .map_err(|_| domain_error(PHONE_INVALID, PHONE_INVALID_MESSAGE.into()))?;
+        card.insert("phone".into(), json!(e164));
+    }
+    Ok(card)
+}
+
+/// `customers.create`: the card's SQL (`customers._create`) with its phone in E.164, and the
+/// `customer.created` notice carrying the card AS SAVED — the host announces the handler's copy
+/// instead of the caller's payload (hub#1786), so listeners (WhatsApp linking its conversations)
+/// see the stored phone and the row's id in `new_id`, as they did when the command was plain SQL.
+pub fn create_pure(input: Value) -> Output {
+    let (payload, new_ids) = payload_context(&input);
+    let mut card = match card_with_e164_phone(&input, &payload) {
+        Ok(card) => card,
+        Err(refusal) => return refusal,
+    };
+    card.insert("new_id".into(), new_ids.first().cloned().unwrap_or(Value::Null));
+    Output {
+        operations: vec![Operation::sql("customers._create", card.clone())],
+        events: vec![Event::new("customer.created", Value::Object(card))],
+        ..Default::default()
+    }
+}
+
+/// `customers.update`: same as [`create_pure`] for an existing card (`customers._update`,
+/// `customer.updated`).
+pub fn update_pure(input: Value) -> Output {
+    let (payload, _ids) = payload_context(&input);
+    let card = match card_with_e164_phone(&input, &payload) {
+        Ok(card) => card,
+        Err(refusal) => return refusal,
+    };
+    Output {
+        operations: vec![Operation::sql("customers._update", card.clone())],
+        events: vec![Event::new("customer.updated", Value::Object(card))],
         ..Default::default()
     }
 }
@@ -221,6 +304,11 @@ fn validate_field_value(field: &Value, value: &str) -> Result<(), (&'static str,
 /// `customers.create`, `bulk_create` and the CSV import may leave required fields pending.
 pub fn update_with_fields_pure(input: Value) -> Output {
     let (payload, _ids) = payload_context(&input);
+    // customers#121: the phone in E.164, or nothing is written.
+    let payload = match card_with_e164_phone(&input, &payload) {
+        Ok(card) => Value::Object(card),
+        Err(refusal) => return refusal,
+    };
     let empty: Vec<Value> = Vec::new();
     let defs = input
         .get("context")
@@ -270,7 +358,7 @@ pub fn update_with_fields_pure(input: Value) -> Output {
         update.insert((*k).into(), payload.get(*k).cloned().unwrap_or(Value::Null));
     }
     let customer_id = update.get("customer_id").cloned().unwrap_or(Value::Null);
-    let mut ops = vec![Operation::sql("customers.update", update)];
+    let mut ops = vec![Operation::sql("customers._update", update)];
     for (field_id, value) in values {
         let mut p = Map::new();
         p.insert("customer_id".into(), customer_id.clone());
@@ -278,7 +366,12 @@ pub fn update_with_fields_pure(input: Value) -> Output {
         p.insert("value".into(), json!(value));
         ops.push(Operation::sql("customers._field_value_set", p));
     }
-    Output { operations: ops, events: vec![], ..Default::default() }
+    // The notice carries the card AS SAVED (its E.164 phone), not the caller's payload (hub#1786).
+    Output {
+        operations: ops,
+        events: vec![Event::new("customer.updated", payload)],
+        ..Default::default()
+    }
 }
 
 /// Lógica de set_groups / set_tags: clear + N adds (reemplazo de colección M2M).
@@ -339,11 +432,11 @@ mod tests {
     fn bulk_create_normalizes_stage_and_correlates_ids() {
         let payload = json!({ "items": [
             { "name": "Bar Manolo", "email": "m@bar.es", "lifecycle_stage": "customer" },
-            { "name": "Ana", "phone": "600" }
+            { "name": "Ana", "phone": "600 111 222" }
         ]});
         let out = bulk_create_pure(with(payload, ctx(4)));
         assert_eq!(out.operations.len(), 2);
-        assert_eq!(out.operations[0].command, "customers.create");
+        assert_eq!(out.operations[0].command, "customers._create");
         assert_eq!(out.operations[0].params["new_id"], json!("id-0"));
         // "customer" → "active".
         assert_eq!(out.operations[0].params["lifecycle_stage"], json!("active"));
@@ -398,7 +491,7 @@ mod tests {
         let out = update_with_fields_pure(with(sheet(json!([{ "field_id": "f-dye", "value": "7.1" }])), ctx));
         assert!(out.error.is_none(), "{:?}", out.error);
         assert_eq!(out.operations.len(), 2);
-        assert_eq!(out.operations[0].command, "customers.update");
+        assert_eq!(out.operations[0].command, "customers._update");
         assert_eq!(out.operations[0].params["customer_id"], json!("c1"));
         assert_eq!(out.operations[0].params["name"], json!("Ana"));
         assert_eq!(out.operations[1].command, "customers._field_value_set");
@@ -479,5 +572,132 @@ mod tests {
         );
         assert_eq!(out.operations.len(), 1);
         assert_eq!(out.operations[0].command, "customers._tag_clear");
+    }
+
+    // ── customers#121: every write of a card saves its phone in E.164 or refuses it ─────────
+    fn card_ctx(country: &str) -> Value {
+        json!({ "context": { "new_ids": ["id-0", "id-1", "id-2", "id-3"], "country_code": country,
+                             "reads": { "customers.fields.values": [] } } })
+    }
+
+    #[test]
+    fn create_saves_e164_and_announces_the_saved_card() {
+        let payload = json!({ "name": "Ana", "phone": "600 111 222", "hub_id": "h1", "new_id": "minted" });
+        let out = create_pure(with(payload, card_ctx("ES")));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 1);
+        let op = &out.operations[0];
+        assert_eq!(op.command, "customers._create");
+        assert_eq!(op.params["phone"], json!("+34600111222"));
+        assert_eq!(op.params["name"], json!("Ana"));
+        // The row takes the batch id, so `new_ids[0]` of the answer is the card.
+        assert_eq!(op.params["new_id"], json!("id-0"));
+        assert_eq!(out.events.len(), 1);
+        assert_eq!(out.events[0].name, "customer.created");
+        assert_eq!(out.events[0].payload["phone"], json!("+34600111222"));
+        assert_eq!(out.events[0].payload["new_id"], json!("id-0"));
+        assert_eq!(out.events[0].payload["name"], json!("Ana"));
+        assert_eq!(out.events[0].payload["hub_id"], json!("h1"));
+    }
+
+    #[test]
+    fn create_reads_a_number_without_prefix_in_the_business_country() {
+        let payload = json!({ "name": "Liz", "phone": "07700 900123" });
+        let out = create_pure(with(payload, card_ctx("GB")));
+        assert_eq!(out.operations[0].params["phone"], json!("+447700900123"));
+    }
+
+    #[test]
+    fn create_without_phone_still_creates() {
+        let out = create_pure(with(json!({ "name": "Walk-in" }), card_ctx("ES")));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 1);
+        // An absent phone stays absent: `create.sql` defaults it to ''.
+        assert!(out.operations[0].params.get("phone").is_none());
+    }
+
+    #[test]
+    fn create_refuses_an_impossible_number_and_writes_nothing() {
+        let out = create_pure(with(json!({ "name": "Ana", "phone": "600111" }), card_ctx("ES")));
+        assert_eq!(out.error.expect("must refuse").code, "customers.phone_invalid");
+        assert!(out.operations.is_empty());
+        assert!(out.events.is_empty());
+    }
+
+    #[test]
+    fn update_saves_e164_and_announces_the_saved_card() {
+        let out = update_pure(with(sheet(json!([])).tap_phone("+44 (0)7700 900123"), card_ctx("ES")));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 1);
+        assert_eq!(out.operations[0].command, "customers._update");
+        assert_eq!(out.operations[0].params["phone"], json!("+447700900123"));
+        assert_eq!(out.operations[0].params["customer_id"], json!("c1"));
+        assert_eq!(out.events.len(), 1);
+        assert_eq!(out.events[0].name, "customer.updated");
+        assert_eq!(out.events[0].payload["phone"], json!("+447700900123"));
+        assert_eq!(out.events[0].payload["customer_id"], json!("c1"));
+    }
+
+    #[test]
+    fn update_refuses_an_impossible_number() {
+        let out = update_pure(with(sheet(json!([])).tap_phone("12345"), card_ctx("ES")));
+        assert_eq!(out.error.expect("must refuse").code, "customers.phone_invalid");
+        assert!(out.operations.is_empty());
+        assert!(out.events.is_empty());
+    }
+
+    #[test]
+    fn update_with_fields_saves_e164_and_announces_it() {
+        let out = update_with_fields_pure(with(sheet(json!([])).tap_phone("(+34) 655.44.33.22"), card_ctx("ES")));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations[0].command, "customers._update");
+        assert_eq!(out.operations[0].params["phone"], json!("+34655443322"));
+        assert_eq!(out.events.len(), 1);
+        assert_eq!(out.events[0].name, "customer.updated");
+        assert_eq!(out.events[0].payload["phone"], json!("+34655443322"));
+    }
+
+    #[test]
+    fn update_with_fields_refuses_an_impossible_number() {
+        let out = update_with_fields_pure(with(sheet(json!([])).tap_phone("655"), card_ctx("ES")));
+        assert_eq!(out.error.expect("must refuse").code, "customers.phone_invalid");
+        assert!(out.operations.is_empty());
+    }
+
+    #[test]
+    fn bulk_create_skips_the_bad_row_and_says_which() {
+        let payload = json!({ "items": [
+            { "name": "A", "phone": "611 22 33 44" },
+            { "name": "B", "phone": "12" },
+            { "name": "C", "phone": "+33 6 12 34 56 78" }
+        ]});
+        let out = bulk_create_pure(with(payload, card_ctx("ES")));
+        assert!(out.error.is_none(), "{:?}", out.error);
+        assert_eq!(out.operations.len(), 2);
+        assert_eq!(out.operations[0].params["phone"], json!("+34611223344"));
+        assert_eq!(out.operations[0].params["new_id"], json!("id-0"));
+        assert_eq!(out.operations[1].params["name"], json!("C"));
+        assert_eq!(out.operations[1].params["phone"], json!("+33612345678"));
+        assert_eq!(out.operations[1].params["new_id"], json!("id-2"));
+        assert_eq!(
+            out.result,
+            Some(json!({ "rejected": [{ "index": 1, "code": "customers.phone_invalid" }] }))
+        );
+    }
+
+    #[test]
+    fn bulk_create_with_every_row_good_reports_nothing_rejected() {
+        let out = bulk_create_pure(with(json!({ "items": [{ "name": "A" }] }), card_ctx("ES")));
+        assert_eq!(out.result, Some(json!({ "rejected": [] })));
+    }
+
+    trait TapPhone {
+        fn tap_phone(self, phone: &str) -> Value;
+    }
+    impl TapPhone for Value {
+        fn tap_phone(mut self, phone: &str) -> Value {
+            self["phone"] = json!(phone);
+            self
+        }
     }
 }

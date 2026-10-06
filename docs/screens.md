@@ -19,6 +19,8 @@ page). Requires `customers.view_customer`.
 2. Fill in the name. Contact details (email, phone, address, city, postal code, country), tax details
    (tax id, company name) and CRM fields are optional. The country is picked from a searchable list
    (Spain first) and stored as its ISO code, so the till always recognises it on the invoice.
+   The phone can be typed any way (`600 111 222`, `+44 7700 900123`); it is saved in international
+   form (`+34600111222`), and a number that is not a phone of its country is refused on save.
 3. Save.
 
 Requires `customers.add_customer` — an employee can do this.

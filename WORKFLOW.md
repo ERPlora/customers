@@ -134,7 +134,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | CUSTOMERS-F08 | Importar fichas desde un CSV | parcial | comun | fichas |
 | CUSTOMERS-F09 | Exportar la lista de fichas | parcial | comun | fichas |
 | CUSTOMERS-F10 | Reconocer a una persona por su número de teléfono | parcial | comun | identidad-y-privacidad |
-| CUSTOMERS-F11 | Guardar el teléfono en formato internacional (E.164) | no hecho | comun | identidad-y-privacidad |
+| CUSTOMERS-F11 | Guardar el teléfono en formato internacional (E.164) | parcial | comun | identidad-y-privacidad |
 | CUSTOMERS-F12 | Evitar fichas duplicadas de la misma persona | parcial | comun | identidad-y-privacidad |
 | CUSTOMERS-F13 | Unir dos fichas de la misma persona | hecho | comun | identidad-y-privacidad |
 | CUSTOMERS-F14 | Registrar que un cliente da su consentimiento para un canal | parcial | comun | identidad-y-privacidad |
@@ -184,22 +184,23 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 
 | Elemento | Estado | Flujo |
 |---|---|---|
-| Guardar el número en E.164 (`+` y cifras) al dar de alta, editar, importar o crear en el TPV | no hecho: se guarda tal como se teclea, sin más que quitar espacios de los extremos | F11, F01, F04, F08, F18 |
-| Guardar en E.164 la ficha que crea WhatsApp | parcial: lleva `+` porque el asistente lo escribe así; nada lo impone | F26 |
-| Comprobar que el número es posible para su país (longitud, tipo) | no hecho: al comparar solo se exigen 7 cifras | F10, F11 |
-| Espacios, guiones, puntos y paréntesis | hecho al comparar por número; no al buscar en la lista; el alta rápida del TPV solo quita espacios | F10, F02, F18 |
-| Prefijo con `+` o con `00` | hecho al comparar | F10 |
-| Cero nacional delante (`07700…` en Reino Unido) | hecho al comparar cuando el número es del país del negocio; uno extranjero guardado así cae en la fila «sin su prefijo» | F10 |
-| Cero nacional entre paréntesis en un número internacional (`+44 (0)7700…`) | no hecho: el cero se queda y no casa | F10 |
-| Países que conservan el cero tras el prefijo (Italia y otros 8) | hecho, con una lista propia de 9 países | F10 |
+| Guardar el número en E.164 (`+` y cifras) al dar de alta, editar, importar o crear en el TPV | hecho: toda escritura de la ficha pasa por las reglas de libphonenumber, y las fichas antiguas las reescribe una tarea programada con copia del texto viejo | F11, F01, F04, F08, F18 |
+| Guardar en E.164 la ficha que crea WhatsApp | hecho: la misma alta lo normaliza | F26 |
+| Comprobar que el número es posible para su país (longitud, tipo) | hecho al guardar (longitud posible de su país; el tipo, móvil o fijo, no se mira); al comparar solo se exigen 7 cifras | F10, F11 |
+| Espacios, guiones, puntos y paréntesis | hecho al guardar y al comparar por número; al buscar, en el TPV y en fusionar fichas sí, en la tabla de Clientes no (customers#126) | F10, F11, F02, F18 |
+| Prefijo con `+` o con `00` | hecho al guardar y al comparar | F10, F11 |
+| Enseñar el número con el formato de su país | no hecho: se enseña tal como se guarda (customers#127) | F11 |
+| Cero nacional delante (`07700…` en Reino Unido) | hecho al guardar y al comparar cuando el número es del país del negocio; uno extranjero tecleado así se rechaza al guardar si no es posible en el país del negocio | F10, F11 |
+| Cero nacional entre paréntesis en un número internacional (`+44 (0)7700…`) | hecho al guardar; al comparar un número que llega así, no: el cero se queda y no casa | F10, F11 |
+| Países que conservan el cero tras el prefijo (Italia y otros 8) | hecho: al guardar, con los metadatos de libphonenumber; al comparar, con una lista propia de 9 países | F10, F11 |
 | País que se supone para un número sin prefijo | parcial: siempre el del negocio; el «País» de la ficha no se usa para el teléfono | F10, F11 |
 | Número extranjero guardado con su prefijo | hecho: casa solo con ese país | F10 |
-| Número extranjero guardado sin su prefijo | no hecho: se toma como del país del negocio, no casa nunca con el que da WhatsApp y sí con quien escriba desde esas cifras en el país del negocio, que es otra persona | F10, F11 |
-| Tabla de prefijos por país | parcial: escrita a mano en Clientes y copiada en la Bandeja de WhatsApp; un país nuevo hay que añadirlo en los dos | F10 |
-| Extensión o dos números en el mismo campo | no hecho: las cifras se juntan y no casa | F10 |
-| Buscar en Clientes un teléfono escrito de otra forma | no hecho: compara texto | F02 |
+| Número extranjero guardado sin su prefijo | parcial: al guardar se lee en el país del negocio; si no es posible allí se rechaza y se pide el prefijo, pero si lo es se guarda como del país del negocio y es otra persona | F10, F11 |
+| Tabla de prefijos por país | parcial: al guardar, generada de los metadatos de libphonenumber; al comparar, escrita a mano en Clientes y copiada en la Bandeja de WhatsApp | F10, F11 |
+| Extensión o dos números en el mismo campo | hecho al guardar: se rechaza | F10, F11 |
+| Buscar en Clientes un teléfono escrito de otra forma | parcial: el TPV y fusionar fichas buscan sus cifras; la tabla compara texto (customers#126) | F02, F18, F13 |
 | Avisar de un teléfono repetido al crear | parcial: solo el alta rápida del TPV, entre los resultados en pantalla | F12, F18 |
-| Comparar números ya normalizados en los demás módulos | no hecho: el buscador de Reservas compara el teléfono como texto y WhatsApp busca la conversación de la cita confirmada con el teléfono copiado en la cita, como texto (WHATSAPP_INBOX-F23) | F11 |
+| Comparar números ya normalizados en los demás módulos | parcial: la cita copia el teléfono ya normalizado y la conversación también lo está, pero el aviso de cita confirmada compara por «contiene» (whatsapp_inbox#279) y el buscador de Reservas compara texto | F11 |
 
 **2 · Borrado de datos contra el inventario (Shopify `customers/redact`, buscador de privacidad de Odoo).**
 
@@ -254,13 +255,14 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 
 ## Datos: de quién es cada dato
 
-Inventario sacado de recorrer las ocho migraciones y lo que viaja en los avisos.
+Inventario sacado de recorrer las nueve migraciones y lo que viaja en los avisos.
 
 | Dato personal | Dónde vive | Dueño | Cómo se borra hoy |
 |---|---|---|---|
 | Nombre, email, teléfono, NIF, empresa, dirección, ciudad, código postal, país, foto, notas internas, cumpleaños, aniversario, canal preferido, marca y fecha de consentimiento | la ficha | Clientes | F16: marcador y vacíos; la fila y su identificador se quedan. F07 no borra nada |
 | Origen, etapa, compras, gastado, última compra, fecha de alta y de baja, quién la creó y cambió | la ficha | Clientes (las cifras, derivadas del historial de compras) | F16 los conserva (no identifican por sí solos) |
 | Valores de campos propios (pueden ser datos de salud: alergias, tinte, embarazo) | valores de campo | Clientes | F16: vaciados y ocultos |
+| Teléfono tal como se tecleó antes de pasarlo a E.164 (solo las fichas que reescribió la tarea de F11) | copia de teléfonos | Clientes | F16: se borra |
 | Notas, su autor (identificador del empleado) y el nombre del autor si se dio | notas | Clientes | F16: texto y nombre vaciados y ocultos; el identificador del autor se queda |
 | Actividad: textos de notas, frase del consentimiento, motivo de una retirada o de una anulación de venta, importes, quién la hizo y a qué venta, nota o ficha apunta | actividad | Clientes | F16: descripción y datos vaciados y ocultos; el título, quién la hizo y a qué apunta se quedan |
 | Entrada de auditoría del borrado, con el motivo tal como se escribió | actividad | Clientes | se queda visible a propósito |
@@ -296,6 +298,8 @@ Solo lo que el código hace cumplir.
   aprobación (PIN) de un responsable; lo que es solo del administrador, no. (Exportar no está en
   esta regla: solo esconde el botón, F09.)
 - **Para crear basta el nombre.** Ninguna otra cosa se exige al dar de alta.
+- **El teléfono se guarda en formato internacional o no se guarda**: toda escritura de la ficha lo
+  normaliza, y uno que no es un número válido de su país rechaza el guardado (F11).
 - **El consentimiento no se pone editando, creando ni importando.** Solo con su acción propia, que
   exige la frase mostrada; cada decisión es un hecho nuevo que ninguna orden de consentimiento
   edita ni borra (al unir fichas pasa a la superviviente; al borrar los datos se vacían su
@@ -325,24 +329,24 @@ Solo lo que el código hace cumplir.
 
 ## Dudas abiertas
 
-Se resuelven con `market-decision`; no las decide el worker.
+Se resuelven con `market-decision`; no las decide el worker. (La del teléfono en E.164 se resolvió en
+customers#121: país del negocio para el número sin prefijo, como libphonenumber y los TPV de
+referencia; fichas existentes reescritas por una tarea programada; reglas con los metadatos de
+libphonenumber dentro del módulo, y WhatsApp sigue con su copia, ver «Cobertura».)
 
-1. **Teléfono en E.164 al guardar (F11).** ¿Qué país se supone para un número sin prefijo: el del
-   negocio o el «País» de la ficha? ¿Se normalizan las fichas que ya existen o solo al editarlas?
-   ¿Dónde vive la librería, para que Clientes, WhatsApp y Reservas usen la misma y no una copia?
-2. **Aviso de duplicado al crear (F12).** customers#12 lo dejó fuera del MVP el 06/08; desde
+1. **Aviso de duplicado al crear (F12).** customers#12 lo dejó fuera del MVP el 06/08; desde
    entonces la fusión entró como P1 (customers#86, 23/09) y pm#621 mide fichas repetidas por
    teléfono. ¿Vuelve como aviso que no bloquea?
-3. **Inventario único de datos personales (F16).** ¿Contrato del hub —cada módulo declara qué guarda
+2. **Inventario único de datos personales (F16).** ¿Contrato del hub —cada módulo declara qué guarda
    de una persona y responde a un único aviso— o cada módulo escucha el aviso por su cuenta, como hoy?
-4. **Eliminar frente a borrar datos (F07, F16).** La orden ya borra los datos de una ficha eliminada
+3. **Eliminar frente a borrar datos (F07, F16).** La orden ya borra los datos de una ficha eliminada
    o absorbida; lo que falta es la pantalla: ¿eliminar debe ofrecer también borrar los datos, y
    dónde se ofrece el borrado de una ficha eliminada o absorbida?
-5. **Devoluciones (F22).** ¿«Gastado» neto de devoluciones, como hacen Shopify y Square?
-6. **Perfiles.** El Cajero puede editar fichas y registrar consentimientos y el Empleado no. ¿Es lo buscado?
-7. **Etapas por tiempo.** «En riesgo», «Inactivo» y «Perdido» no los pone nadie: ¿tarea programada o fuera de la lista?
-8. **Datos de salud (F29, L-10).** ¿Marca de campo sensible con consentimiento explícito?
-9. **Minimización de datos (F30).** Servicios pide la ficha entera de cada titular de un bono (con NIF, dirección, notas y cumpleaños) solo para pintar su nombre. ¿Una lectura que devuelva solo el nombre?
+4. **Devoluciones (F22).** ¿«Gastado» neto de devoluciones, como hacen Shopify y Square?
+5. **Perfiles.** El Cajero puede editar fichas y registrar consentimientos y el Empleado no. ¿Es lo buscado?
+6. **Etapas por tiempo.** «En riesgo», «Inactivo» y «Perdido» no los pone nadie: ¿tarea programada o fuera de la lista?
+7. **Datos de salud (F29, L-10).** ¿Marca de campo sensible con consentimiento explícito?
+8. **Minimización de datos (F30).** Servicios pide la ficha entera de cada titular de un bono (con NIF, dirección, notas y cumpleaños) solo para pintar su nombre. ¿Una lectura que devuelva solo el nombre?
 
 ## Fuentes contrastadas
 

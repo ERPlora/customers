@@ -8,6 +8,8 @@ import '@erplora/outfitkit/ok-empty-state';
 import esLocale from '../../../locales/es.json';
 import enLocale from '../../../locales/en.json';
 import { countryCode, countryName } from '../../lib/country';
+import { domainErrorText } from '../../lib/domain-error-text';
+import { searchTerm } from '../../lib/phone-search';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -228,7 +230,7 @@ export class ErpCustomersPosSearch extends LitElement {
     this.error = '';
     this.state = 'searching';
     try {
-      const r = await erplora().query('customers.list', { search: q, limit: 20, sort: 'name', dir: 'asc' });
+      const r = await erplora().query('customers.list', { search: searchTerm(q), limit: 20, sort: 'name', dir: 'asc' });
       if (seq !== this.searchSeq) return; // stale: a newer search is in flight or already answered
       this.results = rows<Customer>(r);
       this.state = this.results.length ? 'idle' : 'empty';
@@ -316,20 +318,35 @@ export class ErpCustomersPosSearch extends LitElement {
     const name = this.quickName.trim();
     const phone = this.quickPhone.trim();
     if (!name) { this.quickError = erplora().t(CATALOG, 'ui.quickNameRequired'); return; }
-    const dup = phone ? this.results.find((r) => (r.phone ?? '').replace(/\s+/g, '') === phone.replace(/\s+/g, '')) : undefined;
-    if (dup) { this.quickOpen = false; await this.pick(dup); return; }
     this.creating = true;
     this.quickError = '';
     try {
+      const dup = phone ? await this.cardWithPhone(phone) : undefined;
+      if (dup) { this.quickOpen = false; await this.pick(dup); return; }
       const out = await erplora().command<{ new_ids?: string[] }>('customers.create', { name, phone, source: 'walk_in' });
       const id = out?.new_ids?.[0];
       if (!id) throw new Error(erplora().t(CATALOG, 'ui.errCreate'));
       this.quickOpen = false;
       await this.pick({ id, name, phone });
     } catch (e) {
-      this.quickError = e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate');
+      this.quickError = domainErrorText(CATALOG, erplora().locale, e)
+        || (e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate'));
     } finally {
       this.creating = false;
+    }
+  }
+
+  /** The live card that already carries `phone`, compared as a NUMBER of the business's country by
+   *  the server (`customers.by_phone`, F10): cards are stored in E.164 (customers#121), so the text
+   *  the cashier typed («600 111 222») never equals the stored one. If that read fails, the rows on
+   *  screen are compared as before — a failed duplicate check must not block the sale. */
+  private async cardWithPhone(phone: string): Promise<Customer | undefined> {
+    try {
+      const rows = await erplora().query<Customer[]>('customers.by_phone', { phone });
+      return Array.isArray(rows) ? rows[0] : undefined;
+    } catch {
+      const typed = phone.replace(/\s+/g, '');
+      return this.results.find((r) => (r.phone ?? '').replace(/\s+/g, '') === typed);
     }
   }
 

@@ -1,5 +1,6 @@
--- Edición de cliente (la UI envía el conjunto completo de campos editables, Tier 0/1).
--- Portado de CustomerService.update_customer.
+-- Customer edit (the UI sends the whole set of editable fields). Reached as `customers._update`
+-- from the handler (`update` / `update_with_fields`), which has already turned :phone into E.164
+-- or refused it (customers#121): never called straight from a screen.
 --
 -- **`marketing_consent` y `consent_date` YA NO se escriben aquí** (customers#10). Esta sentencia
 -- ponía el booleano y nunca tocaba la fecha, así que se podía encender el consentimiento con fecha

@@ -21,9 +21,10 @@ Pasos:
    preferido» (de fábrica «Ninguno») y «Notas internas».
 3. Solo el nombre es obligatorio: hasta que no lo hay, **Guardar** no se puede pulsar.
 4. Pulsa **Guardar**: el panel se cierra y la ficha aparece en la lista; las cifras de arriba se recalculan.
-Entra: lo que se teclea. El país se guarda como su código de dos letras (`ES`, `FR`). El teléfono,
-el email y el NIF se guardan tal como se escriben, sin quitarles nada salvo los espacios de los
-extremos (ver F11).
+Entra: lo que se teclea. El país se guarda como su código de dos letras (`ES`, `FR`). El teléfono
+se guarda en formato internacional (`+34600111222`), leyendo el que no lleva prefijo en el país del
+negocio (F11); el email y el NIF, tal como se escriben, sin quitarles nada salvo los espacios de los
+extremos.
 Sale: la ficha nueva, sin consentimiento de ningún tipo (no hay casilla, F14), y el aviso de ficha
 creada (`customer.created`, con todos los datos tecleados). WhatsApp lo escucha para unir a la
 ficha las conversaciones que ya tenía ese número. El aviso puede arrancar una automatización (FLOWS-F13): la tarjeta
@@ -32,20 +33,24 @@ una **tarea** de darle la bienvenida (necesita el módulo Tareas, congelado), no
 ficha (FLOWS-F04).
 Si falla: el motivo sale dentro del propio panel, encima del botón, y lo tecleado se conserva. Un
 email mal formado NO falla: se guarda (el esquema declara el formato, pero el hub no lo aplica en
-ese tipo de esquema y la pantalla no lo mira; solo la importación lo rechaza, F08). Los campos
+ese tipo de esquema y la pantalla no lo mira; solo la importación lo rechaza, F08). Un teléfono que
+no es un número válido de su país sí falla: «No es un teléfono válido de su país: revisa las cifras o
+escríbelo con su prefijo internacional (+44…).», y no se guarda nada (F11). Los campos
 personalizados no salen en el alta, así que los obligatorios no se piden aquí (F29). Nada avisa de
 que ya existe otra ficha con el mismo teléfono, email o NIF (F12).
 Implicados: FLOWS-F04, FLOWS-F13, WHATSAPP_INBOX-F04
 QA: B-02
 
 ### CUSTOMERS-F02 Buscar y filtrar fichas
-Estado: parcial — el buscador compara el teléfono como texto: «600111222» no encuentra una ficha guardada como «600 111 222» ni «+34 600-111-222»
+Estado: parcial — el buscador de la tabla compara el teléfono como texto: las fichas lo guardan en formato internacional (F11), así que «600111222» la encuentra pero «600 111 222» no (customers#126)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
 Pasos:
 1. En **Clientes**, escribe en el buscador («Buscar nombre o email…»). Busca a la vez en nombre,
    email, teléfono, NIF y empresa, sin distinguir mayúsculas ni acentos («garcia» encuentra «García»).
+   El teléfono se busca tal como se escribe: escrito todo junto encuentra la ficha, con espacios o
+   guiones no (los buscadores del TPV y de fusionar fichas sí mandan solo sus cifras, F13, F18).
 2. Con **Filtros**: nombre, email y teléfono por «contiene», etapa con lista y gastado por rango
    «Desde / Hasta», escrito en euros. (El servidor admite más filtros —NIF, empresa, origen, activo,
    compras, última compra— que la pantalla no ofrece.)
@@ -94,13 +99,16 @@ Pasos:
    lista o texto largo; los obligatorios llevan `*`) y la casilla «Activo».
 2. Cambia lo que haga falta. Vaciar un campo también es un cambio.
 3. Pulsa **Guardar**. Sale «Cliente actualizado» y la ficha se relee.
-Entra: la ficha entera y el valor de cada campo personalizado.
+Entra: la ficha entera y el valor de cada campo personalizado. El teléfono se guarda en formato
+internacional, como en el alta (F11).
 Sale: la ficha y sus campos guardados en una sola escritura, y el aviso de ficha actualizada
 (`customer.updated`). WhatsApp lo escucha para unir conversaciones de un teléfono recién corregido.
 El consentimiento queda anotado con la dirección para la que se dio: si se cambia el teléfono o el
 email, el panel sigue diciendo «Dado» con la dirección antigua al lado (F14).
-Si falla: un campo obligatorio vacío o un valor que no encaja con su tipo rechaza TODO el guardado
-(nada queda a medias) y el motivo sale arriba de la ficha. La casilla «Activo» desmarcada solo
+Si falla: un campo obligatorio vacío, un valor que no encaja con su tipo o un teléfono que no es un
+número válido de su país (F11) rechaza TODO el guardado (nada queda a medias) y el motivo sale
+arriba de la ficha, con la pantalla desplazada hasta él (en un móvil **Guardar** queda al pie del
+formulario, lejos del aviso). La casilla «Activo» desmarcada solo
 cambia la cifra «Activos» de la lista: la ficha sigue saliendo en búsquedas, en el TPV y en WhatsApp.
 El empleado no ve **Editar**; el perfil Cajero sí puede editar. Un email mal formado no falla: se guarda.
 Implicados: WHATSAPP_INBOX-F04
@@ -162,7 +170,7 @@ Implicados: SERVICES-F29, SERVICES-F30
 QA: L-10
 
 ### CUSTOMERS-F08 Importar fichas desde un CSV
-Estado: parcial — no emite el aviso de ficha creada: las conversaciones de WhatsApp que ya existían no se unen a la ficha importada hasta que esa persona vuelve a escribir (el repaso de cada 15 minutos solo mira una vez cada conversación); no detecta duplicados (repetir el fichero duplica las fichas) y guarda los teléfonos tal como vienen
+Estado: parcial — no emite el aviso de ficha creada: las conversaciones de WhatsApp que ya existían no se unen a la ficha importada hasta que esa persona vuelve a escribir (el repaso de cada 15 minutos solo mira una vez cada conversación); y no detecta duplicados (repetir el fichero duplica las fichas)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
@@ -173,11 +181,12 @@ Pasos:
    `postal_code`/«CP»/«Código postal», `country`/«País», `lifecycle_stage`, `notes`/«Notas».
 3. Mientras trabaja sale «Importando…». Al acabar, un resumen «Importación: {total} filas — {creadas}
    creadas, {omitidas} omitidas, {fallidas} fallidas.» con la lista de filas omitidas y su motivo
-   («falta el nombre», «el email no es válido»), las que tienen algo que revisar («país no
+   («falta el nombre», «el email no es válido», «el teléfono no es válido — escríbelo con su prefijo
+   internacional (+44…)»), las que tienen algo que revisar («país no
    reconocido — importado tal cual, revísalo en la ficha») y los bloques que fallaron. **Cerrar** lo quita.
 Entra: el fichero. Va al servidor en bloques de 50 filas.
-Sale: las fichas creadas, con origen «Importación» y sin consentimiento (aunque el fichero traiga una
-columna de consentimiento). No se emite ningún aviso de ficha creada.
+Sale: las fichas creadas, con origen «Importación», el teléfono en formato internacional (F11) y sin
+consentimiento (aunque el fichero traiga una columna de consentimiento). No se emite ningún aviso de ficha creada.
 Si falla: un bloque rechazado se cuenta con su rango de filas y su motivo, y los siguientes siguen.
 Un corte a mitad deja creadas las filas de los bloques ya enviados: volver a importar el fichero las duplica.
 Implicados: WHATSAPP_INBOX-F04

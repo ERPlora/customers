@@ -269,6 +269,34 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(wc.formError).toContain('Tinte habitual');
   });
 
+  // customers#121: «Save» sits at the foot of a long form and the refusal is painted above it. On a
+  // phone that left the refusal one screen and a half above what the person was looking at: they
+  // tapped «Save» and nothing seemed to happen — every time they edited a card whose old phone the
+  // upgrade could not read. The refusal is brought into view, like the one of the creation form.
+  it('a refused save brings its reason into view (customers#121)', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.command = async () => {
+      throw Object.assign(new Error('That is not a phone number of its country'), { code: 'customers.phone_invalid' });
+    };
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; updateComplete: Promise<unknown> };
+    wc.startEdit();
+    await wc.updateComplete;
+    const revealed: (string | null)[] = [];
+    const proto = HTMLElement.prototype as unknown as { scrollIntoView?: (this: HTMLElement) => void };
+    const original = proto.scrollIntoView;
+    proto.scrollIntoView = function reveal(this: HTMLElement) { revealed.push(this.getAttribute('data-testid')); };
+    try {
+      await wc.saveEdit(new Event('submit'));
+      await wc.updateComplete;
+      await new Promise((r) => setTimeout(r, 0));
+    } finally {
+      proto.scrollIntoView = original;
+    }
+    expect(revealed, 'the refusal of the save is scrolled into view').toContain('customers-list-form-error');
+  });
+
   // hub#1570: a shell whose SDK indexes this catalogue throws the refusal ALREADY spoken — the
   // module's sentence with `{message}` spliced. The screen paints it once, never with the prefix
   // doubled («Falta un campo obligatorio: Falta un campo obligatorio: …»).
@@ -405,6 +433,28 @@ describe('la importación CSV va por customers.bulk_create con informe (customer
     expect(comandos.filter((c) => c.name === 'customers.bulk_create').length, 'los 3 lotes se intentan').toBe(3);
     expect(wc.importReport?.created).toBe(70);
     expect(wc.importReport?.failed).toEqual([{ rows: '51-100', reason: 'duplicate tax id' }]);
+  });
+
+  // customers#121: the server saves every phone in E.164 and does NOT create a row whose phone is
+  // not a phone of its country; it answers `result.rejected = [{index, code}]` by item index within
+  // the batch. That row must show up as skipped with its reason — counting it as created would tell
+  // the owner a customer exists that WhatsApp can never reach.
+  it('a row whose phone the server refuses is reported as skipped, not created (customers#121)', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    let n = 0;
+    sdk.command = async (name: string, payload: Record<string, unknown>) => {
+      comandos.push({ name, payload });
+      if (name === 'customers.bulk_create' && ++n === 2) {
+        return { operations: 1, result: { rejected: [{ index: 1, code: 'customers.phone_invalid' }] } };
+      }
+      return { result: { rejected: [] } };
+    };
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void>; importReport: { created: number; skipped: { row: number; reason: string }[]; failed: unknown[] } | null };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: filas(52) } }));
+    expect(wc.importReport?.created).toBe(51);
+    expect(wc.importReport?.skipped).toEqual([{ row: 52, reason: 'ui.importReasonPhone' }]);
+    expect(wc.importReport?.failed).toEqual([]);
   });
 
   it('acepta cabeceras en español (Nombre/Email/Teléfono)', async () => {

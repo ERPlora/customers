@@ -55,7 +55,7 @@ def main() -> int:
 
     hub.run("customers.merge", {"surviving_id": survivor, "absorbed_id": absorbed})
     got = hub.query("customers.get", {"customer_id": survivor})[0]
-    hub.check("survivor keeps its phone", got.get("phone"), "600111222")
+    hub.check("survivor keeps its phone (stored in E.164 since customers#121)", got.get("phone"), "+34600111222")
     hub.check(
         "survivor gets the empty email filled", got.get("email"), "ana@example.com"
     )

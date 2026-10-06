@@ -123,7 +123,8 @@
         "file": "migrations/postgres/007_tag_field_name_dedupe.sql",
         "kind": "backfill"
       },
-      "migrations/postgres/008_tag_field_name_unique.sql"
+      "migrations/postgres/008_tag_field_name_unique.sql",
+      "migrations/postgres/009_phone_backup.sql"
     ]
   },
   "queries": {
@@ -440,31 +441,45 @@
   "commands": {
     "customers.create": {
       "permission": "customers.add_customer",
-      "transaction": true,
-      "sql": [
-        "commands/create.sql"
-      ],
+      "handler": {
+        "type": "wasm",
+        "file": "dist/handler.wasm",
+        "function": "create"
+      },
       "schema": "schemas/create.json",
       "emit": [
         "customer.created"
       ],
       "ai": {
-        "description": "Creates a new customer"
+        "description": "Creates a new customer. The phone is saved in international E.164 form (+34600111222); a number without prefix is read in the business's country, and a number that is not a phone of its country is refused with customers.phone_invalid."
       }
+    },
+    "customers._create": {
+      "permission": "customers.add_customer",
+      "sql": [
+        "commands/create.sql"
+      ]
     },
     "customers.update": {
       "permission": "customers.change_customer",
-      "transaction": true,
-      "sql": [
-        "commands/update.sql"
-      ],
+      "handler": {
+        "type": "wasm",
+        "file": "dist/handler.wasm",
+        "function": "update"
+      },
       "schema": "schemas/update.json",
       "emit": [
         "customer.updated"
       ],
       "ai": {
-        "description": "Updates an existing customer's data"
+        "description": "Updates an existing customer's data. The phone is saved in E.164 like on creation; an invalid one is refused with customers.phone_invalid."
       }
+    },
+    "customers._update": {
+      "permission": "customers.change_customer",
+      "sql": [
+        "commands/update.sql"
+      ]
     },
     "customers.update_with_fields": {
       "permission": "customers.change_customer",
@@ -565,7 +580,8 @@
         "commands/anonymize_groups.sql",
         "commands/anonymize_tags.sql",
         "commands/anonymize_audit.sql",
-        "commands/anonymize_consent.sql"
+        "commands/anonymize_consent.sql",
+        "commands/anonymize_phone_backup.sql"
       ],
       "schema": "schemas/anonymize.json",
       "emit": [
@@ -638,6 +654,17 @@
       ],
       "ai": {
         "description": "Listener of sale.voided (customers#8): flips the ledger row to voided (history kept), reverts amount/count/last purchase, steps the stage back deterministically and writes a `purchase_voided` timeline entry. Idempotent."
+      }
+    },
+    "customers._phones_to_e164": {
+      "permission": "customers.change_customer",
+      "internal": true,
+      "transaction": true,
+      "sql": [
+        "commands/_phones_to_e164.sql"
+      ],
+      "ai": {
+        "description": "Scheduled sweep (customers#121): rewrites the phones of this hub's cards that were typed before phones were saved in E.164 («600 111 222» → «+34600111222»), reading a number without prefix in the hub's country, with the handler's rules. Each rewritten card keeps its old text in customers_phone_backup; a number that is not valid is left as typed. Idempotent: a second run changes nothing."
       }
     },
     "customers.bulk_create": {
@@ -911,6 +938,7 @@
     "customers.field_unavailable": {},
     "customers.group_name_taken": {},
     "customers.group_unavailable": {},
+    "customers.phone_invalid": {},
     "customers.tag_name_taken": {},
     "customers.tag_unavailable": {}
   },
@@ -933,6 +961,14 @@
       "customer.updated"
     ]
   },
+  "scheduled_tasks": [
+    {
+      "name": "phones_to_e164",
+      "command": "customers._phones_to_e164",
+      "cron": "*/15 * * * *",
+      "catch_up": "collapse"
+    }
+  ],
   "provides_slots": [
     {
       "slot": "sales.pos.assign",

@@ -15,6 +15,7 @@ import { domainErrorText as declaredErrorText } from '../../lib/domain-error-tex
 import { presentConfirmAlert } from '../../lib/confirm-alert';
 import type { ConfirmAlert } from '../../lib/confirm-alert';
 import { countryCode, countryName, countryOptions } from '../../lib/country';
+import { searchTerm } from '../../lib/phone-search';
 
 const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 
@@ -602,8 +603,15 @@ export class ErpCustomersList extends LitElement {
         const batch = valid.slice(i, i + ErpCustomersList.IMPORT_BATCH);
         const range = `${batch[0].row}-${batch[batch.length - 1].row}`;
         try {
-          await erplora().command('customers.bulk_create', { items: batch.map((b) => b.item) });
-          report.created += batch.length;
+          // The server saves every phone in E.164 and leaves out a row whose phone is not a phone of
+          // its country (customers#121), naming it by its index in the batch.
+          const out = await erplora().command<{ result?: { rejected?: { index: number }[] } }>('customers.bulk_create', { items: batch.map((b) => b.item) });
+          const rejected = out?.result?.rejected ?? [];
+          for (const r of rejected) {
+            const item = batch[r.index];
+            if (item) report.skipped.push({ row: item.row, reason: 'ui.importReasonPhone' });
+          }
+          report.created += batch.length - rejected.length;
         } catch (e) {
           report.failed.push({ rows: range, reason: e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate') });
         }
@@ -864,14 +872,16 @@ export class ErpCustomersList extends LitElement {
     super.updated(changed);
     this.ensureDetailSlotMounted();
     if (changed.has('pendingDelete')) this.openDeleteDialog();
-    if (changed.has('createError') && this.createError) void this.revealCreateError();
+    if (changed.has('createError') && this.createError) void this.reveal('[data-testid="customers-list-create-error"]');
+    if (changed.has('formError') && this.formError) void this.reveal('[data-testid="customers-list-form-error"]');
   }
 
   /** pm#478: the refusal appears ABOVE «Add customer», at the foot of a long form — on a phone that
    *  can leave it off the sheet. Bring it into view once it has painted itself: scrolled before, the
-   *  banner still measures 0 px and ends up under the tab bar. */
-  private async revealCreateError(): Promise<void> {
-    const banner = this.renderRoot.querySelector('[data-testid="customers-list-create-error"]') as
+   *  banner still measures 0 px and ends up under the tab bar. The card's own refusal is the same
+   *  case (customers#121): «Save» is at the foot of the edit form and its reason is painted above it. */
+  private async reveal(selector: string): Promise<void> {
+    const banner = this.renderRoot.querySelector(selector) as
       | (HTMLElement & { updateComplete?: Promise<unknown> })
       | null;
     await banner?.updateComplete;
@@ -1106,7 +1116,7 @@ export class ErpCustomersList extends LitElement {
     this.mergeState = 'searching';
     try {
       const r = await erplora().query<{ rows: Customer[] } | Customer[]>('customers.list', {
-        search: q, limit: 20, sort: 'name', dir: 'asc',
+        search: searchTerm(q), limit: 20, sort: 'name', dir: 'asc',
       });
       if (seq !== this.mergeSeq) return; // a newer search already answered
       const rows = Array.isArray(r) ? r : (r?.rows ?? []);
