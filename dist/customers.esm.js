@@ -6545,6 +6545,15 @@ function countryName(raw, lang) {
   }
 }
 
+// ui/lib/phone-search.ts
+var PHONE_ONLY = /^[\d\s+\-().\/]+$/;
+function searchTerm(typed) {
+  const text = typed.trim();
+  if (!PHONE_ONLY.test(text) || !/\d/.test(text)) return typed;
+  const digits = text.replace(/\(0\)/g, "").replace(/\D/g, "");
+  return digits.replace(/^0+/, "") || digits;
+}
+
 // ui/components/erp-customers-list/erp-customers-list.ts
 var CATALOG3 = { es: es_default, en: en_default };
 function erplora3() {
@@ -7473,7 +7482,7 @@ var _ErpCustomersList = class _ErpCustomersList extends i3 {
     this.mergeState = "searching";
     try {
       const r6 = await erplora3().query("customers.list", {
-        search: q,
+        search: searchTerm(q),
         limit: 20,
         sort: "name",
         dir: "asc"
@@ -8456,7 +8465,7 @@ var ErpCustomersPosSearch = class extends i3 {
     this.error = "";
     this.state = "searching";
     try {
-      const r6 = await erplora4().query("customers.list", { search: q, limit: 20, sort: "name", dir: "asc" });
+      const r6 = await erplora4().query("customers.list", { search: searchTerm(q), limit: 20, sort: "name", dir: "asc" });
       if (seq !== this.searchSeq) return;
       this.results = rows(r6);
       this.state = this.results.length ? "idle" : "empty";
