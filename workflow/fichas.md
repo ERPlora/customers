@@ -42,16 +42,21 @@ Implicados: FLOWS-F04, FLOWS-F13, WHATSAPP_INBOX-F04
 QA: B-02
 
 ### CUSTOMERS-F02 Buscar y filtrar fichas
-Estado: parcial — el buscador de la tabla compara el teléfono como texto: las fichas lo guardan en formato internacional (F11), así que «600111222» la encuentra pero «600 111 222» no (customers#126)
+Estado: hecho
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes
 Pasos:
 1. En **Clientes**, escribe en el buscador («Buscar nombre o email…»). Busca a la vez en nombre,
    email, teléfono, NIF y empresa, sin distinguir mayúsculas ni acentos («garcia» encuentra «García»).
-   El teléfono se busca tal como se escribe: escrito todo junto encuentra la ficha, con espacios o
-   guiones no (los buscadores del TPV y de fusionar fichas sí mandan solo sus cifras, F13, F18).
-2. Con **Filtros**: nombre, email y teléfono por «contiene», etapa con lista y gastado por rango
+   Un término hecho solo de cifras y signos de teléfono («600 111 222», «0034 600-111-222»,
+   «+44 (0)7700 900123») se busca por sus cifras, sin el `00` ni el cero nacional, que el número
+   guardado en formato internacional (F11) contiene: se encuentra la ficha se escriba como se
+   escriba, igual que en los buscadores del TPV y de fusionar fichas (F13, F18). El buscador sigue
+   enseñando lo que se tecleó. Cualquier otro término (un nombre, un email, un NIF con letras) se
+   busca tal como se escribe.
+2. Con **Filtros**: nombre, email y teléfono por «contiene» (el teléfono, con la misma lectura por
+   cifras que el buscador), etapa con lista y gastado por rango
    «Desde / Hasta», escrito en euros. (El servidor admite más filtros —NIF, empresa, origen, activo,
    compras, última compra— que la pantalla no ofrece.)
 3. Ordena por cualquiera de las cinco columnas (Nombre, Email, Teléfono, Etapa, Gastado). De
