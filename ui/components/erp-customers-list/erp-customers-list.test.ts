@@ -407,6 +407,28 @@ describe('la importación CSV va por customers.bulk_create con informe (customer
     expect(wc.importReport?.failed).toEqual([{ rows: '51-100', reason: 'duplicate tax id' }]);
   });
 
+  // customers#121: the server saves every phone in E.164 and does NOT create a row whose phone is
+  // not a phone of its country; it answers `result.rejected = [{index, code}]` by item index within
+  // the batch. That row must show up as skipped with its reason — counting it as created would tell
+  // the owner a customer exists that WhatsApp can never reach.
+  it('a row whose phone the server refuses is reported as skipped, not created (customers#121)', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    let n = 0;
+    sdk.command = async (name: string, payload: Record<string, unknown>) => {
+      comandos.push({ name, payload });
+      if (name === 'customers.bulk_create' && ++n === 2) {
+        return { operations: 1, result: { rejected: [{ index: 1, code: 'customers.phone_invalid' }] } };
+      }
+      return { result: { rejected: [] } };
+    };
+    const el = await montar();
+    const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void>; importReport: { created: number; skipped: { row: number; reason: string }[]; failed: unknown[] } | null };
+    await wc.onCsvImport(new CustomEvent('csvImport', { detail: { rows: filas(52) } }));
+    expect(wc.importReport?.created).toBe(51);
+    expect(wc.importReport?.skipped).toEqual([{ row: 52, reason: 'ui.importReasonPhone' }]);
+    expect(wc.importReport?.failed).toEqual([]);
+  });
+
   it('acepta cabeceras en español (Nombre/Email/Teléfono)', async () => {
     const el = await montar();
     const wc = el as unknown as { onCsvImport(e: CustomEvent): Promise<void> };

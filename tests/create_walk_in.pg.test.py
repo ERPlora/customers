@@ -129,7 +129,7 @@ def translate(sql: str) -> str:
 
 
 def run_create(payload: dict) -> tuple[bool, str, str]:
-    cmd = MANIFEST["commands"]["customers.create"]
+    cmd = MANIFEST["commands"]["customers._create"]
     params = dict(payload)
     params.update(hub_id=HUB, current_user_id=USER, now=NOW)
     new_id = str(uuid.uuid4())
@@ -159,7 +159,7 @@ def main() -> int:
             psql([], db=DB, stdin=(MODULE_DIR / rel).read_text())
 
         print("· the statement PREPARES with every bind untyped (the all-absent shape)")
-        for rel in MANIFEST["commands"]["customers.create"]["sql"]:
+        for rel in MANIFEST["commands"]["customers._create"]["sql"]:
             try:
                 psql([], db=DB, stdin=f"PREPARE s AS {translate((MODULE_DIR / rel).read_text())}\nDEALLOCATE s;")
                 check(f"{rel} prepares", True, True)

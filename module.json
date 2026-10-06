@@ -440,31 +440,45 @@
   "commands": {
     "customers.create": {
       "permission": "customers.add_customer",
-      "transaction": true,
-      "sql": [
-        "commands/create.sql"
-      ],
+      "handler": {
+        "type": "wasm",
+        "file": "dist/handler.wasm",
+        "function": "create"
+      },
       "schema": "schemas/create.json",
       "emit": [
         "customer.created"
       ],
       "ai": {
-        "description": "Creates a new customer"
+        "description": "Creates a new customer. The phone is saved in international E.164 form (+34600111222); a number without prefix is read in the business's country, and a number that is not a phone of its country is refused with customers.phone_invalid."
       }
+    },
+    "customers._create": {
+      "permission": "customers.add_customer",
+      "sql": [
+        "commands/create.sql"
+      ]
     },
     "customers.update": {
       "permission": "customers.change_customer",
-      "transaction": true,
-      "sql": [
-        "commands/update.sql"
-      ],
+      "handler": {
+        "type": "wasm",
+        "file": "dist/handler.wasm",
+        "function": "update"
+      },
       "schema": "schemas/update.json",
       "emit": [
         "customer.updated"
       ],
       "ai": {
-        "description": "Updates an existing customer's data"
+        "description": "Updates an existing customer's data. The phone is saved in E.164 like on creation; an invalid one is refused with customers.phone_invalid."
       }
+    },
+    "customers._update": {
+      "permission": "customers.change_customer",
+      "sql": [
+        "commands/update.sql"
+      ]
     },
     "customers.update_with_fields": {
       "permission": "customers.change_customer",
@@ -911,6 +925,7 @@
     "customers.field_unavailable": {},
     "customers.group_name_taken": {},
     "customers.group_unavailable": {},
+    "customers.phone_invalid": {},
     "customers.tag_name_taken": {},
     "customers.tag_unavailable": {}
   },
