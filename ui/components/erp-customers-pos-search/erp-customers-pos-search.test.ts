@@ -9,6 +9,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@erplora/outfitkit/ok-spotlight-search', () => ({}));
 
+import es from '../../../locales/es.json' with { type: 'json' };
+const esErrors = (es as { errors: Record<string, string> }).errors;
+
 const ANA = { id: 'cus-1', name: 'Ana García', phone: '600111222', email: 'ana@example.com' };
 const ANA_FICHA = { ...ANA, tax_id: '12345678Z', address: 'Calle Mayor 1', city: 'Madrid', postal_code: '28013', country: 'ES' };
 
@@ -239,6 +242,49 @@ describe('estados diferenciados y alta rápida (customers#18)', () => {
     expect(comandos.map((c) => c.name)).toEqual(['customers.create']);
     expect(comandos[0].payload).toMatchObject({ name: 'Luis', phone: '600' });
     expect(emitidos.at(-1)).toMatchObject({ customer_id: 'cus-new', customer_name: 'Luis' });
+  });
+
+  // customers#121: phones are stored in E.164 now (`+34600111222`), so comparing the typed text with
+  // the rows on screen no longer finds the card the cashier is about to duplicate. The number is
+  // asked to the server, which compares it as a NUMBER of the business's country (F10).
+  it('quick add picks the card that already carries that number, however it is typed (customers#121)', async () => {
+    const comandos: string[] = [];
+    const byPhone: unknown[] = [];
+    sdk().hasPermission = () => true;
+    sdk().command = async (name: string) => { comandos.push(name); return { ok: true, new_ids: ['cus-new'] }; };
+    sdk().query = async (name: string, params?: Record<string, unknown>) => {
+      if (name === 'customers.list') return [];
+      if (name === 'customers.by_phone') { byPhone.push(params?.phone); return [{ id: 'cus-1', name: 'Ana García', phone: '+34600111222' }]; }
+      if (name === 'customers.get') return [{ ...ANA_FICHA, phone: '+34600111222' }];
+      return [];
+    };
+    const el = (await montar()) as WC;
+    const emitidos: Record<string, unknown>[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+    await abrir(el);
+    el.quickName = 'Ana';
+    el.quickPhone = '600 111 222';
+    await (el.quickCreate as () => Promise<void>)();
+    await flush(el);
+    expect(byPhone).toEqual(['600 111 222']);
+    expect(comandos, 'no second card for the same number').toEqual([]);
+    expect(emitidos.at(-1)).toMatchObject({ customer_id: 'cus-1' });
+  });
+
+  it('a phone the server refuses is explained with the module sentence and the form stays open (customers#121)', async () => {
+    sdk().hasPermission = () => true;
+    sdk().command = async () => { throw Object.assign(new Error('That is not a phone number of its country'), { code: 'customers.phone_invalid' }); };
+    sdk().query = async () => [];
+    const el = (await montar()) as WC;
+    await abrir(el);
+    el.quickOpen = true;
+    el.quickName = 'Luis';
+    el.quickPhone = '600111';
+    await (el.quickCreate as () => Promise<void>)();
+    await flush(el);
+    expect(el.quickError).toBe(esErrors['customers.phone_invalid']);
+    expect(el.quickOpen, 'the typed data is kept on screen').toBe(true);
+    expect(el.quickPhone).toBe('600111');
   });
 
   it('sin permiso de alta no hay alta rápida', async () => {

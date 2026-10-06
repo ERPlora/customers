@@ -202,6 +202,7 @@
     "importRows": "Filas {rows}",
     "importReasonName": "falta el nombre",
     "importReasonEmail": "el email no es válido",
+    "importReasonPhone": "el teléfono no es válido — escríbelo con su prefijo internacional (+44…)",
     "importReasonCountry": "país no reconocido — importado tal cual, revísalo en la ficha",
     "close": "Cerrar",
     "eraseData": "Borrar datos personales",
@@ -260,6 +261,7 @@
     "customers.field_unavailable": "Ese campo no está disponible en este negocio (puede haberse borrado).",
     "customers.group_name_taken": "Ya hay un grupo con ese nombre. Elige otro nombre.",
     "customers.group_unavailable": "Ese grupo no está disponible en este negocio (puede haberse borrado).",
+    "customers.phone_invalid": "No es un teléfono válido de su país: revisa las cifras o escríbelo con su prefijo internacional (+44…).",
     "customers.tag_name_taken": "Ya hay una etiqueta con ese nombre. Elige otro nombre.",
     "customers.tag_unavailable": "Esa etiqueta no está disponible en este negocio (puede haberse borrado)."
   }

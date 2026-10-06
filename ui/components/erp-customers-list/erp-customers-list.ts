@@ -602,8 +602,15 @@ export class ErpCustomersList extends LitElement {
         const batch = valid.slice(i, i + ErpCustomersList.IMPORT_BATCH);
         const range = `${batch[0].row}-${batch[batch.length - 1].row}`;
         try {
-          await erplora().command('customers.bulk_create', { items: batch.map((b) => b.item) });
-          report.created += batch.length;
+          // The server saves every phone in E.164 and leaves out a row whose phone is not a phone of
+          // its country (customers#121), naming it by its index in the batch.
+          const out = await erplora().command<{ result?: { rejected?: { index: number }[] } }>('customers.bulk_create', { items: batch.map((b) => b.item) });
+          const rejected = out?.result?.rejected ?? [];
+          for (const r of rejected) {
+            const item = batch[r.index];
+            if (item) report.skipped.push({ row: item.row, reason: 'ui.importReasonPhone' });
+          }
+          report.created += batch.length - rejected.length;
         } catch (e) {
           report.failed.push({ rows: range, reason: e instanceof Error && e.message ? e.message : erplora().t(CATALOG, 'ui.errCreate') });
         }
