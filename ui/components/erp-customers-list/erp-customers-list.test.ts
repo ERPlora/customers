@@ -269,6 +269,34 @@ describe('campos personalizados en la ficha (ADR-0132)', () => {
     expect(wc.formError).toContain('Tinte habitual');
   });
 
+  // customers#121: «Save» sits at the foot of a long form and the refusal is painted above it. On a
+  // phone that left the refusal one screen and a half above what the person was looking at: they
+  // tapped «Save» and nothing seemed to happen — every time they edited a card whose old phone the
+  // upgrade could not read. The refusal is brought into view, like the one of the creation form.
+  it('a refused save brings its reason into view (customers#121)', async () => {
+    const sdk = (globalThis as Record<string, unknown>).erplora as Record<string, unknown>;
+    sdk.command = async () => {
+      throw Object.assign(new Error('That is not a phone number of its country'), { code: 'customers.phone_invalid' });
+    };
+    const el = await montar();
+    await (el as unknown as { openDetail(id: string): Promise<void> }).openDetail(CLIENTE.id);
+    const wc = el as unknown as { startEdit(): void; saveEdit(e: Event): Promise<void>; updateComplete: Promise<unknown> };
+    wc.startEdit();
+    await wc.updateComplete;
+    const revealed: (string | null)[] = [];
+    const proto = HTMLElement.prototype as unknown as { scrollIntoView?: (this: HTMLElement) => void };
+    const original = proto.scrollIntoView;
+    proto.scrollIntoView = function reveal(this: HTMLElement) { revealed.push(this.getAttribute('data-testid')); };
+    try {
+      await wc.saveEdit(new Event('submit'));
+      await wc.updateComplete;
+      await new Promise((r) => setTimeout(r, 0));
+    } finally {
+      proto.scrollIntoView = original;
+    }
+    expect(revealed, 'the refusal of the save is scrolled into view').toContain('customers-list-form-error');
+  });
+
   // hub#1570: a shell whose SDK indexes this catalogue throws the refusal ALREADY spoken — the
   // module's sentence with `{message}` spliced. The screen paints it once, never with the prefix
   // doubled («Falta un campo obligatorio: Falta un campo obligatorio: …»).

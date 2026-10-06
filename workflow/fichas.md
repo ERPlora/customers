@@ -107,7 +107,8 @@ El consentimiento queda anotado con la dirección para la que se dio: si se camb
 email, el panel sigue diciendo «Dado» con la dirección antigua al lado (F14).
 Si falla: un campo obligatorio vacío, un valor que no encaja con su tipo o un teléfono que no es un
 número válido de su país (F11) rechaza TODO el guardado (nada queda a medias) y el motivo sale
-arriba de la ficha. La casilla «Activo» desmarcada solo
+arriba de la ficha, con la pantalla desplazada hasta él (en un móvil **Guardar** queda al pie del
+formulario, lejos del aviso). La casilla «Activo» desmarcada solo
 cambia la cifra «Activos» de la lista: la ficha sigue saliendo en búsquedas, en el TPV y en WhatsApp.
 El empleado no ve **Editar**; el perfil Cajero sí puede editar. Un email mal formado no falla: se guarda.
 Implicados: WHATSAPP_INBOX-F04

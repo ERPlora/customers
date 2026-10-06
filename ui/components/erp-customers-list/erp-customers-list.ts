@@ -872,14 +872,16 @@ export class ErpCustomersList extends LitElement {
     super.updated(changed);
     this.ensureDetailSlotMounted();
     if (changed.has('pendingDelete')) this.openDeleteDialog();
-    if (changed.has('createError') && this.createError) void this.revealCreateError();
+    if (changed.has('createError') && this.createError) void this.reveal('[data-testid="customers-list-create-error"]');
+    if (changed.has('formError') && this.formError) void this.reveal('[data-testid="customers-list-form-error"]');
   }
 
   /** pm#478: the refusal appears ABOVE «Add customer», at the foot of a long form — on a phone that
    *  can leave it off the sheet. Bring it into view once it has painted itself: scrolled before, the
-   *  banner still measures 0 px and ends up under the tab bar. */
-  private async revealCreateError(): Promise<void> {
-    const banner = this.renderRoot.querySelector('[data-testid="customers-list-create-error"]') as
+   *  banner still measures 0 px and ends up under the tab bar. The card's own refusal is the same
+   *  case (customers#121): «Save» is at the foot of the edit form and its reason is painted above it. */
+  private async reveal(selector: string): Promise<void> {
+    const banner = this.renderRoot.querySelector(selector) as
       | (HTMLElement & { updateComplete?: Promise<unknown> })
       | null;
     await banner?.updateComplete;

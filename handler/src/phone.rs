@@ -173,6 +173,15 @@ mod tests {
     }
 
     #[test]
+    fn a_plus_after_the_first_digit_is_refused_even_when_the_digits_would_read_as_a_number() {
+        // «600+111222» above is refused whatever the rule: its digits are no number. These digits ARE
+        // one once the `+` is taken as the international mark, so only the rule «a `+` goes before
+        // the first digit» refuses them — the same rule `commands/_phones_to_e164.sql` applies.
+        assert_eq!(to_e164("34+600111222", "ES"), Err(InvalidPhone));
+        assert_eq!(to_e164("600 111 222 +34", "ES"), Err(InvalidPhone));
+    }
+
+    #[test]
     fn foreign_number_keeps_its_own_country() {
         assert_eq!(ok("+33 6 12 34 56 78", "ES"), "+33612345678");
         assert_eq!(ok("0033 6 12 34 56 78", "ES"), "+33612345678");

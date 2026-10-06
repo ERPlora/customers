@@ -281,6 +281,33 @@ describe('estados diferenciados y alta rápida (customers#18)', () => {
     expect(emitidos.at(-1)).toMatchObject({ customer_id: 'cus-1' });
   });
 
+  // The duplicate check must never block the sale: if `customers.by_phone` cannot be read, the rows
+  // on screen are compared as before, so the card in front of the cashier is still not duplicated.
+  it('quick add falls back to the rows on screen when the number cannot be asked to the server (customers#121)', async () => {
+    const comandos: string[] = [];
+    sdk().hasPermission = () => true;
+    sdk().command = async (name: string) => { comandos.push(name); return { ok: true, new_ids: ['cus-new'] }; };
+    sdk().query = async (name: string) => {
+      if (name === 'customers.list') return [{ id: 'cus-1', name: 'Ana García', phone: '+34600111222' }];
+      if (name === 'customers.by_phone') throw new Error('network down');
+      if (name === 'customers.get') return [{ ...ANA_FICHA, phone: '+34600111222' }];
+      return [];
+    };
+    const el = (await montar()) as WC;
+    const emitidos: Record<string, unknown>[] = [];
+    el.addEventListener('erp:customer-context', (e) => emitidos.push((e as CustomEvent).detail));
+    await abrir(el);
+    (el.onInput as (v: string) => void)('Ana');
+    await new Promise((r) => setTimeout(r, 350));
+    await flush(el);
+    el.quickName = 'Ana';
+    el.quickPhone = '+34 600 111 222';
+    await (el.quickCreate as () => Promise<void>)();
+    await flush(el);
+    expect(comandos, 'no second card for the number already on screen').toEqual([]);
+    expect(emitidos.at(-1)).toMatchObject({ customer_id: 'cus-1' });
+  });
+
   it('a phone the server refuses is explained with the module sentence and the form stays open (customers#121)', async () => {
     sdk().hasPermission = () => true;
     sdk().command = async () => { throw Object.assign(new Error('That is not a phone number of its country'), { code: 'customers.phone_invalid' }); };

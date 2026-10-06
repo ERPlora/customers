@@ -88,6 +88,8 @@ CARDS = [
     (HUB_ES, "es-words", "call me", "call me", 0),
     (HUB_ES, "es-empty", "", "", 0),
     (HUB_ES, "es-two-plus", "+34 +600111222", "+34 +600111222", 0),
+    # A `+` after the first digit: its digits would read as a number, the handler refuses it.
+    (HUB_ES, "es-mid-plus", "34+600111222", "34+600111222", 0),
     (HUB_ES, "es-paren-plus", "(+34) 600 111 228", "+34600111228", 0),
     (HUB_GB, "gb-trunk", "07700 900123", "+447700900123", 0),
     (HUB_GB, "gb-trunk-garbage", "01234 5678", "01234 5678", 0),
@@ -193,7 +195,11 @@ class ScratchDb:
 
     def run(self, sql: str) -> str | None:
         try:
-            psql([], db=self.name, stdin="BEGIN;\n" + sql.rstrip().rstrip(";") + ";\nCOMMIT;")
+            psql(
+                [],
+                db=self.name,
+                stdin="BEGIN;\n" + sql.rstrip().rstrip(";") + ";\nCOMMIT;",
+            )
             return None
         except RuntimeError as exc:
             return str(exc)
@@ -360,14 +366,20 @@ def test_upgrade() -> None:
 
         # A card that went back to typed text by a path that skips the handler: the next tick
         # keeps the FIRST copy (the text from before the upgrade) and does not fail.
-        db.run("UPDATE customers_customer SET phone = '0034 600 111 999' WHERE id = 'es-idd'")
+        db.run(
+            "UPDATE customers_customer SET phone = '0034 600 111 999' WHERE id = 'es-idd'"
+        )
         check(
             "a tick over a card whose copy already exists does not fail",
             db.command(COMMAND, {}, HUB_ES, user=""),
             None,
         )
-        check("its first copy is kept", db.backups().get("es-idd"), want_backups["es-idd"])
-        db.run("UPDATE customers_customer SET phone = '+34600111224' WHERE id = 'es-idd'")
+        check(
+            "its first copy is kept", db.backups().get("es-idd"), want_backups["es-idd"]
+        )
+        db.run(
+            "UPDATE customers_customer SET phone = '+34600111224' WHERE id = 'es-idd'"
+        )
 
         print(
             "\n4b · erasing a customer's personal data erases her backup copy, in her hub only"
@@ -394,7 +406,9 @@ def test_upgrade() -> None:
         print("\n6 · reversible")
         down = documented_down(TABLE)
         if "customers_customer" not in down or "DROP TABLE" not in down:
-            fail("009 must document a `down` that restores the phones and drops the table")
+            fail(
+                "009 must document a `down` that restores the phones and drops the table"
+            )
             return
         check(
             "a phone is edited after the upgrade",
@@ -450,7 +464,9 @@ def test_table_matches_the_handler() -> None:
     if not (MODULE_DIR / COMMAND_SQL).exists():
         fail(f"{COMMAND_SQL} does not exist")
         return
-    sql_rows = sorted(ROW.findall((MODULE_DIR / COMMAND_SQL).read_text(encoding="utf-8")))
+    sql_rows = sorted(
+        ROW.findall((MODULE_DIR / COMMAND_SQL).read_text(encoding="utf-8"))
+    )
     rust_rows = sorted(
         (iso, code, trunk, idd, lengths.replace(" ", ""))
         for iso, code, trunk, idd, lengths in RUST_ROW.findall(
