@@ -67,9 +67,10 @@ reescrita por la tarea, una copia de su texto anterior (se borra con los datos p
 deshacer la actualización del módulo devuelve los textos). Quien lo copia lo copia ya normalizado:
 Citas guarda en la cita el teléfono de la ficha al reservar (APPOINTMENTS-F01) y el aviso de cita
 confirmada de WhatsApp busca la conversación, que ya guarda su número en E.164, con esa copia, así
-que una ficha escrita con espacios o guiones ya no deja a la clienta sin aviso. Lo que no depende de
-Clientes sigue abierto en whatsapp_inbox#279: el aviso busca la conversación por «contiene», así que
-el teléfono de una cita tecleado a mano o una ficha antigua incompleta pueden dar con otra persona.
+que una ficha escrita con espacios o guiones ya no deja a la clienta sin aviso. El aviso solo acepta
+el número E.164 exacto (WHATSAPP_INBOX-F23): el teléfono de una cita tecleado a mano o una ficha
+antigua que la tarea no supo reescribir no reciben el aviso, y nunca llega a la conversación de otra
+persona.
 La Bandeja de WhatsApp compara además con su propia copia de la tabla de prefijos (WHATSAPP_INBOX-F04).
 Reservas no lee el teléfono de la ficha: guarda el que se teclea o el número de WhatsApp.
 Si falla: «No es un teléfono válido de su país: revisa las cifras o escríbelo con su prefijo
