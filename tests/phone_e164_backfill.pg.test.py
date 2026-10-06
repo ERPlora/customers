@@ -179,7 +179,7 @@ class ScratchDb:
 
     def run(self, sql: str) -> str | None:
         try:
-            psql([], db=self.name, stdin="BEGIN;\n" + sql + "\nCOMMIT;")
+            psql([], db=self.name, stdin="BEGIN;\n" + sql.rstrip().rstrip(";") + ";\nCOMMIT;")
             return None
         except RuntimeError as exc:
             return str(exc)
@@ -194,7 +194,10 @@ class ScratchDb:
     def command(self, name: str, payload: dict, hub: str) -> str | None:
         params = dict(payload)
         params.update(
-            hub_id=hub, current_user_id="admin", now="2026-10-06T10:00:00+00:00"
+            hub_id=hub,
+            current_user_id="admin",
+            now="2026-10-06T10:00:00+00:00",
+            new_id=str(uuid.uuid4()),
         )
         body = "\n".join(
             bind((MODULE_DIR / rel).read_text(encoding="utf-8"), params)
@@ -330,8 +333,12 @@ def test_upgrade() -> None:
         if not documented_down(BACKFILL) or not documented_down(TABLE):
             fail("009 and 010 must each document their `down` (a `-- DOWN` block)")
             return
-        db.run(
-            "UPDATE customers_customer SET phone = '+34699999999' WHERE id = 'es-dashes'"
+        check(
+            "a phone is edited after the upgrade",
+            db.run(
+                "UPDATE customers_customer SET phone = '+34699999999' WHERE id = 'es-dashes'"
+            ),
+            None,
         )
         check("the documented down runs", db.run(down), None)
         restored = db.phones()
@@ -348,7 +355,7 @@ def test_upgrade() -> None:
                 check(f"«{typed}» is back as typed", restored.get(cid), typed)
         check(
             "the backup table is gone",
-            db.rows("SELECT to_regclass('customers_phone_backup') AS t")[0]["t"],
+            db.rows("SELECT to_regclass('customers_phone_backup') AS reg")[0]["reg"],
             None,
         )
         db.migrate([TABLE, BACKFILL])

@@ -1,4 +1,4 @@
--- Step 8/8 of `customers.anonymize` (customers#11 + customers#10): the consent evidence goes too.
+-- Step 8/9 of `customers.anonymize` (customers#11 + customers#10): the consent evidence goes too.
 --
 -- A consent record names a person and the address they were reached at, so it is personal data and
 -- an erasure that left it standing would be an erasure with the customer's email still in a table.

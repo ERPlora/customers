@@ -123,7 +123,12 @@
         "file": "migrations/postgres/007_tag_field_name_dedupe.sql",
         "kind": "backfill"
       },
-      "migrations/postgres/008_tag_field_name_unique.sql"
+      "migrations/postgres/008_tag_field_name_unique.sql",
+      "migrations/postgres/009_phone_backup.sql",
+      {
+        "file": "migrations/postgres/010_phone_e164.sql",
+        "kind": "backfill"
+      }
     ]
   },
   "queries": {
@@ -579,7 +584,8 @@
         "commands/anonymize_groups.sql",
         "commands/anonymize_tags.sql",
         "commands/anonymize_audit.sql",
-        "commands/anonymize_consent.sql"
+        "commands/anonymize_consent.sql",
+        "commands/anonymize_phone_backup.sql"
       ],
       "schema": "schemas/anonymize.json",
       "emit": [
