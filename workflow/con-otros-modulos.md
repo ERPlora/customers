@@ -42,11 +42,16 @@ Pasos:
 2. Pulsa **+ Nuevo cliente «{lo escrito}»**. Si lo escrito parece un teléfono, va a «Teléfono»; si no, a «Nombre».
 3. Completa «Nombre» (obligatorio) y «Teléfono» y pulsa **Crear y asignar** (o **Cancelar**).
 4. La ficha nueva queda asignada a la venta como en F17.
-Entra: nombre y teléfono.
-Sale: la ficha con origen «En el local», el aviso de ficha creada (`customer.created`) y la venta con cliente.
-Si falla: «El nombre es obligatorio.» sin nombre; si el teléfono coincide, quitando espacios, con el
-de una ficha de la lista que hay en pantalla, elige esa ficha en vez de crear otra (F12). Otro fallo
-sale dentro del formulario y lo tecleado se conserva. Sin permiso de crear no aparece el botón.
+Entra: nombre y teléfono. Buscar un teléfono tecleado con espacios, `00` o el cero nacional busca
+sus cifras, que la ficha guardada en formato internacional contiene (F11).
+Sale: la ficha con origen «En el local», el teléfono en formato internacional (F11), el aviso de
+ficha creada (`customer.created`) y la venta con cliente.
+Si falla: «El nombre es obligatorio.» sin nombre; si el teléfono es, como número, el de una ficha
+viva del negocio (la búsqueda por número, F10; si esa búsqueda falla, se compara con la lista que
+hay en pantalla quitando espacios), elige esa ficha en vez de crear otra (F12). Un teléfono que no es
+un número válido de su país sale dentro del formulario («No es un teléfono válido de su país: revisa
+las cifras o escríbelo con su prefijo internacional (+44…).») y no se crea nada. Otro fallo sale
+dentro del formulario y lo tecleado se conserva. Sin permiso de crear no aparece el botón.
 Implicados: SALES-F05, WHATSAPP_INBOX-F04
 QA: B-02
 
@@ -173,12 +178,13 @@ Pasos:
 1. Una clienta escribe al WhatsApp del salón con la respuesta automática de citas encendida.
 2. La respuesta busca su ficha por el número (F10). Si la encuentra, la usa.
 3. Si no la encuentra, crea una ficha con el nombre que la clienta haya dado en el mensaje (o su
-   teléfono como nombre si no dio ninguno), su teléfono con `+` delante y origen «WhatsApp».
+   teléfono como nombre si no dio ninguno), su teléfono en formato internacional (F11) y origen «WhatsApp».
 4. En el restaurante, la respuesta de mesas NO crea ficha: solo liga la reserva a la que ya exista.
 Entra: el número y el mensaje (desde la respuesta automática de WhatsApp).
 Sale: la ficha nueva, el aviso de ficha creada y la conversación unida a ella.
 Si falla: el origen «WhatsApp» lo fija el permiso que el dueño concedió al activar la respuesta;
-el nombre y el `+` del teléfono los escribe el asistente siguiendo su guion (nada lo impone). Si el
+el nombre lo escribe el asistente siguiendo su guion; el teléfono lo pasa a formato internacional la
+propia alta (F11), así que un número que no es válido no crea ficha. Si el
 número casa con dos o más fichas, no crea ninguna (lo que contesta entonces es de REC_WA_CITA-F03).
 Implicados: WHATSAPP_INBOX-F21, REC_WA_CITA-F03
 QA: W-02
