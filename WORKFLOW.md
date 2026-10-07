@@ -200,7 +200,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Extensión o dos números en el mismo campo | hecho al guardar: se rechaza | F10, F11 |
 | Buscar en Clientes un teléfono escrito de otra forma | hecho: la tabla (buscador y filtro «Teléfono»), el TPV y fusionar fichas buscan sus cifras | F02, F18, F13 |
 | Avisar de un teléfono repetido al crear | parcial: solo el alta rápida del TPV, entre los resultados en pantalla | F12, F18 |
-| Comparar números ya normalizados en los demás módulos | parcial: la cita copia el teléfono ya normalizado y la conversación también lo está, pero el aviso de cita confirmada compara por «contiene» (whatsapp_inbox#279) y el buscador de Reservas compara texto | F11 |
+| Comparar números ya normalizados en los demás módulos | parcial: la cita copia el teléfono ya normalizado, la conversación también lo está y el aviso de cita confirmada solo acepta el número E.164 exacto (WHATSAPP_INBOX-F23), pero el buscador de Reservas compara texto | F11 |
 
 **2 · Borrado de datos contra el inventario (Shopify `customers/redact`, buscador de privacidad de Odoo).**
 
