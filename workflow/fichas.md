@@ -42,7 +42,7 @@ Implicados: FLOWS-F04, FLOWS-F13, WHATSAPP_INBOX-F04
 QA: B-02
 
 ### CUSTOMERS-F02 Buscar y filtrar fichas
-Estado: hecho
+Estado: parcial — en un móvil pequeño (375×667) las cuatro cifras de arriba ocupan la pantalla y a la tabla de fichas le quedan unos 90 píxeles (ERPlora/customers#128)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Clientes

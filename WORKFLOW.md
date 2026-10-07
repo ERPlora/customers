@@ -125,7 +125,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | ID | Flujo | Estado | Vertical | Fichero |
 |---|---|---|---|---|
 | CUSTOMERS-F01 | Dar de alta una ficha desde Clientes | parcial | comun | fichas |
-| CUSTOMERS-F02 | Buscar y filtrar fichas | hecho | comun | fichas |
+| CUSTOMERS-F02 | Buscar y filtrar fichas | parcial | comun | fichas |
 | CUSTOMERS-F03 | Abrir la ficha de un cliente | parcial | comun | fichas |
 | CUSTOMERS-F04 | Editar la ficha y sus campos personalizados | parcial | comun | fichas |
 | CUSTOMERS-F05 | Añadir una nota a la ficha | hecho | comun | fichas |
