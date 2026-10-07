@@ -1,18 +1,19 @@
-//! Handlers WASM (Tier 2) del módulo `customers` — las operaciones **batch** del legacy:
+//! WASM handlers (Tier 2) of the `customers` module — the legacy **batch** operations:
 //!
-//! * `bulk_create` — alta de N clientes (cap 50, igual que CustomerService.bulk_create).
-//!   Normaliza lifecycle "customer" → "active" (fiel a create_customer).
-//! * `set_groups` — asigna los grupos de un cliente (M2M): emite un `_group_clear`
-//!   + un `_group_add` por group_id (reemplaza la colección completa, como routes).
-//! * `set_tags` — idem para etiquetas (`_tag_clear` + N `_tag_add`).
+//! * `bulk_create` — creates N customers (cap 50, like CustomerService.bulk_create).
+//!   Normalises lifecycle "customer" → "active" (as create_customer did).
+//! * `set_groups` — sets a customer's groups (M2M): emits one `_group_clear`
+//!   + one `_group_add` per group_id (replaces the whole collection, like routes).
+//! * `set_tags` — the same for tags (`_tag_clear` + N `_tag_add`).
 //!
-//! Lógica pura (sin BD): recibe `{payload, context}`, devuelve **intenciones** (ops SQL
-//! por nombre de command del mismo módulo + params) que el host valida y ejecuta en una
-//! transacción. Los ids de filas nuevas salen de `context.new_ids` (autoridad del host).
+//! Pure logic (no DB): takes `{payload, context}`, returns **intents** (SQL ops by command
+//! name of this same module + params) that the host validates and runs in one transaction.
+//! Ids of new rows come from `context.new_ids` (the host's authority).
+//!
+//! Phones are saved in E.164 with the guest SDK's reading (`erplora_guest_sdk::phone`,
+//! libphonenumber's metadata; hub#2592), the same one other modules use (customers#130).
 
-pub mod phone;
-mod phone_metadata;
-
+use erplora_guest_sdk::phone;
 use erplora_guest_sdk::{DomainError, Event, Operation, Output};
 use serde_json::{json, Map, Value};
 

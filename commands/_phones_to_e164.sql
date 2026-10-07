@@ -4,10 +4,10 @@
 -- (`+34600111222`) or not at all. The cards typed before that keep «600 111 222», «0034 600…» or
 -- «07700 900123», and whoever copies that text (Appointments into the appointment, and from there
 -- the «appointment confirmed» WhatsApp notice) compares it and finds nobody. This rewrites them
--- with the handler's rules (`handler/src/phone.rs`), on the handler's table: the
--- `customers_e164_regions` list below is `handler/src/phone_metadata.rs` row by row, printed by
--- `cargo run -q -- sql` in `handler/tools/phone-metadata` (the battery
--- `tests/phone_e164_backfill.pg.test.py` fails if they drift).
+-- with the handler's rules (`erplora_guest_sdk::phone`, hub#2592), on its table: the
+-- `customers_e164_regions` list below is the guest SDK's `REGIONS` row by row, printed by
+-- `cargo run -q -- sql` in the hub's `crates/guest-sdk/tools/phone-metadata` (the handler test
+-- `the_sweep_reads_phones_with_the_sdk_table` fails if they drift, customers#130).
 --
 -- Why a command and not a migration: a number without prefix is read in the HUB's country, and a
 -- migration has no `:hub_id` to read it with (the hub also refuses a migration that names

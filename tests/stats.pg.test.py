@@ -84,7 +84,8 @@ def q(sql: str) -> str:
     return psql(["-tAc", sql], db=DB).strip()
 
 
-PARAM = re.compile(r":([a-z_][a-z0-9_]*)", re.IGNORECASE)
+# `::` is a cast, not a bind (as the runtime reads it: crates/runtime/src/queries.rs).
+PARAM = re.compile(r"(?<!:):([a-z_][a-z0-9_]*)", re.IGNORECASE)
 
 
 def literal(value) -> str:
