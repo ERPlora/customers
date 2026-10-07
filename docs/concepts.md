@@ -147,9 +147,14 @@ migration `009` puts the old texts back.
 
 ## Finding a customer by phone number
 
-Other modules find a customer by the number she writes or calls from (WhatsApp gives it as
-`34600111222`). The card is found however its phone was typed: with spaces or dashes, with `+` or
-`00`, and also **without the country code** (`600 111 222`), as long as the number has 7 digits or
-more. A longer number that merely contains it is somebody else. When two cards carry the same
+Other modules, and the quick add at the till, find a customer by the number she writes or calls
+from (WhatsApp gives it as `34600111222`). The number asked for is read with **the same rules a
+card's phone is saved with**: spaces, dashes, dots and parentheses, `+` or `00`, the business's
+country for a number **without the country code** (`600 111 222`), and the national `0` dropped
+even when it is written in parentheses after the code (`+44 (0)7700 900123` is `+447700900123`).
+Bare digits are also read as an international number, the way WhatsApp gives them. A number that
+is not possible in its country finds nobody, and so does an old card the scheduled task could not
+read. The same national digits behind another country's code are somebody else, and a longer
+number that merely contains it is somebody else too. When two cards carry the same
 number, both are returned and the module asking decides (the WhatsApp inbox, for instance, then
 links the conversation to nobody and leaves it to a person).

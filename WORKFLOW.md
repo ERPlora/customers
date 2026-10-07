@@ -133,7 +133,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | CUSTOMERS-F07 | Eliminar una ficha | hecho | comun | fichas |
 | CUSTOMERS-F08 | Importar fichas desde un CSV | parcial | comun | fichas |
 | CUSTOMERS-F09 | Exportar la lista de fichas | parcial | comun | fichas |
-| CUSTOMERS-F10 | Reconocer a una persona por su número de teléfono | parcial | comun | identidad-y-privacidad |
+| CUSTOMERS-F10 | Reconocer a una persona por su número de teléfono | hecho | comun | identidad-y-privacidad |
 | CUSTOMERS-F11 | Guardar el teléfono en formato internacional (E.164) | parcial | comun | identidad-y-privacidad |
 | CUSTOMERS-F12 | Evitar fichas duplicadas de la misma persona | parcial | comun | identidad-y-privacidad |
 | CUSTOMERS-F13 | Unir dos fichas de la misma persona | hecho | comun | identidad-y-privacidad |
@@ -163,7 +163,7 @@ de la segunda columna, y sus implicados, en la misma entrega.
 | Pieza compartida | Flujos que la usan |
 |---|---|
 | Un solo formulario de ficha para el alta y la edición (mismos campos, mismo orden) | F01, F04, F11 |
-| La búsqueda por número de teléfono: la misma consulta reconoce a la clienta que pide cita y al comensal que pide mesa, y su tabla de prefijos está copiada a mano en la Bandeja de WhatsApp | F10, F11, F12, F26 |
+| La búsqueda por número de teléfono: la misma consulta reconoce a la clienta que pide cita y al comensal que pide mesa, con las reglas del alta; la Bandeja de WhatsApp vuelve a comprobar con su propia copia de la tabla de prefijos (whatsapp_inbox#281) | F10, F11, F12, F26 |
 | La búsqueda de texto de la lista: la usan la tabla, el panel de fusión, el buscador del TPV y el selector de clienta de Citas (la agenda y las citas periódicas buscan en cada tecla, 20 por página, appointments#306) | F02, F13, F17, F18, F25 |
 | El teléfono tal como se guarda: lo leen la búsqueda por número (F10), WhatsApp al unir conversaciones y Citas, que lo copia en la cita y con esa copia el aviso de cita confirmada busca la conversación | F01, F04, F08, F10, F11, F18, F26 |
 | El aviso de ficha creada o actualizada, que escucha WhatsApp para unir conversaciones (la importación no lo emite) | F01, F04, F08, F18, F26 |
@@ -186,17 +186,17 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 |---|---|---|
 | Guardar el número en E.164 (`+` y cifras) al dar de alta, editar, importar o crear en el TPV | hecho: toda escritura de la ficha pasa por las reglas de libphonenumber, y las fichas antiguas las reescribe una tarea programada con copia del texto viejo | F11, F01, F04, F08, F18 |
 | Guardar en E.164 la ficha que crea WhatsApp | hecho: la misma alta lo normaliza | F26 |
-| Comprobar que el número es posible para su país (longitud, tipo) | hecho al guardar (longitud posible de su país; el tipo, móvil o fijo, no se mira); al comparar solo se exigen 7 cifras | F10, F11 |
+| Comprobar que el número es posible para su país (longitud, tipo) | hecho al guardar y al comparar (longitud posible de su país; el tipo, móvil o fijo, no se mira) | F10, F11 |
 | Espacios, guiones, puntos y paréntesis | hecho al guardar, al comparar por número y al buscar (tabla de Clientes, TPV y fusionar fichas) | F10, F11, F02, F18 |
 | Prefijo con `+` o con `00` | hecho al guardar y al comparar | F10, F11 |
 | Enseñar el número con el formato de su país | no hecho: se enseña tal como se guarda (customers#127) | F11 |
 | Cero nacional delante (`07700…` en Reino Unido) | hecho al guardar y al comparar cuando el número es del país del negocio; uno extranjero tecleado así se rechaza al guardar si no es posible en el país del negocio | F10, F11 |
-| Cero nacional entre paréntesis en un número internacional (`+44 (0)7700…`) | hecho al guardar; al comparar un número que llega así, no: el cero se queda y no casa | F10, F11 |
-| Países que conservan el cero tras el prefijo (Italia y otros 8) | hecho: al guardar, con los metadatos de libphonenumber; al comparar, con una lista propia de 9 países | F10, F11 |
+| Cero nacional entre paréntesis en un número internacional (`+44 (0)7700…`) | hecho al guardar y al comparar (customers#130) | F10, F11 |
+| Países que conservan el cero tras el prefijo (Italia y otros 8) | hecho: al guardar y al comparar, con los metadatos de libphonenumber | F10, F11 |
 | País que se supone para un número sin prefijo | parcial: siempre el del negocio; el «País» de la ficha no se usa para el teléfono | F10, F11 |
 | Número extranjero guardado con su prefijo | hecho: casa solo con ese país | F10 |
 | Número extranjero guardado sin su prefijo | parcial: al guardar se lee en el país del negocio; si no es posible allí se rechaza y se pide el prefijo, pero si lo es se guarda como del país del negocio y es otra persona | F10, F11 |
-| Tabla de prefijos por país | parcial: al guardar, generada de los metadatos de libphonenumber; al comparar, escrita a mano en Clientes y copiada en la Bandeja de WhatsApp | F10, F11 |
+| Tabla de prefijos por país | parcial: Clientes guarda y compara con la del SDK del hub, generada de los metadatos de libphonenumber (customers#130); la Bandeja de WhatsApp sigue con su copia escrita a mano (whatsapp_inbox#281) | F10, F11 |
 | Extensión o dos números en el mismo campo | hecho al guardar: se rechaza | F10, F11 |
 | Buscar en Clientes un teléfono escrito de otra forma | hecho: la tabla (buscador y filtro «Teléfono»), el TPV y fusionar fichas buscan sus cifras | F02, F18, F13 |
 | Avisar de un teléfono repetido al crear | parcial: solo el alta rápida del TPV, entre los resultados en pantalla | F12, F18 |
@@ -313,7 +313,7 @@ Solo lo que el código hace cumplir.
 - **La edición de la ficha se guarda entera o nada**: un campo propio obligatorio vacío o de tipo incorrecto la rechaza (el alta no los mira).
 - **Un nombre por negocio** entre los grupos, las etiquetas y los campos vivos y activos, sin distinguir mayúsculas ni espacios.
 - **El dinero va en céntimos**; el filtro «Gastado» se escribe en euros.
-- **Buscar por teléfono nunca devuelve a todos**: un número vacío o de menos de 7 cifras no casa con nadie.
+- **Buscar por teléfono nunca devuelve a todos**: un número vacío o que no es posible en su país no casa con nadie.
 - **Clientes no depende de ningún módulo**: se instala solo.
 
 ## Lo que NO hace, a propósito
@@ -332,7 +332,8 @@ Solo lo que el código hace cumplir.
 Se resuelven con `market-decision`; no las decide el worker. (La del teléfono en E.164 se resolvió en
 customers#121: país del negocio para el número sin prefijo, como libphonenumber y los TPV de
 referencia; fichas existentes reescritas por una tarea programada; reglas con los metadatos de
-libphonenumber dentro del módulo, y WhatsApp sigue con su copia, ver «Cobertura».)
+libphonenumber, que desde customers#130 vienen del SDK del hub y usan por igual el alta, la tarea y
+la búsqueda por número; WhatsApp sigue con su copia, ver «Cobertura».)
 
 1. **Aviso de duplicado al crear (F12).** customers#12 lo dejó fuera del MVP el 06/08; desde
    entonces la fusión entró como P1 (customers#86, 23/09) y pm#621 mide fichas repetidas por

@@ -11,26 +11,36 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F10 Reconocer a una persona por su número de teléfono
-Estado: parcial — las fichas ya guardan el teléfono en E.164 (F11), pero la búsqueda por número sigue comparando con su propia regla escrita a mano (una tabla de prefijos copiada en la Bandeja de WhatsApp), no con la del alta: no entiende el «(0)» de un número internacional que llegue a preguntar, y una ficha antigua que la tarea de F11 no pudo leer se sigue comparando como texto tecleado
+Estado: hecho
 Vertical: comun
 Actor: sistema
 Pantalla: ninguna
 Pasos:
-1. Otro módulo (WhatsApp, o su respuesta automática) pregunta qué fichas llevan un número; nadie lo hace a mano.
-2. Los dos lados se reducen a cifras (fuera espacios, guiones, puntos, paréntesis y el `+`) y se les
-   quitan los ceros iniciales (el `00` internacional y el `0` nacional de, por ejemplo, Reino Unido).
-3. Casan si quedan iguales, o si uno es el otro con el prefijo del país DEL NEGOCIO delante. En un
-   negocio de España, `600 111 222`, `+34 600-111-222`, `0034600111222` y `34600111222` son la misma.
-4. En Italia, San Marino, Vaticano y otros seis países que conservan el `0` tras el prefijo, el lado
-   sin prefijo se compara con su `0` (`06 1234567` es `+39 06 1234567`).
+1. Otro módulo (WhatsApp, o su respuesta automática) o el alta rápida del TPV (F12) pregunta qué
+   fichas llevan un número; nadie lo hace a mano.
+2. El número que llega se lee con las mismas reglas con que se guarda el teléfono de una ficha (F11,
+   las de libphonenumber): con el prefijo que lleve (`+` o el `00` del país del negocio) o, si no
+   lleva, en el país del negocio; fuera espacios, guiones, puntos, barras y paréntesis, y fuera el
+   cero nacional también cuando viene entre paréntesis tras el prefijo (`+44 (0)7700 900123` es
+   `+447700900123`). En Italia y los demás países que conservan el `0` tras el prefijo, se queda
+   (`06 1234567` es `+39 06 1234567`).
+3. Unas cifras sin `+` se leen además como número internacional, que es como las da WhatsApp: en un
+   negocio de España, `447700900123` es `+447700900123` y `39061234567` es `+39 06 1234567`.
+4. Casan las fichas cuyo teléfono, ya en E.164, es uno de esos números. Una ficha antigua que la
+   tarea de F11 aún no ha reescrito se lee como la reescribirá. En un negocio de España,
+   `600 111 222`, `+34 600-111-222`, `0034600111222` y `34600111222` son la misma.
 5. Los mismos dígitos detrás del prefijo de otro país son otra persona: un `+33 600 111 222` no es
    la ficha `600 111 222` de un salón español.
-Entra: el número tal como llegue, y el país del negocio (ajustes del hub; si nunca se guardaron, España).
+Entra: el número tal como llegue, y el país del negocio (ajustes del hub; si nunca se guardaron, o
+no es un país conocido, España, como al guardar).
 Sale: las fichas que casan (nombre, email, teléfono), ordenadas por nombre. Si son dos o más, decide
 quien pregunta: WhatsApp no une la conversación a ninguna.
-Si falla: un número vacío, o con menos de 7 cifras en cualquiera de los dos lados, no casa con nadie
-(nunca devuelve la lista entera). Un país sin prefijo conocido solo casa el número exacto. Las fichas
-eliminadas o absorbidas no salen; las no activas, sí. Una ficha extranjera guardada sin su prefijo
+Si falla: un número vacío, con letras o que no es posible en su país (`600111` en España) no casa
+con nadie (nunca devuelve la lista entera). Una ficha antigua que la tarea de F11 no supo leer no
+casa con nadie, tampoco por sus cifras: pedirá un número válido la próxima vez que se edite. Las
+fichas eliminadas o absorbidas no salen; las no activas, sí. La Bandeja de WhatsApp vuelve a
+comprobar cada ficha con su propia copia de la tabla de prefijos (WHATSAPP_INBOX-F04,
+whatsapp_inbox#281). Una ficha extranjera guardada sin su prefijo
 nunca casa con el número que da WhatsApp, y en cambio casa con quien escriba desde esas mismas
 cifras en el país del negocio, que es otra persona (una ficha francesa `612 345 678` en un salón
 español casa con `+34 612 345 678`).
