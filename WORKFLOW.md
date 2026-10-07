@@ -164,7 +164,7 @@ de la segunda columna, y sus implicados, en la misma entrega.
 |---|---|
 | Un solo formulario de ficha para el alta y la edición (mismos campos, mismo orden) | F01, F04, F11 |
 | La búsqueda por número de teléfono: la misma consulta reconoce a la clienta que pide cita y al comensal que pide mesa, y su tabla de prefijos está copiada a mano en la Bandeja de WhatsApp | F10, F11, F12, F26 |
-| La búsqueda de texto de la lista: la usan la tabla, el panel de fusión, el buscador del TPV y el selector de clienta de Citas (la agenda y las citas periódicas piden las 500 primeras por nombre) | F02, F13, F17, F18, F25 |
+| La búsqueda de texto de la lista: la usan la tabla, el panel de fusión, el buscador del TPV y el selector de clienta de Citas (la agenda y las citas periódicas buscan en cada tecla, 20 por página, appointments#306) | F02, F13, F17, F18, F25 |
 | El teléfono tal como se guarda: lo leen la búsqueda por número (F10), WhatsApp al unir conversaciones y Citas, que lo copia en la cita y con esa copia el aviso de cita confirmada busca la conversación | F01, F04, F08, F10, F11, F18, F26 |
 | El aviso de ficha creada o actualizada, que escucha WhatsApp para unir conversaciones (la importación no lo emite) | F01, F04, F08, F18, F26 |
 | La fusión y su aviso: lo escuchan Citas (peluquería), Reservas y Cocina (restaurante), y Ventas, WhatsApp, Servicios y Reservas online | F13 |
@@ -231,7 +231,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Alta solo con el nombre, teléfono y NIF a la vista | hecho | F01 |
 | Email comprobado al guardar | no hecho: un email mal formado se guarda en el alta, la edición y el TPV; solo la importación lo rechaza | F01, F04 |
 | Alta desde el TPV en dos toques | hecho | F18 |
-| Alta desde la agenda | no hecho (la agenda solo elige entre las 500 primeras fichas, APPOINTMENTS-F01) | F25 |
+| Alta desde la agenda | no hecho (la agenda busca entre todas las fichas pero no crea una nueva, APPOINTMENTS-F01, appointments#318) | F25 |
 | Alta automática desde WhatsApp | hecho en peluquería; el restaurante no crea fichas | F26 |
 | Aviso de posible duplicado al crear (teléfono, email, NIF) | fuera del MVP por el triaje de customers#12 (06/08); ver «Dudas abiertas» | F12 |
 | Unir duplicados conservando todo | hecho | F13 |

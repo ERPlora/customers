@@ -155,7 +155,7 @@ Implicados: APPOINTMENTS-F20
 QA: B-03, L-10
 
 ### CUSTOMERS-F25 Crear la clienta sin salir de la agenda
-Estado: no hecho — al dar una cita (y al crear una cita periódica) solo se elige entre fichas ya creadas (la agenda carga las 500 primeras por nombre); una clienta nueva obliga a ir a Clientes, crearla y volver
+Estado: no hecho — al dar una cita (y al crear una cita periódica) solo se elige entre fichas ya creadas (la agenda las busca todas por nombre, teléfono o email desde appointments#306); una clienta nueva obliga a ir a Clientes, crearla y volver (appointments#318)
 Vertical: peluqueria
 Actor: administrador, responsable, empleado
 Pantalla: Citas: Agenda
