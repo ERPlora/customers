@@ -18,7 +18,9 @@
 --
 -- `customers_e164_asked`: what gets read — the question, and this hub's live cards whose phone is
 --   not E.164 yet (typed before customers#121 and not reached by the sweep, or that it could not
---   read). A card already in E.164 is compared as saved: it went through `to_e164` when written.
+--   read). A card already in E.164 is compared as saved: it went through `to_e164` when written
+--   (a «+digits» text typed before that and not canonical, say «+4407700900123», is rewritten by
+--   the sweep on its first pass). Skipping them keeps a question from re-reading the whole file.
 -- `customers_e164_readings`: the sweep's readings, in the alta's order (1, 2), plus one for the
 --   QUESTION only (3): its digits as an international number without the `+`, the way WhatsApp
 --   and a caller id give it. A British «447700900123» writing to a Spanish salon is no Spanish
@@ -314,8 +316,8 @@ customers_e164_cards AS (
          strpos(a.phone, '+') > 0 AS plus
     FROM customers_e164_asked a
    CROSS JOIN customers_e164_home m
-   WHERE btrim(a.phone, E' \t\n\r ')
-         ~ '^[- \t./() ]*(\+[- \t./() ]*)?[0-9][0-9 \t./() -]*$'
+   WHERE btrim(a.phone, E' \t\n\r\u00a0')
+         ~ '^[- \t./()\u00a0]*(\+[- \t./()\u00a0]*)?[0-9][0-9 \t./()\u00a0-]*$'
 ),
 customers_e164_routed AS (
   SELECT k.*,

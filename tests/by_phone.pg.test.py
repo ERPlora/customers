@@ -119,6 +119,9 @@ CARDS = [
     ("c130-es", HUB_130, "+34600111222", 0),
     ("c130-typed", HUB_130, "0034 655 44 33 22", 0),
     ("c130-unreadable", HUB_130, "+34 6001112229", 0),
+    # Typed before customers#121 without its «+»: in a Spanish hub the sweep cannot read it.
+    ("c130-unreadable-intl", HUB_130, "447700900123", 0),
+    ("c130-de", HUB_130, "+493012345678", 0),
 ]
 
 
@@ -400,6 +403,21 @@ def main() -> int:
             "customers#130: a card the sweep could not read is nobody, not its typed digits",
             [],
             found(HUB_130, "+346001112229"),
+        )
+        check(
+            "customers#130: a card the sweep could not read gets no WhatsApp reading of its own",
+            ["c130-uk"],
+            found(HUB_130, "+44 7700 900123"),
+        )
+        check(
+            "customers#130: a trunk 0 goes even where the number would be possible with it",
+            ["c130-de"],
+            found(HUB_130, "+49 (0)30 12345678"),
+        )
+        check(
+            "customers#130: a no-break space, as the alta reads it",
+            ["c130-es"],
+            found(HUB_130, "600\u00a0111\u00a0222"),
         )
         check(
             "customers#130: a question the alta refuses is nobody («600111»)",
