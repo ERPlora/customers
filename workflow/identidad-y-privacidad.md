@@ -16,8 +16,9 @@ Vertical: comun
 Actor: sistema
 Pantalla: ninguna
 Pasos:
-1. Otro módulo (WhatsApp, o su respuesta automática) o el alta rápida del TPV (F12) pregunta qué
-   fichas llevan un número; nadie lo hace a mano.
+1. Otro módulo (WhatsApp, o su respuesta automática; Reservas al apuntar a mano una reserva o una
+   entrada de espera) o el alta rápida del TPV (F12) pregunta qué fichas llevan un número; nadie lo
+   hace a mano.
 2. El número que llega se lee con las mismas reglas con que se guarda el teléfono de una ficha (F11,
    las de libphonenumber): con el prefijo que lleve (`+` o el `00` del país del negocio) o, si no
    lleva, en el país del negocio; fuera espacios, guiones, puntos, barras y paréntesis, y fuera el
@@ -44,7 +45,7 @@ whatsapp_inbox#281). Una ficha extranjera guardada sin su prefijo
 nunca casa con el número que da WhatsApp, y en cambio casa con quien escriba desde esas mismas
 cifras en el país del negocio, que es otra persona (una ficha francesa `612 345 678` en un salón
 español casa con `+34 612 345 678`).
-Implicados: RESERVATIONS-F17, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F21, WHATSAPP_INBOX-F24, REC_WA_CITA-F03, REC_WA_MESA-F03
+Implicados: RESERVATIONS-F06, RESERVATIONS-F14, RESERVATIONS-F17, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F21, WHATSAPP_INBOX-F24, REC_WA_CITA-F03, REC_WA_MESA-F03
 QA: W-02
 
 ### CUSTOMERS-F11 Guardar el teléfono en formato internacional (E.164)
@@ -186,7 +187,7 @@ Implicados: FLOWS-F13
 QA: L-10, WA-05
 
 ### CUSTOMERS-F16 Borrar los datos personales de un cliente (RGPD)
-Estado: parcial — la pantalla solo ofrece el borrado en una ficha viva: una ficha eliminada (F07) o absorbida (F13) conserva sus datos y no hay botón para borrarlos, aunque la orden sí los acepta (asistente o API, con su identificador); y de los módulos que guardan copias, Citas, Reservas y Reservas online no escuchan el aviso
+Estado: parcial — la pantalla solo ofrece el borrado en una ficha viva: una ficha eliminada (F07) o absorbida (F13) conserva sus datos y no hay botón para borrarlos, aunque la orden sí los acepta (asistente o API, con su identificador); y de los módulos que guardan copias, Citas y Reservas online no escuchan el aviso
 Vertical: comun
 Actor: administrador
 Pantalla: Ficha de cliente
@@ -206,12 +207,14 @@ quitan. Se conservan en la ficha el origen, la etapa, las compras, el gastado, l
 fecha de alta y quién la creó; y aparte, el historial de compras y los pedidos enlazados (prueba
 comercial y fiscal) y una única entrada de auditoría visible (quién, cuándo, el motivo tal como se
 escribió, qué se borró y qué se guardó). El aviso de ficha anonimizada (`customer.anonymized`) lo
-escuchan WhatsApp (vacía y cierra sus conversaciones, WHATSAPP_INBOX-F11), Servicios (marca sus bonos) y el propio hub,
+escuchan WhatsApp (vacía y cierra sus conversaciones, WHATSAPP_INBOX-F11), Servicios (marca sus bonos),
+Reservas (vacía nombre, teléfono, correo y notas de sus reservas y entradas de espera, también las
+apuntadas a mano, que se ligan a la ficha al apuntarlas: RESERVATIONS-F22) y el propio hub,
 que vacía en su historial los avisos ya entregados o descartados y las automatizaciones terminadas
 que nombraban a esa ficha; los avisos pendientes o atascados y las automatizaciones en curso
-conservan los datos hasta que se procesan o los poda la retención. Citas, Reservas y Reservas online
-no lo escuchan: el nombre, el teléfono, el correo y las notas copiados en citas y series, reservas y
-lista de espera (RESERVATIONS-F22, no hecho) y reservas online se quedan. Ventas y facturas guardan
+conservan los datos hasta que se procesan o los poda la retención. Citas y Reservas online
+no lo escuchan: el nombre, el teléfono, el correo y las notas copiados en citas y series y en
+reservas online se quedan. Ventas y facturas guardan
 su copia fiscal a propósito.
 Si falla: «No se pudieron borrar los datos personales» o «Ese cliente no está disponible en este
 negocio.» si el identificador no es de este negocio. Sobre una ficha ya eliminada, absorbida o
