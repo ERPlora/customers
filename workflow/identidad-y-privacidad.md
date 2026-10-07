@@ -38,7 +38,7 @@ Implicados: RESERVATIONS-F17, WHATSAPP_INBOX-F04, WHATSAPP_INBOX-F21, WHATSAPP_I
 QA: W-02
 
 ### CUSTOMERS-F11 Guardar el teléfono en formato internacional (E.164)
-Estado: parcial — la ficha enseña el número tal como se guarda, todo junto, y no con el formato de su país (customers#127); y el buscador de la tabla de Clientes no encuentra un teléfono tecleado con espacios (customers#126)
+Estado: parcial — la ficha enseña el número tal como se guarda, todo junto, y no con el formato de su país (customers#127)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Ficha de cliente
@@ -58,9 +58,9 @@ Pasos:
    pasada tras actualizar hace el trabajo y las siguientes no encuentran nada): con las mismas reglas
    y el mismo país, guardando aparte el texto viejo de cada ficha que cambia. Un número que no sabe
    leer se queda como estaba, y la ficha pedirá uno válido la próxima vez que se edite.
-6. Reconocer por número (F10) compara con la ficha ya normalizada. Los buscadores del TPV (F18) y de
-   fusionar fichas (F13) mandan un teléfono tecleado como sus cifras, que el número guardado contiene;
-   el de la tabla de Clientes (F02) aún no.
+6. Reconocer por número (F10) compara con la ficha ya normalizada. Los buscadores de la tabla de
+   Clientes (F02, también su filtro «Teléfono»), del TPV (F18) y de fusionar fichas (F13) mandan un
+   teléfono tecleado como sus cifras, que el número guardado contiene.
 Entra: el teléfono tecleado y el país del negocio.
 Sale: el teléfono en E.164 en la ficha y en los avisos de ficha creada o actualizada; por cada ficha
 reescrita por la tarea, una copia de su texto anterior (se borra con los datos personales, F16, y

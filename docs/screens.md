@@ -8,7 +8,10 @@ The module contributes four tabs to the hub navigation: **Customers**, **Groups*
 Summary cards on top (`customers.stats`) and the customer list below (`customers.list`, 50 rows per
 page). Requires `customers.view_customer`.
 
-- **Search** by name, email, phone, tax id or company name.
+- **Search** by name, email, phone, tax id or company name. A phone is found however it is typed
+  (`600 111 222`, `0034 600-111-222`, `+44 (0)7700 900123`): a term made only of a phone's
+  characters is searched by its digits, which the stored international number contains. The
+  «Phone» filter reads it the same way.
 - **Sort** by name, email, phone, tax id, company, lifecycle stage, source, active flag, number of
   purchases, total spent or last purchase date. Default: name, ascending.
 - **Filter** by any of those, with ranges on tax id, purchases, spend and last purchase date.

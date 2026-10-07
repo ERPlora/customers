@@ -125,7 +125,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | ID | Flujo | Estado | Vertical | Fichero |
 |---|---|---|---|---|
 | CUSTOMERS-F01 | Dar de alta una ficha desde Clientes | parcial | comun | fichas |
-| CUSTOMERS-F02 | Buscar y filtrar fichas | parcial | comun | fichas |
+| CUSTOMERS-F02 | Buscar y filtrar fichas | hecho | comun | fichas |
 | CUSTOMERS-F03 | Abrir la ficha de un cliente | parcial | comun | fichas |
 | CUSTOMERS-F04 | Editar la ficha y sus campos personalizados | parcial | comun | fichas |
 | CUSTOMERS-F05 | Añadir una nota a la ficha | hecho | comun | fichas |
@@ -187,7 +187,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Guardar el número en E.164 (`+` y cifras) al dar de alta, editar, importar o crear en el TPV | hecho: toda escritura de la ficha pasa por las reglas de libphonenumber, y las fichas antiguas las reescribe una tarea programada con copia del texto viejo | F11, F01, F04, F08, F18 |
 | Guardar en E.164 la ficha que crea WhatsApp | hecho: la misma alta lo normaliza | F26 |
 | Comprobar que el número es posible para su país (longitud, tipo) | hecho al guardar (longitud posible de su país; el tipo, móvil o fijo, no se mira); al comparar solo se exigen 7 cifras | F10, F11 |
-| Espacios, guiones, puntos y paréntesis | hecho al guardar y al comparar por número; al buscar, en el TPV y en fusionar fichas sí, en la tabla de Clientes no (customers#126) | F10, F11, F02, F18 |
+| Espacios, guiones, puntos y paréntesis | hecho al guardar, al comparar por número y al buscar (tabla de Clientes, TPV y fusionar fichas) | F10, F11, F02, F18 |
 | Prefijo con `+` o con `00` | hecho al guardar y al comparar | F10, F11 |
 | Enseñar el número con el formato de su país | no hecho: se enseña tal como se guarda (customers#127) | F11 |
 | Cero nacional delante (`07700…` en Reino Unido) | hecho al guardar y al comparar cuando el número es del país del negocio; uno extranjero tecleado así se rechaza al guardar si no es posible en el país del negocio | F10, F11 |
@@ -198,7 +198,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Número extranjero guardado sin su prefijo | parcial: al guardar se lee en el país del negocio; si no es posible allí se rechaza y se pide el prefijo, pero si lo es se guarda como del país del negocio y es otra persona | F10, F11 |
 | Tabla de prefijos por país | parcial: al guardar, generada de los metadatos de libphonenumber; al comparar, escrita a mano en Clientes y copiada en la Bandeja de WhatsApp | F10, F11 |
 | Extensión o dos números en el mismo campo | hecho al guardar: se rechaza | F10, F11 |
-| Buscar en Clientes un teléfono escrito de otra forma | parcial: el TPV y fusionar fichas buscan sus cifras; la tabla compara texto (customers#126) | F02, F18, F13 |
+| Buscar en Clientes un teléfono escrito de otra forma | hecho: la tabla (buscador y filtro «Teléfono»), el TPV y fusionar fichas buscan sus cifras | F02, F18, F13 |
 | Avisar de un teléfono repetido al crear | parcial: solo el alta rápida del TPV, entre los resultados en pantalla | F12, F18 |
 | Comparar números ya normalizados en los demás módulos | parcial: la cita copia el teléfono ya normalizado y la conversación también lo está, pero el aviso de cita confirmada compara por «contiene» (whatsapp_inbox#279) y el buscador de Reservas compara texto | F11 |
 
