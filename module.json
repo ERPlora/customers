@@ -201,7 +201,7 @@
       "sql": "queries/by_phone.sql",
       "schema": "schemas/by_phone.json",
       "ai": {
-        "description": "Finds the customers whose phone is the same number as `phone`, however either side was typed (spaces, dashes, +, 00, with or without the business's country code, keeping the leading 0 behind it where the country does, as Italian landlines; another country's code in front is somebody else)"
+        "description": "Finds the customers whose phone is the same number as `phone`, read with the same rules a card's phone is saved with (libphonenumber: spaces, dashes and parentheses, + or 00, the business's country for a number without prefix, the trunk 0 written as (0) after the code, Italian landlines keeping their 0; the bare digits WhatsApp sends also count as an international number); another country's code in front is somebody else, and a number that is not possible in its country finds nobody"
       }
     },
     "customers.get": {

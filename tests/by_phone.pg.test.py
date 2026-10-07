@@ -15,7 +15,7 @@ the other way round). Seven digits at least: a short number is an extension, not
 A card without a prefix is a number of the business's own country (whatsapp_inbox#199, the same
 rule the inbox applies since #167): a French `33 600 111 222` writing to a Spanish salon is NOT
 the local card `600 111 222`. The country is the hub's `hub_settings.country_code`, `ES` when the
-row is absent (the runtime's default); a country with no known calling code matches exact only.
+row is absent (the runtime's default), and so is a code the alta does not know (customers#130).
 
 What is checked here, against a real Postgres and bound the way the runtime binds it:
 1. every usual way of typing the same number finds the card;
@@ -54,6 +54,10 @@ HUB_NOCODE = "hub-nocode"
 HUB_IT = "hub-it"
 HUB_CI = "hub-ci"
 HUB_RW = "hub-rw"
+# customers#130: a hub whose cards are stored the way every write saves them since customers#121
+# (E.164), plus the leftovers the sweep `phones_to_e164` meets (not yet rewritten, unreadable).
+# No settings row: Spain.
+HUB_130 = "hub-130"
 
 # The core table the country is read from (`crates/runtime/src/system_migrations.rs` v4). HUB_A has
 # NO row on purpose: a fresh hub that never saved its settings is `ES`, the runtime's default.
@@ -111,13 +115,21 @@ CARDS = [
     ("c-it-intl-landline", HUB_IT, "+39 06 7654321", 0),
     ("c-ci-national", HUB_CI, "07 07 12 34 56", 0),
     ("c-rw-trunk", HUB_RW, "078 123 4567", 0),
+    ("c130-uk", HUB_130, "+447700900123", 0),
+    ("c130-es", HUB_130, "+34600111222", 0),
+    ("c130-typed", HUB_130, "0034 655 44 33 22", 0),
+    ("c130-unreadable", HUB_130, "+34 6001112229", 0),
+    # Typed before customers#121 without its «+»: in a Spanish hub the sweep cannot read it.
+    ("c130-unreadable-intl", HUB_130, "447700900123", 0),
+    ("c130-de", HUB_130, "+493012345678", 0),
 ]
 
 
 def seed():
     S.psql([], db=S.DB, stdin=CORE_TABLES)
     settings = ",".join(
-        f"('{hub}', 'country_code', '{code}', '{S.NOW}', 'system')" for hub, code in SETTINGS
+        f"('{hub}', 'country_code', '{code}', '{S.NOW}', 'system')"
+        for hub, code in SETTINGS
     )
     S.psql(
         [],
@@ -266,22 +278,24 @@ def main() -> int:
             found(HUB_A, "447700900123"),
         )
         check(
-            "a country with no known calling code: exact number only",
-            [],
+            "customers#130: a country the alta does not know is Spain, as the alta reads it",
+            ["c-nocode-national"],
             found(HUB_NOCODE, "34600111333"),
         )
         check(
-            "a country with no known calling code: the national search misses the +34 card",
-            [],
+            "customers#130: a country the alta does not know: a national search is a Spanish number",
+            ["c-nocode-intl"],
             found(HUB_NOCODE, "600111444"),
         )
         check(
-            "a country with no known calling code: the exact number still finds her",
+            "a country the alta does not know: the exact number still finds her",
             ["c-nocode-intl"],
             found(HUB_NOCODE, "0034 600 111 444"),
         )
 
-        print("· a country that keeps the leading 0 in the international number (customers#82)")
+        print(
+            "· a country that keeps the leading 0 in the international number (customers#82)"
+        )
         check(
             "Italian hub: the landline card «06 …» → the +39 06 … number",
             ["c-it-landline"],
@@ -313,8 +327,8 @@ def main() -> int:
             found(HUB_RW, "250781234567"),
         )
         check(
-            "Rwandan hub: the 0 is not kept behind +250",
-            [],
+            "customers#130: Rwandan hub: a trunk 0 behind +250 goes, as the alta reads «+44 (0)…»",
+            ["c-rw-trunk"],
             found(HUB_RW, "2500781234567"),
         )
 
@@ -325,8 +339,8 @@ def main() -> int:
             found(HUB_A, "34600111222"),
         )
         check(
-            "the longer card only answers its own number",
-            ["c-longer"],
+            "customers#130: a card no reading makes possible answers nobody, not even its digits",
+            [],
             found(HUB_A, "+346001112229"),
         )
         check(
@@ -352,6 +366,68 @@ def main() -> int:
             "the card plus FOUR digits is not a country code",
             [],
             found(HUB_A, "1234600111333"),
+        )
+
+        print("· the question is read with the alta's rules (customers#130)")
+        check(
+            "customers#130: «+44 (0)7700 900123» is the card the alta saved as +447700900123",
+            ["c130-uk"],
+            found(HUB_130, "+44 (0)7700 900123"),
+        )
+        check(
+            "customers#130: the 00 prefix and the (0) together",
+            ["c130-uk"],
+            found(HUB_130, "0044 (0)7700 900123"),
+        )
+        check(
+            "customers#130: WhatsApp digits of a foreign number find its E.164 card",
+            ["c130-uk"],
+            found(HUB_130, "447700900123"),
+        )
+        check(
+            "customers#130: punctuation the alta accepts («(+34) 600.11.12.22»)",
+            ["c130-es"],
+            found(HUB_130, "(+34) 600.11.12.22"),
+        )
+        check(
+            "customers#130: a national question finds the E.164 card",
+            ["c130-es"],
+            found(HUB_130, "600 111 222"),
+        )
+        check(
+            "customers#130: a card the sweep has not rewritten yet is read as the sweep will",
+            ["c130-typed"],
+            found(HUB_130, "+34 655 443 322"),
+        )
+        check(
+            "customers#130: a card the sweep could not read is nobody, not its typed digits",
+            [],
+            found(HUB_130, "+346001112229"),
+        )
+        check(
+            "customers#130: a card the sweep could not read gets no WhatsApp reading of its own",
+            ["c130-uk"],
+            found(HUB_130, "+44 7700 900123"),
+        )
+        check(
+            "customers#130: a trunk 0 goes even where the number would be possible with it",
+            ["c130-de"],
+            found(HUB_130, "+49 (0)30 12345678"),
+        )
+        check(
+            "customers#130: a no-break space, as the alta reads it",
+            ["c130-es"],
+            found(HUB_130, "600\u00a0111\u00a0222"),
+        )
+        check(
+            "customers#130: a question the alta refuses is nobody («600111»)",
+            [],
+            found(HUB_130, "600111"),
+        )
+        check(
+            "customers#130: the same national digits behind another code are somebody else",
+            [],
+            found(HUB_130, "+33 600 111 222"),
         )
 
         print("· tenancy and soft-delete")

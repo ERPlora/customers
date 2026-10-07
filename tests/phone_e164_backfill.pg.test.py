@@ -25,8 +25,8 @@ command `customers._phones_to_e164`, run per hub by a scheduled task (system con
   6. reversible: the DOWN documented in `009` puts the old text back on the cards that still carry
      the rewritten number (a phone edited after the upgrade is kept), then the table goes, and the
      up runs again;
-  7. the country table the command carries is the handler's (`handler/src/phone_metadata.rs`),
-     row by row: a drift would make the upgrade and the handler save two different numbers.
+  (the country table the command carries is the guest SDK's, row by row — the handler test
+  `the_sweep_reads_phones_with_the_sdk_table` fails if they drift, customers#130).
 
 Usage: tests/phone_e164_backfill.pg.test.py   (exit 0 = green)
   Uses the `erplora-test-pg-5433` container by default (override: ERPLORA_TEST_PG_CONTAINER).
@@ -49,7 +49,6 @@ TABLE = "migrations/postgres/009_phone_backup.sql"
 COMMAND = "customers._phones_to_e164"
 COMMAND_SQL = "commands/_phones_to_e164.sql"
 RETIRED = "migrations/postgres/010_phone_e164.sql"
-METADATA = MODULE_DIR / "handler" / "src" / "phone_metadata.rs"
 
 HUB_ES = "hub-es"  # no settings row: Spain
 HUB_GB = "hub-gb"
@@ -75,7 +74,8 @@ INSERT INTO hub_settings (hub_id, key, value, updated_at) VALUES
 """
 
 # (hub, card, phone as typed, phone after the upgrade, deleted?) — the expectations are the
-# handler's own (`handler/src/phone.rs` tests): the upgrade saves what an edit would save.
+# guest SDK's own (`erplora_guest_sdk::phone` tests in the hub): the upgrade saves what an edit
+# would save.
 CARDS = [
     (HUB_ES, "es-spaces", "600 111 222", "+34600111222", 0),
     (HUB_ES, "es-dashes", "+34 600-111-223", "+34600111223", 0),
@@ -448,37 +448,6 @@ def test_upgrade() -> None:
         db.drop()
 
 
-# ── 7 · one table, two copies ──────────────────────────────────────────────────────────────────
-
-
-ROW = re.compile(
-    r"\(\s*'([0-9A-Z]+)'\s*,\s*'([0-9]+)'\s*,\s*'([0-9]*)'\s*,\s*'([0-9]*)'\s*,\s*'\{([0-9,]*)\}'"
-)
-RUST_ROW = re.compile(
-    r'iso: "([0-9A-Z]+)", code: "([0-9]+)", trunk: "([0-9]*)", idd: "([0-9]*)", lengths: &\[([0-9, ]*)\]'
-)
-
-
-def test_table_matches_the_handler() -> None:
-    print("\n7 · the command's country table is the handler's, row by row")
-    if not (MODULE_DIR / COMMAND_SQL).exists():
-        fail(f"{COMMAND_SQL} does not exist")
-        return
-    sql_rows = sorted(
-        ROW.findall((MODULE_DIR / COMMAND_SQL).read_text(encoding="utf-8"))
-    )
-    rust_rows = sorted(
-        (iso, code, trunk, idd, lengths.replace(" ", ""))
-        for iso, code, trunk, idd, lengths in RUST_ROW.findall(
-            METADATA.read_text(encoding="utf-8")
-        )
-    )
-    check("same number of regions", len(sql_rows), len(rust_rows))
-    check(
-        "same regions, codes, trunks, prefixes and lengths", sql_rows == rust_rows, True
-    )
-
-
 def main() -> int:
     test_manifest()
     try:
@@ -487,7 +456,6 @@ def main() -> int:
         fail(f"no Postgres in container {CONTAINER}: {exc} — this battery never skips")
         return report()
     test_upgrade()
-    test_table_matches_the_handler()
     return report()
 
 

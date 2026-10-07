@@ -1,105 +1,376 @@
--- Customers whose phone is the SAME NUMBER as :phone, however either side was typed
--- (whatsapp_inbox#162), read as a number of the BUSINESS's country (whatsapp_inbox#199).
--- Runtime injects :hub_id.
+-- Customers whose phone is the same NUMBER as :phone (whatsapp_inbox#162), read with the SAME rules
+-- every write of a card saves its phone with (customers#130). Runtime injects :hub_id.
 --
--- `customers.list` filters `phone` with a LIKE over the raw column, so the number WhatsApp gives
--- (`34600111222`) never found a card typed `600 111 222` or `+34 600-111-222`. Here both sides are
--- reduced to digits and leading zeros are dropped (the `00` international prefix, a national trunk
--- `0` as in UK `07700…`). They match when they are equal, or when one is the other with the calling
--- code of the hub's country in front: a card typed without it is a number of THIS country, so it is
--- still her. The same national digits behind ANOTHER country's code are somebody else — a French
--- `33 600 111 222` writing to a Spanish salon is not the local card `600 111 222` (the rule the
--- WhatsApp inbox applies since whatsapp_inbox#167; the WhatsApp recipes read this query as is).
--- Both sides need 7 digits at least: a shorter number is an extension or a typo, not an identity.
+-- Since customers#121 a card's phone is saved in E.164 (`+34600111222`) by
+-- `erplora_guest_sdk::phone::to_e164` — libphonenumber's rules, a number without prefix read in the
+-- BUSINESS's country — and the sweep `customers._phones_to_e164` rewrites the cards typed before
+-- that with the same rules. So «who carries this number» reads the QUESTION with those rules and
+-- compares by equality: «+44 (0)7700 900123», «0044 7700 900123» and, in a British hub,
+-- «07700 900123» are all +447700900123. Before customers#130 this query had a prefix table of its own
+-- (a copy of the WhatsApp inbox's), which did not drop the «(0)» of an international number: the
+-- TPV's quick add asked with it, found nobody and created a second card for the same person.
 --
--- The country is the core's `hub_settings.country_code` (ADR-0085): the runtime binds no
--- `:country_code`, so it is read here, and a hub that never saved its settings has no row and is
--- `ES`, the runtime's default (`settings::country_code_of`). A country with no known calling code
--- matches the exact number only: any doubt is «nobody». The ISO 3166 → E.164 table is the same one
--- the whatsapp_inbox handler uses (`calling_code`); a country added there is added here.
+-- The `customers_e164_regions` list is the guest SDK's `REGIONS` row by row (printed by
+-- `cargo run -q -- sql` in the hub's `crates/guest-sdk/tools/phone-metadata`), and every step not
+-- described below is the sweep's, with its name and its prose (`commands/_phones_to_e164.sql`). The
+-- handler test `by_phone_reads_the_question_with_the_sdk_table` fails if the table drifts. A query
+-- cannot call the handler, so the rules are here in SQL.
 --
--- In a country with no trunk prefix whose numbers may begin with `0` (`keeps_zero`: IT, VA, SM,
--- CI, CG, BF, GA, NE, TJ — the handler's `keeps_leading_zero`, whatsapp_inbox#201) that `0` is part
--- of the international number: an Italian landline «06 1234567» is +39 06 1234567, not +39 6 …
--- (customers#82). There the national side goes behind the calling code with its digits as typed;
--- everywhere else its leading zeros (a trunk `0`, as in UK `07700…` or Rwanda `078…`) are dropped.
+-- `customers_e164_asked`: what gets read — the question, and this hub's live cards whose phone is
+--   not E.164 yet (typed before customers#121 and not reached by the sweep, or that it could not
+--   read). A card already in E.164 is compared as saved: it went through `to_e164` when written
+--   (a «+digits» text typed before that and not canonical, say «+4407700900123», is rewritten by
+--   the sweep on its first pass). Skipping them keeps a question from re-reading the whole file.
+-- `customers_e164_readings`: the sweep's readings, in the alta's order (1, 2), plus one for the
+--   QUESTION only (3): its digits as an international number without the `+`, the way WhatsApp
+--   and a caller id give it. A British «447700900123» writing to a Spanish salon is no Spanish
+--   number, and an Italian «39061234567» is a possible Italian national number as well: the alta
+--   reads it as typed in the hub's country, WhatsApp means +39 06 1234567, and the card that
+--   carries either one is hers. Cards get no reading 3: they are read exactly as the sweep will
+--   rewrite them.
+-- `customers_e164_read`: the first possible reading of the alta (1, then 2) and, for the question,
+--   the possible reading 3. A question no reading makes possible («600111», an empty or absent
+--   phone, «+ -») asks nothing, and a card no reading makes possible carries no number: neither is
+--   ever matched. Any doubt is «nobody», and never the whole list.
 --
--- An empty or absent :phone answers NO rows, never the whole list: a caller that lost the number
--- must not be handed everybody. Deciding between two matching cards is the caller's job (the
--- WhatsApp link links nobody then); this query only answers who carries the number.
-WITH wanted AS (
-  SELECT ltrim(r, '0') AS d, r
-  FROM (SELECT regexp_replace(COALESCE(:phone, ''), '[^0-9]', '', 'g') AS r) p
+-- Deciding between two matching cards is the caller's job (the WhatsApp link links nobody then):
+-- this query only answers who carries the number. Deleted cards never answer.
+WITH customers_e164_regions (iso, code, trunk, idd, lengths) AS (
+  VALUES
+    ('001', '979', '', '', '{9}'::int[]),
+    ('AC', '247', '', '00', '{5,6}'::int[]),
+    ('AD', '376', '', '00', '{6,8,9}'::int[]),
+    ('AE', '971', '0', '00', '{5,6,7,8,9,10,11,12}'::int[]),
+    ('AF', '93', '0', '00', '{9}'::int[]),
+    ('AG', '1', '1', '011', '{10}'::int[]),
+    ('AI', '1', '1', '011', '{10}'::int[]),
+    ('AL', '355', '0', '00', '{6,7,8,9}'::int[]),
+    ('AM', '374', '0', '00', '{8}'::int[]),
+    ('AO', '244', '', '00', '{9}'::int[]),
+    ('AR', '54', '0', '00', '{10,11}'::int[]),
+    ('AS', '1', '1', '011', '{10}'::int[]),
+    ('AT', '43', '0', '00', '{4,5,6,7,8,9,10,11,12,13}'::int[]),
+    ('AU', '61', '0', '0011', '{5,6,7,8,9,10,12}'::int[]),
+    ('AW', '297', '', '00', '{7}'::int[]),
+    ('AX', '358', '0', '00', '{5,6,7,8,9,10,11,12}'::int[]),
+    ('AZ', '994', '0', '00', '{9}'::int[]),
+    ('BA', '387', '0', '00', '{8,9}'::int[]),
+    ('BB', '1', '1', '011', '{10}'::int[]),
+    ('BD', '880', '0', '00', '{6,7,8,9,10}'::int[]),
+    ('BE', '32', '0', '00', '{8,9}'::int[]),
+    ('BF', '226', '', '00', '{8}'::int[]),
+    ('BG', '359', '0', '00', '{6,7,8,9,12}'::int[]),
+    ('BH', '973', '', '00', '{8}'::int[]),
+    ('BI', '257', '', '00', '{8}'::int[]),
+    ('BJ', '229', '', '00', '{8,10}'::int[]),
+    ('BL', '590', '0', '00', '{9}'::int[]),
+    ('BM', '1', '1', '011', '{10}'::int[]),
+    ('BN', '673', '', '00', '{7}'::int[]),
+    ('BO', '591', '0', '', '{8,9}'::int[]),
+    ('BQ', '599', '', '00', '{7}'::int[]),
+    ('BR', '55', '0', '', '{8,9,10,11}'::int[]),
+    ('BS', '1', '1', '011', '{10}'::int[]),
+    ('BT', '975', '', '00', '{7,8}'::int[]),
+    ('BW', '267', '', '00', '{7,8,10}'::int[]),
+    ('BY', '375', '8', '810', '{6,7,8,9,10,11}'::int[]),
+    ('BZ', '501', '', '00', '{7,11}'::int[]),
+    ('CA', '1', '1', '011', '{7,10}'::int[]),
+    ('CC', '61', '0', '0011', '{6,7,8,9,10,12}'::int[]),
+    ('CD', '243', '0', '00', '{7,8,9,10}'::int[]),
+    ('CF', '236', '', '00', '{8}'::int[]),
+    ('CG', '242', '', '00', '{9}'::int[]),
+    ('CH', '41', '0', '00', '{9,12}'::int[]),
+    ('CI', '225', '', '00', '{10}'::int[]),
+    ('CK', '682', '', '00', '{5}'::int[]),
+    ('CL', '56', '', '', '{9,10,11}'::int[]),
+    ('CM', '237', '', '00', '{8,9}'::int[]),
+    ('CN', '86', '0', '00', '{7,8,9,10,11,12}'::int[]),
+    ('CO', '57', '0', '', '{8,10,11}'::int[]),
+    ('CR', '506', '', '00', '{8,10}'::int[]),
+    ('CU', '53', '0', '119', '{6,7,8,10}'::int[]),
+    ('CV', '238', '', '0', '{7}'::int[]),
+    ('CW', '599', '', '00', '{7,8}'::int[]),
+    ('CX', '61', '0', '0011', '{6,7,8,9,10,12}'::int[]),
+    ('CY', '357', '', '00', '{8}'::int[]),
+    ('CZ', '420', '', '00', '{9,10,11,12}'::int[]),
+    ('DE', '49', '0', '00', '{4,5,6,7,8,9,10,11,12,13,14,15}'::int[]),
+    ('DJ', '253', '', '00', '{8}'::int[]),
+    ('DK', '45', '', '00', '{8}'::int[]),
+    ('DM', '1', '1', '011', '{10}'::int[]),
+    ('DO', '1', '1', '011', '{10}'::int[]),
+    ('DZ', '213', '0', '00', '{8,9}'::int[]),
+    ('EC', '593', '0', '00', '{8,9,10,11}'::int[]),
+    ('EE', '372', '', '00', '{7,8,10}'::int[]),
+    ('EG', '20', '0', '00', '{8,9,10}'::int[]),
+    ('EH', '212', '0', '00', '{9}'::int[]),
+    ('ER', '291', '0', '00', '{7}'::int[]),
+    ('ES', '34', '', '00', '{9}'::int[]),
+    ('ET', '251', '0', '00', '{9}'::int[]),
+    ('FI', '358', '0', '00', '{5,6,7,8,9,10,11,12}'::int[]),
+    ('FJ', '679', '', '00', '{7,11}'::int[]),
+    ('FK', '500', '', '00', '{5}'::int[]),
+    ('FM', '691', '', '00', '{7}'::int[]),
+    ('FO', '298', '', '00', '{6}'::int[]),
+    ('FR', '33', '0', '00', '{9}'::int[]),
+    ('GA', '241', '', '00', '{7,8}'::int[]),
+    ('GB', '44', '0', '00', '{7,9,10}'::int[]),
+    ('GD', '1', '1', '011', '{10}'::int[]),
+    ('GE', '995', '0', '00', '{9}'::int[]),
+    ('GF', '594', '0', '00', '{9}'::int[]),
+    ('GG', '44', '0', '00', '{7,9,10}'::int[]),
+    ('GH', '233', '0', '00', '{8,9}'::int[]),
+    ('GI', '350', '', '00', '{8}'::int[]),
+    ('GL', '299', '', '00', '{6}'::int[]),
+    ('GM', '220', '', '00', '{7}'::int[]),
+    ('GN', '224', '', '00', '{8,9}'::int[]),
+    ('GP', '590', '0', '00', '{9}'::int[]),
+    ('GQ', '240', '', '00', '{9}'::int[]),
+    ('GR', '30', '', '00', '{10,11,12}'::int[]),
+    ('GT', '502', '', '00', '{8,11}'::int[]),
+    ('GU', '1', '1', '011', '{10}'::int[]),
+    ('GW', '245', '', '00', '{7,9}'::int[]),
+    ('GY', '592', '', '001', '{7}'::int[]),
+    ('HK', '852', '', '00', '{5,6,7,8,9,11}'::int[]),
+    ('HN', '504', '', '00', '{8,11}'::int[]),
+    ('HR', '385', '0', '00', '{7,8,9}'::int[]),
+    ('HT', '509', '', '00', '{8}'::int[]),
+    ('HU', '36', '06', '00', '{8,9}'::int[]),
+    ('ID', '62', '0', '', '{7,8,9,10,11,12,13,14,15,16,17}'::int[]),
+    ('IE', '353', '0', '00', '{7,8,9,10}'::int[]),
+    ('IL', '972', '0', '', '{7,8,9,10,11,12}'::int[]),
+    ('IM', '44', '0', '00', '{10}'::int[]),
+    ('IN', '91', '0', '00', '{8,9,10,11,12,13}'::int[]),
+    ('IO', '246', '', '00', '{7}'::int[]),
+    ('IQ', '964', '0', '00', '{8,9,10}'::int[]),
+    ('IR', '98', '0', '00', '{4,5,6,7,10}'::int[]),
+    ('IS', '354', '', '00', '{7,9}'::int[]),
+    ('IT', '39', '', '00', '{6,7,8,9,10,11,12}'::int[]),
+    ('JE', '44', '0', '00', '{10}'::int[]),
+    ('JM', '1', '1', '011', '{10}'::int[]),
+    ('JO', '962', '0', '00', '{8,9}'::int[]),
+    ('JP', '81', '0', '010', '{8,9,10,11,12,13,14,15,16,17}'::int[]),
+    ('KE', '254', '0', '000', '{7,8,9,10}'::int[]),
+    ('KG', '996', '0', '00', '{9,10}'::int[]),
+    ('KH', '855', '0', '', '{8,9,10}'::int[]),
+    ('KI', '686', '0', '00', '{5,8}'::int[]),
+    ('KM', '269', '', '00', '{7}'::int[]),
+    ('KN', '1', '1', '011', '{10}'::int[]),
+    ('KP', '850', '0', '', '{8,10}'::int[]),
+    ('KR', '82', '0', '', '{5,6,8,9,10,11,12,13,14}'::int[]),
+    ('KW', '965', '', '00', '{7,8}'::int[]),
+    ('KY', '1', '1', '011', '{10}'::int[]),
+    ('KZ', '7', '8', '810', '{10,14}'::int[]),
+    ('LA', '856', '0', '00', '{8,9,10}'::int[]),
+    ('LB', '961', '0', '00', '{7,8}'::int[]),
+    ('LC', '1', '1', '011', '{10}'::int[]),
+    ('LI', '423', '0', '00', '{7,9}'::int[]),
+    ('LK', '94', '0', '00', '{9}'::int[]),
+    ('LR', '231', '0', '00', '{7,8,9}'::int[]),
+    ('LS', '266', '', '00', '{8}'::int[]),
+    ('LT', '370', '0', '00', '{8}'::int[]),
+    ('LU', '352', '', '00', '{4,5,6,7,8,9,10,11}'::int[]),
+    ('LV', '371', '', '00', '{8}'::int[]),
+    ('LY', '218', '0', '00', '{9}'::int[]),
+    ('MA', '212', '0', '00', '{9}'::int[]),
+    ('MC', '377', '0', '00', '{8,9}'::int[]),
+    ('MD', '373', '0', '00', '{8}'::int[]),
+    ('ME', '382', '0', '00', '{8,9}'::int[]),
+    ('MF', '590', '0', '00', '{9}'::int[]),
+    ('MG', '261', '0', '00', '{9}'::int[]),
+    ('MH', '692', '1', '011', '{7}'::int[]),
+    ('MK', '389', '0', '00', '{8}'::int[]),
+    ('ML', '223', '', '00', '{8}'::int[]),
+    ('MM', '95', '0', '00', '{6,7,8,9,10}'::int[]),
+    ('MN', '976', '0', '001', '{8,9,10}'::int[]),
+    ('MO', '853', '', '00', '{7,8}'::int[]),
+    ('MP', '1', '1', '011', '{10}'::int[]),
+    ('MQ', '596', '0', '00', '{9}'::int[]),
+    ('MR', '222', '', '00', '{8}'::int[]),
+    ('MS', '1', '1', '011', '{10}'::int[]),
+    ('MT', '356', '', '00', '{8}'::int[]),
+    ('MU', '230', '', '020', '{7,8,10}'::int[]),
+    ('MV', '960', '', '00', '{7,10}'::int[]),
+    ('MW', '265', '0', '00', '{7,9}'::int[]),
+    ('MX', '52', '', '00', '{10}'::int[]),
+    ('MY', '60', '0', '00', '{8,9,10}'::int[]),
+    ('MZ', '258', '', '00', '{8,9}'::int[]),
+    ('NA', '264', '0', '00', '{8,9}'::int[]),
+    ('NC', '687', '', '00', '{6}'::int[]),
+    ('NE', '227', '', '00', '{8}'::int[]),
+    ('NF', '672', '', '00', '{6}'::int[]),
+    ('NG', '234', '0', '009', '{10,11,12,13,14}'::int[]),
+    ('NI', '505', '', '00', '{8}'::int[]),
+    ('NL', '31', '0', '00', '{5,6,7,8,9,10,11}'::int[]),
+    ('NO', '47', '', '00', '{5,8}'::int[]),
+    ('NP', '977', '0', '00', '{8,10,11}'::int[]),
+    ('NR', '674', '', '00', '{7}'::int[]),
+    ('NU', '683', '', '00', '{4,7}'::int[]),
+    ('NZ', '64', '0', '00', '{5,6,7,8,9,10}'::int[]),
+    ('OM', '968', '', '00', '{7,8,9}'::int[]),
+    ('PA', '507', '', '00', '{7,8,10,11}'::int[]),
+    ('PE', '51', '0', '00', '{8,9}'::int[]),
+    ('PF', '689', '', '00', '{6,8,9}'::int[]),
+    ('PG', '675', '', '00', '{7,8}'::int[]),
+    ('PH', '63', '0', '00', '{6,8,9,10,11,12,13}'::int[]),
+    ('PK', '92', '0', '00', '{8,9,10,11,12}'::int[]),
+    ('PL', '48', '', '00', '{6,7,8,9,10}'::int[]),
+    ('PM', '508', '0', '00', '{6,9}'::int[]),
+    ('PR', '1', '1', '011', '{10}'::int[]),
+    ('PS', '970', '0', '00', '{8,9,10}'::int[]),
+    ('PT', '351', '', '00', '{9}'::int[]),
+    ('PW', '680', '', '', '{7}'::int[]),
+    ('PY', '595', '0', '00', '{6,7,8,9,10,11}'::int[]),
+    ('QA', '974', '', '00', '{7,8,9,11}'::int[]),
+    ('RE', '262', '0', '00', '{9}'::int[]),
+    ('RO', '40', '0', '00', '{6,9}'::int[]),
+    ('RS', '381', '0', '00', '{6,7,8,9,10,11,12}'::int[]),
+    ('RU', '7', '8', '810', '{10,14}'::int[]),
+    ('RW', '250', '0', '00', '{8,9}'::int[]),
+    ('SA', '966', '0', '00', '{9,10}'::int[]),
+    ('SB', '677', '', '', '{5,7}'::int[]),
+    ('SC', '248', '', '00', '{7}'::int[]),
+    ('SD', '249', '0', '00', '{9}'::int[]),
+    ('SE', '46', '0', '00', '{6,7,8,9,10,12}'::int[]),
+    ('SG', '65', '', '', '{8,10,11}'::int[]),
+    ('SH', '290', '', '00', '{4,5}'::int[]),
+    ('SI', '386', '0', '00', '{5,6,7,8}'::int[]),
+    ('SJ', '47', '', '00', '{5,8}'::int[]),
+    ('SK', '421', '0', '00', '{6,7,9}'::int[]),
+    ('SL', '232', '0', '00', '{8}'::int[]),
+    ('SM', '378', '', '00', '{8,10}'::int[]),
+    ('SN', '221', '', '00', '{9}'::int[]),
+    ('SO', '252', '0', '00', '{6,7,8,9}'::int[]),
+    ('SR', '597', '', '00', '{6,7}'::int[]),
+    ('SS', '211', '0', '00', '{9}'::int[]),
+    ('ST', '239', '', '00', '{7}'::int[]),
+    ('SV', '503', '', '00', '{7,8,11}'::int[]),
+    ('SX', '1', '1', '011', '{10}'::int[]),
+    ('SY', '963', '0', '00', '{8,9}'::int[]),
+    ('SZ', '268', '', '00', '{8,9}'::int[]),
+    ('TA', '290', '', '00', '{4}'::int[]),
+    ('TC', '1', '1', '011', '{10}'::int[]),
+    ('TD', '235', '', '00', '{8}'::int[]),
+    ('TG', '228', '', '00', '{8}'::int[]),
+    ('TH', '66', '0', '', '{8,9,10,13}'::int[]),
+    ('TJ', '992', '', '810', '{9}'::int[]),
+    ('TK', '690', '', '00', '{4,5,6,7}'::int[]),
+    ('TL', '670', '', '00', '{7,8}'::int[]),
+    ('TM', '993', '8', '810', '{8}'::int[]),
+    ('TN', '216', '', '00', '{8}'::int[]),
+    ('TO', '676', '', '00', '{5,7}'::int[]),
+    ('TR', '90', '0', '00', '{7,10,12,13}'::int[]),
+    ('TT', '1', '1', '011', '{10}'::int[]),
+    ('TV', '688', '', '00', '{5,6,7}'::int[]),
+    ('TW', '886', '0', '', '{7,8,9,10,11}'::int[]),
+    ('TZ', '255', '0', '', '{9}'::int[]),
+    ('UA', '380', '0', '00', '{9,10}'::int[]),
+    ('UG', '256', '0', '', '{9}'::int[]),
+    ('US', '1', '1', '011', '{10}'::int[]),
+    ('UY', '598', '0', '00', '{4,5,6,7,8,9,10,11,12,13}'::int[]),
+    ('UZ', '998', '', '00', '{9}'::int[]),
+    ('VA', '39', '', '00', '{6,7,8,9,10,11,12}'::int[]),
+    ('VC', '1', '1', '011', '{10}'::int[]),
+    ('VE', '58', '0', '00', '{10}'::int[]),
+    ('VG', '1', '1', '011', '{10}'::int[]),
+    ('VI', '1', '1', '011', '{10}'::int[]),
+    ('VN', '84', '0', '00', '{7,8,9,10}'::int[]),
+    ('VU', '678', '', '00', '{5,7}'::int[]),
+    ('WF', '681', '', '00', '{6,9}'::int[]),
+    ('WS', '685', '', '0', '{5,6,7,10}'::int[]),
+    ('XK', '383', '0', '00', '{8,9,10,11,12}'::int[]),
+    ('YE', '967', '0', '00', '{7,8,9}'::int[]),
+    ('YT', '262', '0', '00', '{9}'::int[]),
+    ('ZA', '27', '0', '00', '{5,6,7,8,9,10}'::int[]),
+    ('ZM', '260', '0', '00', '{9}'::int[]),
+    ('ZW', '263', '0', '00', '{5,6,7,8,9,10}'::int[])
 ),
-home_country AS (
-  SELECT COALESCE(
-    (SELECT NULLIF(UPPER(TRIM(s.value)), '') FROM hub_settings s
-      WHERE s.hub_id = :hub_id AND s.key = 'country_code'),
-    'ES') AS iso
+customers_e164_codes AS (
+  SELECT r.code,
+         (array_agg(r.trunk ORDER BY r.iso))[1] AS trunk,
+         array_agg(DISTINCT l.n) AS lengths
+    FROM customers_e164_regions r
+   CROSS JOIN LATERAL unnest(r.lengths) AS l(n)
+   GROUP BY r.code
 ),
-calling_codes (iso, code) AS (VALUES
-    ('US', '1'), ('CA', '1'), ('AG', '1'), ('AI', '1'), ('AS', '1'), ('BB', '1'), ('BM', '1'),
-    ('BS', '1'), ('DM', '1'), ('DO', '1'), ('GD', '1'), ('GU', '1'), ('JM', '1'), ('KN', '1'),
-    ('KY', '1'), ('LC', '1'), ('MP', '1'), ('MS', '1'), ('PR', '1'), ('SX', '1'), ('TC', '1'),
-    ('TT', '1'), ('VC', '1'), ('VG', '1'), ('VI', '1'), ('UM', '1'), ('RU', '7'), ('KZ', '7'),
-    ('EG', '20'), ('ZA', '27'), ('GR', '30'), ('NL', '31'), ('BE', '32'), ('FR', '33'),
-    ('ES', '34'), ('HU', '36'), ('IT', '39'), ('VA', '39'), ('RO', '40'), ('CH', '41'),
-    ('AT', '43'), ('GB', '44'), ('GG', '44'), ('IM', '44'), ('JE', '44'), ('DK', '45'),
-    ('SE', '46'), ('NO', '47'), ('SJ', '47'), ('PL', '48'), ('DE', '49'), ('PE', '51'),
-    ('MX', '52'), ('CU', '53'), ('AR', '54'), ('BR', '55'), ('CL', '56'), ('CO', '57'),
-    ('VE', '58'), ('MY', '60'), ('AU', '61'), ('CX', '61'), ('CC', '61'), ('ID', '62'),
-    ('PH', '63'), ('NZ', '64'), ('PN', '64'), ('SG', '65'), ('TH', '66'), ('JP', '81'),
-    ('KR', '82'), ('VN', '84'), ('CN', '86'), ('TR', '90'), ('IN', '91'), ('PK', '92'),
-    ('AF', '93'), ('LK', '94'), ('MM', '95'), ('IR', '98'), ('SS', '211'), ('MA', '212'),
-    ('EH', '212'), ('DZ', '213'), ('TN', '216'), ('LY', '218'), ('GM', '220'), ('SN', '221'),
-    ('MR', '222'), ('ML', '223'), ('GN', '224'), ('CI', '225'), ('BF', '226'), ('NE', '227'),
-    ('TG', '228'), ('BJ', '229'), ('MU', '230'), ('LR', '231'), ('SL', '232'), ('GH', '233'),
-    ('NG', '234'), ('TD', '235'), ('CF', '236'), ('CM', '237'), ('CV', '238'), ('ST', '239'),
-    ('GQ', '240'), ('GA', '241'), ('CG', '242'), ('CD', '243'), ('AO', '244'), ('GW', '245'),
-    ('IO', '246'), ('SC', '248'), ('SD', '249'), ('RW', '250'), ('ET', '251'), ('SO', '252'),
-    ('DJ', '253'), ('KE', '254'), ('TZ', '255'), ('UG', '256'), ('BI', '257'), ('MZ', '258'),
-    ('ZM', '260'), ('MG', '261'), ('RE', '262'), ('YT', '262'), ('ZW', '263'), ('NA', '264'),
-    ('MW', '265'), ('LS', '266'), ('BW', '267'), ('SZ', '268'), ('KM', '269'), ('SH', '290'),
-    ('ER', '291'), ('AW', '297'), ('FO', '298'), ('GL', '299'), ('GI', '350'), ('PT', '351'),
-    ('LU', '352'), ('IE', '353'), ('IS', '354'), ('AL', '355'), ('MT', '356'), ('CY', '357'),
-    ('FI', '358'), ('AX', '358'), ('BG', '359'), ('LT', '370'), ('LV', '371'), ('EE', '372'),
-    ('MD', '373'), ('AM', '374'), ('BY', '375'), ('AD', '376'), ('MC', '377'), ('SM', '378'),
-    ('UA', '380'), ('RS', '381'), ('ME', '382'), ('XK', '383'), ('HR', '385'), ('SI', '386'),
-    ('BA', '387'), ('MK', '389'), ('CZ', '420'), ('SK', '421'), ('LI', '423'), ('FK', '500'),
-    ('GS', '500'), ('BZ', '501'), ('GT', '502'), ('SV', '503'), ('HN', '504'), ('NI', '505'),
-    ('CR', '506'), ('PA', '507'), ('PM', '508'), ('HT', '509'), ('GP', '590'), ('BL', '590'),
-    ('MF', '590'), ('BO', '591'), ('GY', '592'), ('EC', '593'), ('GF', '594'), ('PY', '595'),
-    ('MQ', '596'), ('SR', '597'), ('UY', '598'), ('CW', '599'), ('BQ', '599'), ('TL', '670'),
-    ('NF', '672'), ('AQ', '672'), ('BN', '673'), ('NR', '674'), ('PG', '675'), ('TO', '676'),
-    ('SB', '677'), ('VU', '678'), ('FJ', '679'), ('PW', '680'), ('WF', '681'), ('CK', '682'),
-    ('NU', '683'), ('WS', '685'), ('KI', '686'), ('NC', '687'), ('TV', '688'), ('PF', '689'),
-    ('TK', '690'), ('FM', '691'), ('MH', '692'), ('KP', '850'), ('HK', '852'), ('MO', '853'),
-    ('KH', '855'), ('LA', '856'), ('BD', '880'), ('TW', '886'), ('MV', '960'), ('LB', '961'),
-    ('JO', '962'), ('SY', '963'), ('IQ', '964'), ('KW', '965'), ('SA', '966'), ('YE', '967'),
-    ('OM', '968'), ('PS', '970'), ('AE', '971'), ('IL', '972'), ('BH', '973'), ('QA', '974'),
-    ('BT', '975'), ('MN', '976'), ('NP', '977'), ('TJ', '992'), ('TM', '993'), ('AZ', '994'),
-    ('GE', '995'), ('KG', '996'), ('UZ', '998')
+customers_e164_home AS (
+  SELECT r.code, r.trunk, r.idd
+    FROM customers_e164_regions r
+   WHERE r.iso = COALESCE(
+           (SELECT x.iso
+              FROM hub_settings s
+              JOIN customers_e164_regions x ON x.iso = UPPER(TRIM(s.value))
+             WHERE s.hub_id = :hub_id AND s.key = 'country_code'),
+           'ES')
 ),
-keeps_zero (iso) AS (VALUES
-    ('IT'), ('VA'), ('SM'), ('CI'), ('CG'), ('BF'), ('GA'), ('NE'), ('TJ')
+customers_e164_asked AS (
+  SELECT TRUE AS asked, :hub_id AS hub_id, '' AS id, COALESCE(:phone, '') AS phone
+  UNION ALL
+  SELECT FALSE, c.hub_id, c.id, c.phone
+    FROM customers_customer c
+   WHERE c.hub_id = :hub_id AND c.is_deleted = 0
+     AND c.phone !~ '^\+[0-9]+$'
 ),
-home AS (
-  SELECT cc.code, EXISTS (SELECT 1 FROM keeps_zero z WHERE z.iso = h.iso) AS keeps_zero
-  FROM home_country h JOIN calling_codes cc ON cc.iso = h.iso
+customers_e164_cards AS (
+  SELECT a.asked, a.hub_id, a.id, m.code AS home_code, m.trunk AS home_trunk, m.idd AS home_idd,
+         regexp_replace(a.phone, '[^0-9]', '', 'g') AS d,
+         strpos(a.phone, '+') > 0 AS plus
+    FROM customers_e164_asked a
+   CROSS JOIN customers_e164_home m
+   WHERE btrim(a.phone, E' \t\n\r\u00a0')
+         ~ '^[- \t./()\u00a0]*(\+[- \t./()\u00a0]*)?[0-9][0-9 \t./()\u00a0-]*$'
+),
+customers_e164_routed AS (
+  SELECT k.*,
+         CASE WHEN k.plus THEN k.d
+              WHEN k.home_idd <> ''
+               AND length(k.d) > length(k.home_idd)
+               AND left(k.d, length(k.home_idd)) = k.home_idd
+              THEN substr(k.d, length(k.home_idd) + 1)
+         END AS intl
+    FROM customers_e164_cards k
+),
+customers_e164_readings AS (
+  SELECT r.asked, r.hub_id, r.id, 1 AS pref, c.code, c.trunk, c.lengths,
+         substr(r.intl, length(c.code) + 1) AS rest
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON length(c.code) <= length(r.intl) AND left(r.intl, length(c.code)) = c.code
+   WHERE r.intl IS NOT NULL
+  UNION ALL
+  SELECT r.asked, r.hub_id, r.id, 1, c.code, r.home_trunk, c.lengths, r.d
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON c.code = r.home_code
+   WHERE r.intl IS NULL
+  UNION ALL
+  SELECT r.asked, r.hub_id, r.id, 2, c.code, '', c.lengths, substr(r.d, length(c.code) + 1)
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON c.code = r.home_code
+   WHERE r.intl IS NULL
+     AND left(r.d, length(c.code)) = c.code
+  UNION ALL
+  SELECT r.asked, r.hub_id, r.id, 3, c.code, c.trunk, c.lengths, substr(r.d, length(c.code) + 1)
+    FROM customers_e164_routed r
+    JOIN customers_e164_codes c ON length(c.code) <= length(r.d) AND left(r.d, length(c.code)) = c.code
+   WHERE r.asked AND r.intl IS NULL
+),
+customers_e164_national AS (
+  SELECT x.asked, x.hub_id, x.id, x.pref, x.code, x.lengths,
+         CASE WHEN x.trunk <> ''
+               AND left(x.rest, length(x.trunk)) = x.trunk
+               AND (x.trunk = '0' OR NOT (length(x.rest) = ANY (x.lengths)))
+              THEN substr(x.rest, length(x.trunk) + 1)
+              ELSE x.rest
+         END AS nat
+    FROM customers_e164_readings x
+),
+customers_e164_read AS (
+  SELECT DISTINCT ON (n.asked, n.id, n.pref = 3) n.asked, n.hub_id, n.id, '+' || n.code || n.nat AS e164
+    FROM customers_e164_national n
+   WHERE length(n.nat) = ANY (n.lengths)
+   ORDER BY n.asked, n.id, n.pref = 3, n.pref
 )
 SELECT c.id, c.name, c.email, c.phone
 FROM customers_customer c
-CROSS JOIN wanted w
-CROSS JOIN LATERAL (
-  SELECT ltrim(r, '0') AS n, r
-  FROM (SELECT regexp_replace(c.phone, '[^0-9]', '', 'g') AS r) p
-) k
-LEFT JOIN home ON TRUE
+LEFT JOIN customers_e164_read k ON NOT k.asked AND k.hub_id = c.hub_id AND k.id = c.id
 WHERE c.hub_id = :hub_id AND c.is_deleted = 0
-  AND length(w.d) >= 7 AND length(k.n) >= 7
-  AND (
-    k.n = w.d
-    OR w.d = home.code || CASE WHEN home.keeps_zero THEN k.r ELSE k.n END
-    OR k.n = home.code || CASE WHEN home.keeps_zero THEN w.r ELSE w.d END
-  )
+  AND COALESCE(k.e164, c.phone) IN (SELECT q.e164 FROM customers_e164_read q WHERE q.asked)
 ORDER BY c.name, c.id

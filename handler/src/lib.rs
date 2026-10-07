@@ -1,18 +1,19 @@
-//! Handlers WASM (Tier 2) del módulo `customers` — las operaciones **batch** del legacy:
+//! WASM handlers (Tier 2) of the `customers` module — the legacy **batch** operations:
 //!
-//! * `bulk_create` — alta de N clientes (cap 50, igual que CustomerService.bulk_create).
-//!   Normaliza lifecycle "customer" → "active" (fiel a create_customer).
-//! * `set_groups` — asigna los grupos de un cliente (M2M): emite un `_group_clear`
-//!   + un `_group_add` por group_id (reemplaza la colección completa, como routes).
-//! * `set_tags` — idem para etiquetas (`_tag_clear` + N `_tag_add`).
+//! * `bulk_create` — creates N customers (cap 50, like CustomerService.bulk_create).
+//!   Normalises lifecycle "customer" → "active" (as create_customer did).
+//! * `set_groups` — sets a customer's groups (M2M): emits one `_group_clear`
+//!   + one `_group_add` per group_id (replaces the whole collection, like routes).
+//! * `set_tags` — the same for tags (`_tag_clear` + N `_tag_add`).
 //!
-//! Lógica pura (sin BD): recibe `{payload, context}`, devuelve **intenciones** (ops SQL
-//! por nombre de command del mismo módulo + params) que el host valida y ejecuta en una
-//! transacción. Los ids de filas nuevas salen de `context.new_ids` (autoridad del host).
+//! Pure logic (no DB): takes `{payload, context}`, returns **intents** (SQL ops by command
+//! name of this same module + params) that the host validates and runs in one transaction.
+//! Ids of new rows come from `context.new_ids` (the host's authority).
+//!
+//! Phones are saved in E.164 with the guest SDK's reading (`erplora_guest_sdk::phone`,
+//! libphonenumber's metadata; hub#2592), the same one other modules use (customers#130).
 
-pub mod phone;
-mod phone_metadata;
-
+use erplora_guest_sdk::phone;
 use erplora_guest_sdk::{DomainError, Event, Operation, Output};
 use serde_json::{json, Map, Value};
 
@@ -699,5 +700,52 @@ mod tests {
             self["phone"] = json!(phone);
             self
         }
+    }
+
+    // ── customers#130: the SQL that reads phones carries the guest SDK's table, row by row ─────
+
+    /// The `('ISO', 'code', 'trunk', 'idd', '{lengths}'::int[])` rows of a SQL file's
+    /// `customers_e164_regions` list, as `iso|code|trunk|idd|lengths`.
+    fn sql_regions(sql: &str) -> Vec<String> {
+        sql.split("('")
+            .skip(1)
+            .filter_map(|row| row.split_once("'::int[])").map(|(cells, _)| cells))
+            .map(|cells| {
+                cells
+                    .split(',')
+                    .map(|c| c.trim().trim_matches(|ch| ch == '\'' || ch == '{' || ch == '}'))
+                    .collect::<Vec<_>>()
+            })
+            .map(|cells| {
+                let (fixed, lengths) = cells.split_at(4.min(cells.len()));
+                format!("{}|{}", fixed.join("|"), lengths.join(","))
+            })
+            .collect()
+    }
+
+    fn sdk_regions() -> Vec<String> {
+        erplora_guest_sdk::phone::REGIONS
+            .iter()
+            .map(|r| {
+                let lengths: Vec<String> = r.lengths.iter().map(u8::to_string).collect();
+                format!("{}|{}|{}|{}|{}", r.iso, r.code, r.trunk, r.idd, lengths.join(","))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_sweep_reads_phones_with_the_sdk_table() {
+        // customers#121 + customers#130: the sweep rewrites old cards with exactly what an edit
+        // (`erplora_guest_sdk::phone::to_e164`) would save.
+        let sql = include_str!("../../commands/_phones_to_e164.sql");
+        assert_eq!(sql_regions(sql), sdk_regions());
+    }
+
+    #[test]
+    fn by_phone_reads_the_question_with_the_sdk_table() {
+        // customers#130: «who carries this number» reads it with the alta's rules, not with a
+        // prefix table of its own — «+44 (0)7700 900123» is the card saved as +447700900123.
+        let sql = include_str!("../../queries/by_phone.sql");
+        assert_eq!(sql_regions(sql), sdk_regions());
     }
 }

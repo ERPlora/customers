@@ -20,11 +20,15 @@ Contract fixed here, through the SHIPPED `dist/handler.wasm` on the real dispatc
   * `customers.bulk_create` creates the good rows normalised, does NOT create the bad one, and says
     which item it skipped and why (`result.rejected = [{index, code}]`).
   * Searching the list by the number as digits finds the card (CUSTOMERS-F02).
+  * `customers.by_phone` reads the QUESTION with the same rules: the card saved from
+    «+44 (0)7700 9…» answers «+44 (0)7700 9…», «0044 (0)7700 9…» and WhatsApp's «447700 9…»
+    (customers#130, CUSTOMERS-F10).
 
 Usage: `erplora test <dir> --against-hub` (module-toolkit#110). Without a runtime it fails.
 """
 
 import sys
+import uuid
 
 from hub_harness import Hub, key
 
@@ -190,6 +194,19 @@ def test_bulk_create_skips_the_bad_row(hub: Hub) -> None:
     )
 
 
+def test_by_phone_reads_the_question_like_the_alta(hub: Hub) -> None:
+    print("\n6 · customers.by_phone reads the question with the alta's rules (customers#130)")
+    # A number of its own per run: the hub is shared and by_phone answers every card that has it.
+    tail = f"{uuid.uuid4().int % 100000:05d}"
+    typed = f"+44 (0)7700 9{tail}"
+    out = hub.run("customers.create", {"name": key("uk"), "phone": typed})
+    cid = (out.get("new_ids") or [None])[0]
+    hub.check(f"«{typed}» is stored as +4477009{tail}", phone_of(hub, cid), f"+4477009{tail}")
+    for asked in (typed, f"0044 (0)7700 9{tail}", f"4477009{tail}"):
+        ids = [r.get("id") for r in hub.query("customers.by_phone", {"phone": asked})]
+        hub.check(f"customers#130: by_phone «{asked}» finds that card", ids, [cid])
+
+
 def main() -> int:
     hub = Hub("phone_e164", needs=("customers",))
     cid = test_create_saves_e164(hub)
@@ -198,6 +215,7 @@ def main() -> int:
         test_update_normalises_and_refuses(hub, cid)
         test_search_finds_the_digits(hub, cid)
     test_bulk_create_skips_the_bad_row(hub)
+    test_by_phone_reads_the_question_like_the_alta(hub)
     return hub.finish(
         "every way of saving a card stores its phone in E.164 or refuses it"
     )
