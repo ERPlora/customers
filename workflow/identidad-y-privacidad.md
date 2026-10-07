@@ -56,8 +56,9 @@ Pasos:
 1. Al dar de alta o editar una ficha (F01, F04), en el alta rápida del TPV (F18), al importar (F08)
    o cuando la crea la respuesta de WhatsApp (F26), la persona escribe el teléfono como lo tenga
    (`600 111 222`, `0034 600-111-222`, `+44 (0)7700 900123`).
-2. Al guardar, el número se lee con las reglas de libphonenumber (sus metadatos de cada país, dentro
-   del módulo): con el prefijo que lleve (`+` o el `00` que se marca desde el país del negocio) o, si
+2. Al guardar, el número se lee con las reglas de libphonenumber (sus metadatos de cada país, en el
+   SDK de handlers del hub desde customers#130; la tarea de reescritura y la búsqueda por número, F10,
+   llevan esa misma tabla fila a fila en su SQL): con el prefijo que lleve (`+` o el `00` que se marca desde el país del negocio) o, si
    no lleva, en el país del negocio (ajustes del hub; España si nunca se guardó), nunca en el «País»
    de la ficha. Se quitan espacios, guiones, puntos, barras, paréntesis y el cero nacional, y se
    guarda en E.164 (`+34600111222`). Vaciar el teléfono está permitido: solo el nombre es obligatorio.
