@@ -206,7 +206,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 
 | Elemento | Estado | Flujo |
 |---|---|---|
-| Un único aviso de borrado al que responde todo el que guarda algo de la persona | parcial: existe el aviso de ficha anonimizada; lo escuchan WhatsApp, Servicios, Reservas y el historial del hub; Citas y Reservas online no | F16 |
+| Un único aviso de borrado al que responde todo el que guarda algo de la persona | parcial: existe el aviso de ficha anonimizada; lo escuchan WhatsApp, Servicios, Citas, Reservas y el historial del hub; Reservas online no | F16 |
 | Inventario declarado: cada módulo dice qué guarda de una persona | no hecho: no hay contrato; hoy solo lo dicen los apartados «Datos» de cada WORKFLOW | F16 |
 | Buscar todo lo que el hub guarda de una persona | no hecho | — |
 | Borrar desde la ficha, con motivo y auditoría de quién y cuándo | hecho | F16 |
@@ -215,7 +215,7 @@ ficha: Reservas guarda nombre y teléfono por su cuenta.
 | Notas, actividad, campos, grupos, etiquetas y consentimientos de la ficha | hecho | F16 |
 | Historial de avisos y automatizaciones del hub que nombra la ficha | parcial: se vacían los avisos ya entregados o descartados y las automatizaciones terminadas (hub#2467); los pendientes, atascados o en curso no (hub#2484); lo que solo lleva su teléfono, tampoco (hub#2477) | F16 |
 | Conversaciones de WhatsApp unidas a la ficha | hecho (WHATSAPP_INBOX-F11) | F16 |
-| Nombre, teléfono, correo y notas copiados en citas y series | no hecho: Citas no escucha el aviso y no tiene flujo para ello (`appointments/WORKFLOW.md`, «Datos») | F16 |
+| Nombre, teléfono, correo y notas copiados en citas y series | parcial (APPOINTMENTS-F24): se vacían en citas, series e historial; queda la etiqueta de los huecos apartados de la antigua bandeja de WhatsApp (appointments#314) | F16 |
 | Nombre, teléfono, correo y notas copiados en reservas y lista de espera | hecho (RESERVATIONS-F22): también lo apuntado a mano, que se liga a la ficha al apuntarlo | F16 |
 | Nombre, correo y teléfono copiados en reservas online | no hecho | F16 |
 | Copia fiscal en ventas y facturas | se conserva a propósito: obligación de conservar los documentos | F16, F17 |
@@ -273,7 +273,7 @@ Inventario sacado de recorrer las nueve migraciones y lo que viaja en los avisos
 | Quién creó y cambió cada fila (identificador de empleado) | todas las tablas | Clientes | se conserva (es del empleado) |
 | Ficha absorbida en una fusión, con todos sus datos y los valores de campo que chocaban | la ficha retirada | Clientes | no se borra desde la pantalla; la orden de borrar datos sí la acepta por el asistente o la API con su identificador, que está en la actividad de la superviviente (F13, F16) |
 | Ficha creada o actualizada con todos sus datos (el aviso de ficha actualizada lleva además los valores de los campos propios, p. ej. alergias); dirección y frase en los avisos de consentimiento; motivo en el de borrado | avisos que salen a otros módulos (historial del hub) | hub | al borrar los datos se vacían solo los ya entregados o descartados (hub#2467); los pendientes o atascados conservan los datos hasta que se procesan o los poda la retención (90 días) |
-| Nombre, teléfono, correo y notas en citas y series | Citas | Citas | no se borran (no escucha) |
+| Nombre, teléfono, correo y notas en citas y series | Citas | Citas | APPOINTMENTS-F24: se vacían; queda la etiqueta de los huecos apartados de la antigua bandeja de WhatsApp (appointments#314) |
 | Nombre, teléfono, correo, notas en reservas y lista de espera | Reservas | Reservas | RESERVATIONS-F22: se vacían en las ligadas a la ficha (también las apuntadas a mano); una fila antigua sin ficha, no |
 | Nombre, correo, teléfono en reservas online | Reservas online | Reservas online | no se borran |
 | Conversaciones y mensajes | Bandeja de WhatsApp | WhatsApp | WHATSAPP_INBOX-F11 |
