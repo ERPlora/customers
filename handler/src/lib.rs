@@ -700,4 +700,51 @@ mod tests {
             self
         }
     }
+
+    // ── customers#130: the SQL that reads phones carries the guest SDK's table, row by row ─────
+
+    /// The `('ISO', 'code', 'trunk', 'idd', '{lengths}'::int[])` rows of a SQL file's
+    /// `customers_e164_regions` list, as `iso|code|trunk|idd|lengths`.
+    fn sql_regions(sql: &str) -> Vec<String> {
+        sql.split("('")
+            .skip(1)
+            .filter_map(|row| row.split_once("'::int[])").map(|(cells, _)| cells))
+            .map(|cells| {
+                cells
+                    .split(',')
+                    .map(|c| c.trim().trim_matches(|ch| ch == '\'' || ch == '{' || ch == '}'))
+                    .collect::<Vec<_>>()
+            })
+            .map(|cells| {
+                let (fixed, lengths) = cells.split_at(4.min(cells.len()));
+                format!("{}|{}", fixed.join("|"), lengths.join(","))
+            })
+            .collect()
+    }
+
+    fn sdk_regions() -> Vec<String> {
+        erplora_guest_sdk::phone::REGIONS
+            .iter()
+            .map(|r| {
+                let lengths: Vec<String> = r.lengths.iter().map(u8::to_string).collect();
+                format!("{}|{}|{}|{}|{}", r.iso, r.code, r.trunk, r.idd, lengths.join(","))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_sweep_reads_phones_with_the_sdk_table() {
+        // customers#121 + customers#130: the sweep rewrites old cards with exactly what an edit
+        // (`erplora_guest_sdk::phone::to_e164`) would save.
+        let sql = include_str!("../../commands/_phones_to_e164.sql");
+        assert_eq!(sql_regions(sql), sdk_regions());
+    }
+
+    #[test]
+    fn by_phone_reads_the_question_with_the_sdk_table() {
+        // customers#130: «who carries this number» reads it with the alta's rules, not with a
+        // prefix table of its own — «+44 (0)7700 900123» is the card saved as +447700900123.
+        let sql = include_str!("../../queries/by_phone.sql");
+        assert_eq!(sql_regions(sql), sdk_regions());
+    }
 }
