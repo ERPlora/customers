@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F17 Asignar un cliente a la venta en el TPV
-Estado: parcial — al dejar una cuenta en su mesa, el cliente se queda en el botón y la cuenta siguiente sale a su nombre (sales#566); al eliminarla, el botón se vacía pero la cuenta siguiente se cobra igual a su nombre (sales#567)
+Estado: parcial — con un cliente en la cuenta de una mesa, tocar otra mesa libre sin dejarla antes hace que la cuenta de la mesa nueva salga a su nombre (sales#569)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Buscador de cliente del TPV
@@ -19,9 +19,9 @@ Pasos:
 2. Se abre el buscador («Buscar por nombre, teléfono, email…») con las 20 primeras fichas por nombre;
    al escribir, busca en nombre, email, teléfono, NIF y empresa.
 3. Toca la ficha. El buscador se cierra y el botón pasa a enseñar el nombre del cliente.
-4. **Quitar cliente** (al pie del buscador) deja la venta sin cliente. Tras cobrar o aparcar la cuenta, el TPV lo quita solo.
-5. Al recargar la pantalla de venta (o reiniciarse la tableta) y al recuperar una cuenta aparcada, la
-   cuenta vuelve con su cliente: el botón enseña otra vez su nombre y el TPV recibe la misma copia
+4. **Quitar cliente** (al pie del buscador) deja la venta sin cliente. Tras cobrar, aparcar, dejar en la mesa o eliminar la cuenta, el TPV lo quita solo.
+5. Al recargar la pantalla de venta (o reiniciarse la tableta), al recuperar una cuenta aparcada y al
+   retomar una mesa tocándola, la cuenta vuelve con su cliente: el botón enseña otra vez su nombre y el TPV recibe la misma copia
    fiscal que en el paso 3, sin volver a elegirlo. Clientes lo sabe por el enlace de ese pedido
    (F19); una cuenta sin cliente quita el de la cuenta que se deja, pero no el elegido a mano para
    una venta que aún no se ha guardado.
@@ -37,7 +37,7 @@ clientes.». Si la ficha completa no se puede leer, el cliente NO se asigna y sa
 cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.». Si al recuperar una cuenta
 no se puede leer su cliente, sale «No se pudo recuperar el cliente de esta cuenta. Vuelve a asignarlo
 antes de cobrar.» y la cuenta sigue sin él (o con el que ya tenía, si es la misma cuenta).
-Implicados: INVOICE-F02, SALES-F04, SALES-F05, SALES-F17, SERVICES-F22, REC_PELUQUERIA-F09, REC_PELUQUERIA-F10
+Implicados: INVOICE-F02, SALES-F04, SALES-F05, SALES-F17, SALES-F18, SALES-F19, SERVICES-F22, REC_PELUQUERIA-F09, REC_PELUQUERIA-F10
 QA: R-09, B-06, BD-09
 
 ### CUSTOMERS-F18 Crear un cliente desde el buscador del TPV
