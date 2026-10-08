@@ -140,7 +140,7 @@ teniendo ficha). No hay pestaña de **Ajustes**: el módulo no declara ajustes.
 | CUSTOMERS-F14 | Registrar que un cliente da su consentimiento para un canal | parcial | comun | identidad-y-privacidad |
 | CUSTOMERS-F15 | Retirar el consentimiento de un canal | hecho | comun | identidad-y-privacidad |
 | CUSTOMERS-F16 | Borrar los datos personales de un cliente (RGPD) | parcial | comun | identidad-y-privacidad |
-| CUSTOMERS-F17 | Asignar un cliente a la venta en el TPV | hecho | comun | con-otros-modulos |
+| CUSTOMERS-F17 | Asignar un cliente a la venta en el TPV | parcial | comun | con-otros-modulos |
 | CUSTOMERS-F18 | Crear un cliente desde el buscador del TPV | hecho | comun | con-otros-modulos |
 | CUSTOMERS-F19 | Enlazar el cliente al pedido abierto | hecho | comun | con-otros-modulos |
 | CUSTOMERS-F20 | Sumar la compra a la ficha al cobrar | hecho | comun | con-otros-modulos |

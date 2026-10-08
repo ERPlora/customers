@@ -380,6 +380,14 @@
         "description": "Lists the order ids linked to a customer (ADR-0141). Amounts come from sales via its declared query; customers stores only the FK."
       }
     },
+    "customers.orders.customer": {
+      "permission": "customers.view_customer",
+      "sql": "queries/order_customer.sql",
+      "schema": "schemas/order_customer.json",
+      "ai": {
+        "description": "Returns the customer linked to an order (ADR-0141), if any: at most one row with order_id and customer_id. The till uses it to put the customer back on a restored check (customers#135)."
+      }
+    },
     "customers.purchases": {
       "permission": "customers.view_customer",
       "sql": "queries/purchases.sql",

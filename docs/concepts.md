@@ -25,6 +25,12 @@ Instead, this module keeps its own link between a customer and an order. The til
 check is materialised, and this module writes the link. **`sales` never calls `customers`** — that is
 what keeps a CRM installable without dragging the whole point of sale along.
 
+The link is also how the customer comes back. When the till takes a check back — the page is
+reloaded, the tablet restarts, a parked check is retrieved — it only says which order is in front;
+the customer selector reads that order's link (`customers.orders.customer`) and assigns the customer
+again, with the same sheet read and the same fiscal snapshot as a manual pick. If the link cannot be
+read, the cashier is told to assign the customer again before charging.
+
 The order id stored here is **opaque**: it is a reference, not a foreign key, and amounts and lines
 are never joined across the two modules. Asking "which orders does this customer have" gives you
 ids; asking what they cost is a question for `sales`.

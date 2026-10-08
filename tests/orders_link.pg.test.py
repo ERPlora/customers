@@ -23,6 +23,10 @@ Contract fixed here, against a real Postgres built from THIS module's migrations
     only on `(hub_id, order_id)`, never on the customer, so "a pedido tiene como mucho un cliente"
     holds even across a hand-off, not just a retry.
   * Hub-scoped: hub A's link never shows up under hub B's `by_customer`.
+  * The way back (customers#135): `customers.orders.customer` answers WHICH customer an order has,
+    so the till's customer search can put her back when the check is restored after a reload. It
+    follows a re-assignment, answers nothing for an order without customer or for a link that was
+    soft-deleted, and never answers with another hub's link.
 
 Usage: tests/orders_link.pg.test.py   (exit 0 = green)
   Uses the `erplora-test-pg-5433` container by default (override: ERPLORA_TEST_PG_CONTAINER).
@@ -174,6 +178,19 @@ def by_customer(customer_id: str, hub: str) -> list[str]:
     return json.loads(rows)
 
 
+def by_order(order_id: str, hub: str) -> list[str]:
+    """`customers.orders.customer`, bound like the runtime does, against the real table."""
+    sql = (
+        MODULE_DIR / MANIFEST["queries"]["customers.orders.customer"]["sql"]
+    ).read_text()
+    rows = q(
+        "SELECT COALESCE(json_agg(customer_id), '[]') FROM ("
+        + bind(sql, {"order_id": order_id, "hub_id": hub}).rstrip().rstrip(";")
+        + ") h"
+    )
+    return json.loads(rows)
+
+
 def main() -> int:
     print("· the manifest")
     check(
@@ -193,6 +210,11 @@ def main() -> int:
         "customers.orders.by_customer is exposed",
         True,
         MANIFEST["queries"]["customers.orders.by_customer"].get("expose_api"),
+    )
+    check(
+        "customers.orders.customer exists, readable by whoever sees customers",
+        "customers.view_customer",
+        MANIFEST["queries"].get("customers.orders.customer", {}).get("permission"),
     )
 
     if not docker_available():
@@ -219,6 +241,8 @@ def main() -> int:
         )
         check("link accepted", True, ok if ok else err)
         check("the customer has its order linked", [order], by_customer("c-a", HUB_A))
+        check("the order answers with its customer", ["c-a"], by_order(order, HUB_A))
+        check("an order nobody linked answers nothing", [], by_order("ord-none", HUB_A))
 
         print("· re-linking the SAME pair does not duplicate")
         ok, err = run(
@@ -243,6 +267,7 @@ def main() -> int:
         check("re-assign accepted", True, ok if ok else err)
         check("the OLD customer no longer has it", [], by_customer("c-a", HUB_A))
         check("the NEW customer has it", [order], by_customer("c-a2", HUB_A))
+        check("the order now answers with the NEW customer only", ["c-a2"], by_order(order, HUB_A))
         check(
             "still exactly one junction row for this order, hub-wide",
             "1",
@@ -264,6 +289,24 @@ def main() -> int:
             [],
             by_customer("c-b", HUB_A),
         )
+        check("hub B's order answers in hub B", ["c-b"], by_order("ord-b", HUB_B))
+        check("hub B's order answers nothing in hub A", [], by_order("ord-b", HUB_A))
+        check("hub A's order answers nothing in hub B", [], by_order(order, HUB_B))
+        # The same order id in two hubs (ids are opaque): each hub reads its own customer.
+        ok, err = run(
+            "customers.orders.link",
+            {"customer_id": "c-b", "order_id": order},
+            hub=HUB_B,
+        )
+        check("hub B links an order with hub A's id", True, ok if ok else err)
+        check("hub A still reads its own customer for that id", ["c-a2"], by_order(order, HUB_A))
+        check("hub B reads its own customer for that id", ["c-b"], by_order(order, HUB_B))
+
+        print("· a soft-deleted link is not a customer of the order")
+        q(
+            f"UPDATE customers_customer_order SET is_deleted = 1 WHERE hub_id = '{HUB_A}' AND order_id = '{order}' RETURNING 1"
+        )
+        check("the order answers nothing once its link is deleted", [], by_order(order, HUB_A))
     finally:
         subprocess.run(
             ["docker", "exec", CONTAINER, "dropdb", "-U", "postgres", "--force", DB]

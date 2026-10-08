@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F17 Asignar un cliente a la venta en el TPV
-Estado: hecho
+Estado: parcial — al aparcar una cuenta, el cliente se queda en el botón y la cuenta siguiente sale a su nombre (sales#557)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Buscador de cliente del TPV
@@ -20,7 +20,13 @@ Pasos:
    al escribir, busca en nombre, email, teléfono, NIF y empresa.
 3. Toca la ficha. El buscador se cierra y el botón pasa a enseñar el nombre del cliente.
 4. **Quitar cliente** (al pie del buscador) deja la venta sin cliente. Tras cobrar, el TPV lo quita solo.
-Entra: la búsqueda y, al elegir, la ficha completa.
+5. Al recargar la pantalla de venta (o reiniciarse la tableta) y al recuperar una cuenta aparcada, la
+   cuenta vuelve con su cliente: el botón enseña otra vez su nombre y el TPV recibe la misma copia
+   fiscal que en el paso 3, sin volver a elegirlo. Clientes lo sabe por el enlace de ese pedido
+   (F19); una cuenta sin cliente quita el de la cuenta que se deja, pero no el elegido a mano para
+   una venta que aún no se ha guardado.
+Entra: la búsqueda y, al elegir, la ficha completa; al recuperar una cuenta, su pedido, y de él el
+cliente enlazado (`customers.orders.customer`) y su ficha completa.
 Sale: al TPV, el cliente y una COPIA de sus datos fiscales (nombre, NIF, dirección en una línea y
 país en código de dos letras). La venta la lleva hasta la factura; cambiar la ficha después no
 cambia una factura ya emitida.
@@ -28,8 +34,10 @@ Si falla: el motivo del fallo (o «No se pudieron cargar los clientes» si no tr
 **Reintentar** (conserva lo escrito); sin
 resultados, «Sin resultados.» o «No hay clientes.»; sin permiso, «No tienes permiso para consultar
 clientes.». Si la ficha completa no se puede leer, el cliente NO se asigna y sale «No se pudieron
-cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.».
-Implicados: INVOICE-F02, SALES-F04, SALES-F05, REC_PELUQUERIA-F09
+cargar los datos fiscales de {nombre}. Vuelve a pulsar para reintentar.». Si al recuperar una cuenta
+no se puede leer su cliente, sale «No se pudo recuperar el cliente de esta cuenta. Vuelve a asignarlo
+antes de cobrar.» y la cuenta sigue sin él (o con el que ya tenía, si es la misma cuenta).
+Implicados: INVOICE-F02, SALES-F04, SALES-F05, SALES-F17, SERVICES-F22, REC_PELUQUERIA-F09, REC_PELUQUERIA-F10
 QA: R-09, B-06, BD-09
 
 ### CUSTOMERS-F18 Crear un cliente desde el buscador del TPV
@@ -67,7 +75,9 @@ Pasos:
 Entra: la pantalla del TPV avisa, en el propio navegador, de que hay un pedido, y el buscador de
 Clientes lo enlaza con el cliente elegido en ese momento, con el permiso de quien está en la caja
 (si no hay cliente elegido, no hace nada).
-Sale: el enlace cliente ↔ pedido, que solo se consulta con el asistente o la API (no hay pantalla).
+Sale: el enlace cliente ↔ pedido. No tiene pantalla propia: lo lee el buscador del TPV para devolver
+el cliente a la cuenta al recargar o recuperarla (F17, `customers.orders.customer`), y el asistente o
+la API. Volver a la cuenta con el mismo cliente no reescribe el enlace.
 Si falla: la venta sigue; el TPV enseña «La venta sigue, pero el cliente no se pudo asociar al
 pedido: no aparecerá en su historial.» o, sin permiso, «La venta sigue, pero no tienes permiso para
 asociar clientes a pedidos: no aparecerá en su historial.».

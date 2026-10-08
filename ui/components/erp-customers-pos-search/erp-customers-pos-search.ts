@@ -23,6 +23,9 @@ const CATALOG: Record<string, unknown> = { es: esLocale, en: enLocale };
 //     customer_country} — the country as an ISO alpha-2 code ('' if the file names none, customers#71)
 //     → el POS lo adjunta a la venta, y de ahí viaja en `sale.completed` hasta la factura.
 //   ─ escucha `erp:customer-context-reset` → el POS lo dispara tras cobrar.
+//   ─ listens to `erp:order-restored` {order_id} → the till took a check back (reload, a parked
+//     check retrieved): the customer linked to that order is read back and assigned again
+//     (customers#135), the same way a manual pick does.
 //   ─ escucha `erp:customer-required` → el POS lo dispara cuando la venta EXIGE cliente y no lo hay
 //     (`sales.require_customer`, sales#222): el buscador se abre solo, sin buscar el icono a mano.
 //
@@ -155,9 +158,21 @@ export class ErpCustomersPosSearch extends LitElement {
   private searchTimer?: ReturnType<typeof setTimeout>;
   /** Sequence of the last search issued: an older answer arriving later is dropped. */
   private searchSeq = 0;
+  /** The order the selected customer is linked to (written by `erp:order-linked` or read back on
+   *  `erp:order-restored`). A selection with no order yet is the cashier's own pick for the check
+   *  being built, and a restore that finds no link must not wipe it (customers#135). */
+  private boundOrderId?: string;
+  /** Bumped by every restore and by every choice of the cashier (pick, clear, reset after charging):
+   *  a restore answer that arrives after any of them is stale and is dropped. */
+  private restoreSeq = 0;
+  /** The order whose link is being written right now: until it lands, reading that order's link
+   *  back would still answer with the customer it replaces. */
+  private linkingOrderId?: string;
   private readonly onReset = () => {
+    this.restoreSeq++;
     this.selectedId = undefined;
     this.selectedName = '';
+    this.boundOrderId = undefined;
   };
 
   private readonly onLocaleChange = (): void => this.requestUpdate();
@@ -180,25 +195,78 @@ export class ErpCustomersPosSearch extends LitElement {
   private readonly onOrderLinked = async (e: Event): Promise<void> => {
     const d = (e as CustomEvent<{ order_id?: string }>).detail;
     if (!d?.order_id || !this.selectedId) return;
+    // Read back from this very order (customers#135): the link is already there.
+    if (this.boundOrderId === d.order_id) return;
+    const customerId = this.selectedId;
+    this.linkingOrderId = d.order_id;
     try {
-      await erplora().command('customers.orders.link', { customer_id: this.selectedId, order_id: d.order_id });
+      await erplora().command('customers.orders.link', { customer_id: customerId, order_id: d.order_id });
+      if (this.selectedId === customerId) this.boundOrderId = d.order_id;
     } catch (err) {
       // La asociación es OPERATIVA: nunca debe romper la venta — por eso se traga. Tragarla en
       // SILENCIO era el fallo (customers#59): el historial del cliente se quedaba vacío hub tras
       // hub y nadie se enteraba. Se dice y se registra; el cobro sigue su camino.
-      this.reportLinkFailure(err);
+      this.warnCashier('customers.orders.link failed; the sale goes on without customer history', err, linkFailureMessage(err));
+    } finally {
+      if (this.linkingOrderId === d.order_id) this.linkingOrderId = undefined;
     }
   };
 
+  /** The till took a check back (`erp:order-restored`, customers#135): reloading it, or retrieving
+   *  a parked one. `sales` keeps no customer on the order (ADR-0141); the link is ours, so the
+   *  customer is read back and assigned like a manual pick — same sheet read, same fiscal snapshot.
+   *  A check with no customer drops the customer of the check left behind, but never the cashier's
+   *  own pick that is not linked to any order yet. A read that fails is said, never swallowed:
+   *  without the customer the charge would not offer her voucher. */
+  private readonly onOrderRestored = async (e: Event): Promise<void> => {
+    const orderId = (e as CustomEvent<{ order_id?: string }>).detail?.order_id;
+    // The customer in front is being written as this order's customer: she already is.
+    if (!orderId || orderId === this.linkingOrderId) return;
+    const seq = ++this.restoreSeq;
+    try {
+      const link = rows<{ customer_id?: string }>(await erplora().query('customers.orders.customer', { order_id: orderId }))[0];
+      if (seq !== this.restoreSeq) return;
+      const customerId = link?.customer_id;
+      if (customerId && customerId === this.selectedId) {
+        this.boundOrderId = orderId;
+        return;
+      }
+      const sheet = customerId
+        ? rows<CustomerFicha>(await erplora().query('customers.get', { customer_id: customerId }))[0]
+        : undefined;
+      if (seq !== this.restoreSeq) return;
+      if (!sheet) {
+        this.dropOtherChecksCustomer(orderId);
+        return;
+      }
+      this.boundOrderId = orderId; // before `assign`: the till answers it with `erp:order-linked`
+      this.assign(sheet);
+    } catch (err) {
+      if (seq !== this.restoreSeq) return;
+      this.dropOtherChecksCustomer(orderId);
+      this.warnCashier('the customer of a restored check could not be read', err, erplora().t(CATALOG, 'ui.errRestoreCustomer'));
+    }
+  };
+
+  /** The customer in front belongs to ANOTHER check: she is not this check's customer. */
+  private dropOtherChecksCustomer(orderId: string): void {
+    if (this.selectedId && this.boundOrderId && this.boundOrderId !== orderId) {
+      this.selectedId = undefined;
+      this.selectedName = '';
+      this.boundOrderId = undefined;
+      this.emit(VACIO);
+    }
+  }
+
   /** Un fallo que no se ve no existe: rastro para el runtime + aviso traducido para el cajero. */
-  private reportLinkFailure(err: unknown): void {
+  private warnCashier(log: string, err: unknown, message: string): void {
     // El log va PRIMERO: es el rastro que queda aunque el shell no sepa avisar.
-    console.warn('[customers] customers.orders.link failed; the sale goes on without customer history', err);
+    console.warn(`[customers] ${log}`, err);
     const c = erplora();
     try {
-      c.notify?.({ type: 'warning', message: linkFailureMessage(err) });
+      c.notify?.({ type: 'warning', message });
     } catch (notifyErr) {
-      console.warn('[customers] the shell could not show the link warning', notifyErr);
+      console.warn('[customers] the shell could not show the warning', notifyErr);
     }
   }
 
@@ -207,6 +275,7 @@ export class ErpCustomersPosSearch extends LitElement {
     this.addEventListener('erp:customer-context-reset', this.onReset);
     this.addEventListener('erp:customer-required', this.onCustomerRequired);
     this.addEventListener('erp:order-linked', this.onOrderLinked);
+    this.addEventListener('erp:order-restored', this.onOrderRestored);
     window.addEventListener('erplora:locale-changed', this.onLocaleChange);
   }
 
@@ -214,6 +283,7 @@ export class ErpCustomersPosSearch extends LitElement {
     this.removeEventListener('erp:customer-context-reset', this.onReset);
     this.removeEventListener('erp:customer-required', this.onCustomerRequired);
     this.removeEventListener('erp:order-linked', this.onOrderLinked);
+    this.removeEventListener('erp:order-restored', this.onOrderRestored);
     window.removeEventListener('erplora:locale-changed', this.onLocaleChange);
     super.disconnectedCallback();
   }
@@ -273,6 +343,7 @@ export class ErpCustomersPosSearch extends LitElement {
     // cannot be read the customer is NOT selected and nothing is emitted (customers#18): a visible
     // error beats a sale that goes on "with a customer" but without fiscal data. Retry = tap again.
     this.error = '';
+    this.restoreSeq++; // the cashier's pick wins over a restore still on its way
     let ficha: CustomerFicha | undefined;
     try {
       ficha = rows<CustomerFicha>(await erplora().query('customers.get', { customer_id: c.id }))[0];
@@ -288,15 +359,21 @@ export class ErpCustomersPosSearch extends LitElement {
       this.error = erplora().t(CATALOG, 'ui.errCustomerNotFound');
       return;
     }
-    this.selectedId = c.id;
-    this.selectedName = ficha.name || c.name;
+    this.boundOrderId = undefined;
     this.closeOverlay();
+    this.assign({ ...ficha, id: c.id, name: ficha.name || c.name });
+  }
+
+  /** Selects the customer and hands the till her fiscal snapshot — a COPY (ADR-0132). */
+  private assign(sheet: CustomerFicha): void {
+    this.selectedId = sheet.id;
+    this.selectedName = sheet.name;
     this.emit({
-      customer_id: c.id,
-      customer_name: ficha.name || c.name,
-      customer_tax_id: ficha.tax_id ?? '',
-      customer_address: direccionFiscal(ficha),
-      customer_country: countryCode(ficha.country, erplora().locale),
+      customer_id: sheet.id,
+      customer_name: sheet.name,
+      customer_tax_id: sheet.tax_id ?? '',
+      customer_address: direccionFiscal(sheet),
+      customer_country: countryCode(sheet.country, erplora().locale),
     });
   }
 
@@ -351,6 +428,8 @@ export class ErpCustomersPosSearch extends LitElement {
   }
 
   private clear() {
+    this.restoreSeq++;
+    this.boundOrderId = undefined;
     this.selectedId = undefined;
     this.selectedName = '';
     this.closeOverlay();

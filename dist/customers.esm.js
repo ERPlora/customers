@@ -4833,6 +4833,7 @@ var es_default = {
     posNoPermission: "No tienes permiso para consultar clientes.",
     errCustomerSnapshot: "No se pudieron cargar los datos fiscales de {name}. Vuelve a pulsar para reintentar.",
     errLinkOrder: "La venta sigue, pero el cliente no se pudo asociar al pedido: no aparecer\xE1 en su historial.",
+    errRestoreCustomer: "No se pudo recuperar el cliente de esta cuenta. Vuelve a asignarlo antes de cobrar.",
     errLinkOrderNoPermission: "La venta sigue, pero no tienes permiso para asociar clientes a pedidos: no aparecer\xE1 en su historial.",
     retry: "Reintentar",
     quickAddCustomer: "+ Nuevo cliente \xAB{term}\xBB",
@@ -5102,6 +5103,7 @@ var en_default = {
     posNoPermission: "You do not have permission to look up customers.",
     errCustomerSnapshot: "Could not load {name}'s fiscal data. Tap again to retry.",
     errLinkOrder: "The sale goes on, but the customer could not be attached to the order: it will not show in their history.",
+    errRestoreCustomer: "The customer of this check could not be loaded. Assign them again before charging.",
     errLinkOrderNoPermission: "The sale goes on, but you do not have permission to attach customers to orders: it will not show in their history.",
     retry: "Retry",
     quickAddCustomer: "+ New customer \u201C{term}\u201D",
@@ -8396,9 +8398,14 @@ var ErpCustomersPosSearch = class extends i3 {
     this.creating = false;
     /** Sequence of the last search issued: an older answer arriving later is dropped. */
     this.searchSeq = 0;
+    /** Bumped by every restore and by every choice of the cashier (pick, clear, reset after charging):
+     *  a restore answer that arrives after any of them is stale and is dropped. */
+    this.restoreSeq = 0;
     this.onReset = () => {
+      this.restoreSeq++;
       this.selectedId = void 0;
       this.selectedName = "";
+      this.boundOrderId = void 0;
     };
     this.onLocaleChange = () => this.requestUpdate();
     /** El cobro EXIGE cliente y no lo hay (`sales.require_customer` → `erp:customer-required`,
@@ -8415,10 +8422,48 @@ var ErpCustomersPosSearch = class extends i3 {
     this.onOrderLinked = async (e7) => {
       const d3 = e7.detail;
       if (!d3?.order_id || !this.selectedId) return;
+      if (this.boundOrderId === d3.order_id) return;
+      const customerId = this.selectedId;
+      this.linkingOrderId = d3.order_id;
       try {
-        await erplora4().command("customers.orders.link", { customer_id: this.selectedId, order_id: d3.order_id });
+        await erplora4().command("customers.orders.link", { customer_id: customerId, order_id: d3.order_id });
+        if (this.selectedId === customerId) this.boundOrderId = d3.order_id;
       } catch (err) {
-        this.reportLinkFailure(err);
+        this.warnCashier("customers.orders.link failed; the sale goes on without customer history", err, linkFailureMessage(err));
+      } finally {
+        if (this.linkingOrderId === d3.order_id) this.linkingOrderId = void 0;
+      }
+    };
+    /** The till took a check back (`erp:order-restored`, customers#135): reloading it, or retrieving
+     *  a parked one. `sales` keeps no customer on the order (ADR-0141); the link is ours, so the
+     *  customer is read back and assigned like a manual pick — same sheet read, same fiscal snapshot.
+     *  A check with no customer drops the customer of the check left behind, but never the cashier's
+     *  own pick that is not linked to any order yet. A read that fails is said, never swallowed:
+     *  without the customer the charge would not offer her voucher. */
+    this.onOrderRestored = async (e7) => {
+      const orderId = e7.detail?.order_id;
+      if (!orderId || orderId === this.linkingOrderId) return;
+      const seq = ++this.restoreSeq;
+      try {
+        const link = rows(await erplora4().query("customers.orders.customer", { order_id: orderId }))[0];
+        if (seq !== this.restoreSeq) return;
+        const customerId = link?.customer_id;
+        if (customerId && customerId === this.selectedId) {
+          this.boundOrderId = orderId;
+          return;
+        }
+        const sheet = customerId ? rows(await erplora4().query("customers.get", { customer_id: customerId }))[0] : void 0;
+        if (seq !== this.restoreSeq) return;
+        if (!sheet) {
+          this.dropOtherChecksCustomer(orderId);
+          return;
+        }
+        this.boundOrderId = orderId;
+        this.assign(sheet);
+      } catch (err) {
+        if (seq !== this.restoreSeq) return;
+        this.dropOtherChecksCustomer(orderId);
+        this.warnCashier("the customer of a restored check could not be read", err, erplora4().t(CATALOG4, "ui.errRestoreCustomer"));
       }
     };
   }
@@ -8442,14 +8487,23 @@ var ErpCustomersPosSearch = class extends i3 {
     ion-icon.selected-mark { color: var(--ion-color-primary, #0054e9); }
   `;
   }
+  /** The customer in front belongs to ANOTHER check: she is not this check's customer. */
+  dropOtherChecksCustomer(orderId) {
+    if (this.selectedId && this.boundOrderId && this.boundOrderId !== orderId) {
+      this.selectedId = void 0;
+      this.selectedName = "";
+      this.boundOrderId = void 0;
+      this.emit(VACIO);
+    }
+  }
   /** Un fallo que no se ve no existe: rastro para el runtime + aviso traducido para el cajero. */
-  reportLinkFailure(err) {
-    console.warn("[customers] customers.orders.link failed; the sale goes on without customer history", err);
+  warnCashier(log, err, message) {
+    console.warn(`[customers] ${log}`, err);
     const c5 = erplora4();
     try {
-      c5.notify?.({ type: "warning", message: linkFailureMessage(err) });
+      c5.notify?.({ type: "warning", message });
     } catch (notifyErr) {
-      console.warn("[customers] the shell could not show the link warning", notifyErr);
+      console.warn("[customers] the shell could not show the warning", notifyErr);
     }
   }
   connectedCallback() {
@@ -8457,12 +8511,14 @@ var ErpCustomersPosSearch = class extends i3 {
     this.addEventListener("erp:customer-context-reset", this.onReset);
     this.addEventListener("erp:customer-required", this.onCustomerRequired);
     this.addEventListener("erp:order-linked", this.onOrderLinked);
+    this.addEventListener("erp:order-restored", this.onOrderRestored);
     window.addEventListener("erplora:locale-changed", this.onLocaleChange);
   }
   disconnectedCallback() {
     this.removeEventListener("erp:customer-context-reset", this.onReset);
     this.removeEventListener("erp:customer-required", this.onCustomerRequired);
     this.removeEventListener("erp:order-linked", this.onOrderLinked);
+    this.removeEventListener("erp:order-restored", this.onOrderRestored);
     window.removeEventListener("erplora:locale-changed", this.onLocaleChange);
     super.disconnectedCallback();
   }
@@ -8516,6 +8572,7 @@ var ErpCustomersPosSearch = class extends i3 {
   }
   async pick(c5) {
     this.error = "";
+    this.restoreSeq++;
     let ficha;
     try {
       ficha = rows(await erplora4().query("customers.get", { customer_id: c5.id }))[0];
@@ -8529,15 +8586,20 @@ var ErpCustomersPosSearch = class extends i3 {
       this.error = erplora4().t(CATALOG4, "ui.errCustomerNotFound");
       return;
     }
-    this.selectedId = c5.id;
-    this.selectedName = ficha.name || c5.name;
+    this.boundOrderId = void 0;
     this.closeOverlay();
+    this.assign({ ...ficha, id: c5.id, name: ficha.name || c5.name });
+  }
+  /** Selects the customer and hands the till her fiscal snapshot — a COPY (ADR-0132). */
+  assign(sheet) {
+    this.selectedId = sheet.id;
+    this.selectedName = sheet.name;
     this.emit({
-      customer_id: c5.id,
-      customer_name: ficha.name || c5.name,
-      customer_tax_id: ficha.tax_id ?? "",
-      customer_address: direccionFiscal(ficha),
-      customer_country: countryCode(ficha.country, erplora4().locale)
+      customer_id: sheet.id,
+      customer_name: sheet.name,
+      customer_tax_id: sheet.tax_id ?? "",
+      customer_address: direccionFiscal(sheet),
+      customer_country: countryCode(sheet.country, erplora4().locale)
     });
   }
   // — Quick add (customers#18). Market: Square, Toast, Lightspeed, Shopify POS, Fresha all offer
@@ -8594,6 +8656,8 @@ var ErpCustomersPosSearch = class extends i3 {
     }
   }
   clear() {
+    this.restoreSeq++;
+    this.boundOrderId = void 0;
     this.selectedId = void 0;
     this.selectedName = "";
     this.closeOverlay();
