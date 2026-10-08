@@ -545,6 +545,41 @@ describe('a restored check comes back WITH its customer (customers#135)', () => 
     expect(emitted.map((d) => d.customer_id)).toEqual([BEA.id, ANA.id]);
   });
 
+  it('a link write that lands AFTER another check was retrieved does not re-bind its customer', async () => {
+    // Ana is picked for ord-1 and her link is being written; before it lands the cashier retrieves
+    // ord-2 (Bea). When Ana's write finally lands, Bea must stay bound to ord-2: otherwise a re-fired
+    // restore of ord-2 whose read fails would take Bea for «the customer of another check» and drop her.
+    links = { 'ord-2': BEA.id };
+    const el = await mount();
+    await pickFromList(el, ANA.id);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    sdk().command = async (name: string, payload?: Record<string, unknown>) => {
+      if (name === 'customers.orders.link') {
+        await gate;
+        links[String(payload?.order_id)] = String(payload?.customer_id);
+      }
+      return { ok: true };
+    };
+    linked(el, 'ord-1');
+    await flush(el);
+    restore(el, 'ord-2');
+    await flush(el);
+    expect(trigger(el).getAttribute('trigger-label')).toBe(BEA.name);
+    release();
+    await flush(el);
+    sdk().query = async () => { throw new Error('db down'); };
+    const emitted = listen(el);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    restore(el, 'ord-2');
+    await flush(el);
+
+    expect(emitted, 'Bea is still the customer of ord-2').toEqual([]);
+    expect(trigger(el).getAttribute('trigger-label')).toBe(BEA.name);
+    warn.mockRestore();
+  });
+
   it('the warning is translated in both catalogs', () => {
     const ui = (c: unknown) => (c as { ui: Record<string, string> }).ui;
     expect(ui(en).errRestoreCustomer).toBeTruthy();
