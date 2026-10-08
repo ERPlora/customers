@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F17 Asignar un cliente a la venta en el TPV
-Estado: hecho
+Estado: parcial — al aparcar una cuenta, el cliente se queda en el botón y la cuenta siguiente sale a su nombre (sales#557)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Buscador de cliente del TPV
