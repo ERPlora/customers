@@ -9,7 +9,7 @@ Prefijo: CUSTOMERS
 ## Flujos
 
 ### CUSTOMERS-F17 Asignar un cliente a la venta en el TPV
-Estado: parcial — al aparcar una cuenta, el cliente se queda en el botón y la cuenta siguiente sale a su nombre (sales#557)
+Estado: parcial — al dejar una cuenta en su mesa, el cliente se queda en el botón y la cuenta siguiente sale a su nombre (sales#566); al eliminarla, el botón se vacía pero la cuenta siguiente se cobra igual a su nombre (sales#567)
 Vertical: comun
 Actor: administrador, responsable, empleado
 Pantalla: Buscador de cliente del TPV
@@ -19,7 +19,7 @@ Pasos:
 2. Se abre el buscador («Buscar por nombre, teléfono, email…») con las 20 primeras fichas por nombre;
    al escribir, busca en nombre, email, teléfono, NIF y empresa.
 3. Toca la ficha. El buscador se cierra y el botón pasa a enseñar el nombre del cliente.
-4. **Quitar cliente** (al pie del buscador) deja la venta sin cliente. Tras cobrar, el TPV lo quita solo.
+4. **Quitar cliente** (al pie del buscador) deja la venta sin cliente. Tras cobrar o aparcar la cuenta, el TPV lo quita solo.
 5. Al recargar la pantalla de venta (o reiniciarse la tableta) y al recuperar una cuenta aparcada, la
    cuenta vuelve con su cliente: el botón enseña otra vez su nombre y el TPV recibe la misma copia
    fiscal que en el paso 3, sin volver a elegirlo. Clientes lo sabe por el enlace de ese pedido
