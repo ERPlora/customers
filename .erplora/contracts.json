@@ -13,6 +13,7 @@
       "customers.group_ids",
       "customers.groups.list",
       "customers.list",
+      "customers.orders.customer",
       "customers.stats",
       "customers.tag_ids",
       "customers.tags.list"

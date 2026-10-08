@@ -25,7 +25,7 @@ versión instalada y cita la de TU versión, no la de la última publicada. En i
 
 | Tipo | Nombre | Permiso |
 | ---- | ------ | ------- |
-| query | `customers.list` / `.get` / `.stats` / `.group_ids` / `.tag_ids` / `.orders.by_customer` | `view_customer` |
+| query | `customers.list` / `.get` / `.stats` / `.group_ids` / `.tag_ids` / `.orders.by_customer` / `.orders.customer` (cliente de un pedido: el TPV lo lee al recuperar la cuenta) | `view_customer` |
 | query | `customers.groups.list` · `customers.tags.list` | `view_customergroup` · `view_customertag` |
 | query | `customers.fields.list` / `.fields.values` | `view_customer` |
 | query | `customers.activities` | `view_activity` |

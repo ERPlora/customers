@@ -189,6 +189,7 @@
     "posNoPermission": "No tienes permiso para consultar clientes.",
     "errCustomerSnapshot": "No se pudieron cargar los datos fiscales de {name}. Vuelve a pulsar para reintentar.",
     "errLinkOrder": "La venta sigue, pero el cliente no se pudo asociar al pedido: no aparecerá en su historial.",
+    "errRestoreCustomer": "No se pudo recuperar el cliente de esta cuenta. Vuelve a asignarlo antes de cobrar.",
     "errLinkOrderNoPermission": "La venta sigue, pero no tienes permiso para asociar clientes a pedidos: no aparecerá en su historial.",
     "retry": "Reintentar",
     "quickAddCustomer": "+ Nuevo cliente «{term}»",

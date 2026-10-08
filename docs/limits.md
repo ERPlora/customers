@@ -120,6 +120,11 @@ Send the complete list you want, not just the new one.
 you have `customers.view_customer`, and remember the sell screen resolves its slots when it mounts —
 leave the screen and come back.
 
+**"After reloading the till the check came back without its customer."** It comes back with her
+when the link was written, that is, when the check was saved with the customer already picked. If
+the cashier sees "The customer of this check could not be loaded", the link could not be read:
+assign the customer again before charging.
+
 **"The customer is attached to the wrong check."** An order can only have one live customer;
 re-assigning replaces the link. Do it from the check.
 
